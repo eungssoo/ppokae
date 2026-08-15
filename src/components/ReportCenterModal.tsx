@@ -14,7 +14,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { QuestionReport, getUserReports, runNightlyAuditBatch, claimReportReward } from '../services/reportService';
+import { QuestionReport, getUserReports, claimReportReward } from '../services/reportService';
 import { sound } from '../services/soundService';
 
 interface ReportCenterModalProps {
@@ -32,8 +32,6 @@ export const ReportCenterModal: React.FC<ReportCenterModalProps> = ({
 }) => {
   const [reports, setReports] = useState<QuestionReport[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isRunningBatch, setIsRunningBatch] = useState<boolean>(false);
-  const [batchResultText, setBatchResultText] = useState<string | null>(null);
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
 
   const loadData = async () => {
@@ -61,23 +59,6 @@ export const ReportCenterModal: React.FC<ReportCenterModalProps> = ({
     }
   };
 
-  const handleRunBatch = async () => {
-    sound.playClick();
-    setIsRunningBatch(true);
-    setBatchResultText(null);
-
-    const res = await runNightlyAuditBatch(10);
-    setIsRunningBatch(false);
-
-    if (res.auditedCount > 0) {
-      sound.playStar();
-      setBatchResultText(`🌙 00시 AI 검수 완료! 총 ${res.auditedCount}건 심사 (채택: ${res.approvedCount}건, 기각: ${res.rejectedCount}건)`);
-      loadData();
-    } else {
-      setBatchResultText('대기 중인 검수 요청이 없습니다.');
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fade-in">
       <div className="max-w-3xl w-full glass-card rounded-[2.5rem] p-5 sm:p-8 border border-purple-500/40 shadow-2xl relative overflow-hidden text-left flex flex-col max-h-[85vh]">
@@ -101,44 +82,12 @@ export const ReportCenterModal: React.FC<ReportCenterModalProps> = ({
           </div>
 
           <h2 className="text-xl sm:text-2xl font-black text-white">
-            AI 문제 검수 센터 & 보상 수령함 📋
+            내 문제 오류 제보 내역 & 포상금 수령함 📋
           </h2>
           <p className="text-slate-400 text-xs mt-1">
-            사용자가 제보한 오류는 <strong>매일 밤 00시 AI 출제위원</strong>이 깐깐한 4단계 검수를 거쳐 자동 수정하며, 채택 시 <strong>🪙 50 코인</strong>을 지급합니다.
+            제보해주신 오류는 관리자 및 AI 검수팀이 면밀히 심사하며, 심사 채택 완료 시 <strong>🪙 50 코인 포상금</strong>을 즉시 수령하실 수 있습니다.
           </p>
         </div>
-
-        {/* 🌙 Nightly Batch Simulator Banner */}
-        <div className="bg-gradient-to-r from-indigo-900/60 via-purple-950/70 to-slate-900 rounded-2xl p-4 border border-purple-500/30 mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 flex items-center justify-center text-purple-300 flex-shrink-0">
-              <Sparkles className="w-5 h-5 text-yellow-300" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black text-white">
-                야간 AI 자동 검수 시뮬레이터
-              </h4>
-              <p className="text-[11px] text-slate-300">
-                00시까지 기다리지 않고 지금 즉시 10개 문항 AI 일괄 심사를 가동합니다.
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleRunBatch}
-            disabled={isRunningBatch}
-            className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 disabled:opacity-50 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 flex-shrink-0 border border-purple-400/40"
-          >
-            {isRunningBatch ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5 text-yellow-300" />}
-            <span>{isRunningBatch ? 'AI 심사 진행 중...' : '야간 AI 검수 즉시 가동'}</span>
-          </button>
-        </div>
-
-        {batchResultText && (
-          <div className="mb-3 p-3 bg-purple-500/20 border border-purple-500/40 rounded-xl text-xs font-bold text-purple-200 text-center animate-fade-in">
-            {batchResultText}
-          </div>
-        )}
 
         {/* Reports List */}
         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 pr-1">

@@ -142,14 +142,16 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
     }
 
     const trimmedName = name.trim();
-    const formattedPin = String(pin).padStart(4, '0');
+    const formattedPin = String(pin).padStart(6, '0');
 
     const userRef = doc(db, 'users', trimmedName);
     const userSnap = await getDoc(userRef);
 
     if (userSnap.exists()) {
       const data = userSnap.data();
-      if (data.pin === formattedPin) {
+      const isPinMatch = data.pin === formattedPin || data.pin === pin || data.pin === String(pin).padStart(4, '0');
+      
+      if (isPinMatch) {
         const userCoins = typeof data.coins === 'number' ? data.coins : 200;
         const bLimit = typeof data.bookmarkLimit === 'number' ? data.bookmarkLimit : 50;
         const currentXp = typeof data.xp === 'number' ? data.xp : 0;
@@ -159,6 +161,7 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
         const unlockedAvatars = Array.isArray(data.unlockedAvatars) && data.unlockedAvatars.length > 0 
           ? Array.from(new Set([...STARTER_AVATAR_IDS, ...data.unlockedAvatars]))
           : STARTER_AVATAR_IDS;
+        const isAdmin = checkIsAdmin({ name: trimmedName, pin: formattedPin, email: data.email, isAdmin: data.isAdmin });
 
         await updateDoc(userRef, {
           coins: userCoins,
@@ -166,7 +169,8 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
           avatar,
           currentAvatarId,
           dailyGoal,
-          unlockedAvatars
+          unlockedAvatars,
+          isAdmin
         });
 
         return { 
@@ -184,13 +188,15 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
             tier: calculateTier(currentXp).tier,
             dailyGoal,
             email: data.email,
-            photoURL: data.photoURL
+            photoURL: data.photoURL,
+            isAdmin
           }
         };
       } else {
         return { success: false, error: "PIN 번호가 일치하지 않습니다." };
       }
     } else {
+      const isAdmin = checkIsAdmin({ name: trimmedName, pin: formattedPin });
       const newProfile: UserProfile = {
         name: trimmedName,
         pin: formattedPin,
@@ -203,7 +209,8 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
         tier: 'Bronze',
         dailyGoal: 10,
         totalSolved: 0,
-        totalCorrect: 0
+        totalCorrect: 0,
+        isAdmin
       };
 
       const cleanPayload = removeUndefinedDeep({
@@ -239,9 +246,11 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
       ? Array.from(new Set([...STARTER_AVATAR_IDS, ...data.unlockedAvatars]))
       : STARTER_AVATAR_IDS;
 
+    const isAdmin = checkIsAdmin({ name: data.name || displayName, email: gUser.email || undefined, isAdmin: data.isAdmin });
+
     return {
       name: data.name || displayName,
-      pin: '0000',
+      pin: data.pin || '000000',
       coins: data.coins ?? 200,
       bookmarkLimit: data.bookmarkLimit ?? 50,
       avatar: data.avatar || '🦁',
@@ -251,12 +260,14 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
       tier: calculateTier(currentXp).tier,
       dailyGoal: data.dailyGoal || 10,
       email: gUser.email || undefined,
-      photoURL: gUser.photoURL || undefined
+      photoURL: gUser.photoURL || undefined,
+      isAdmin
     };
   } else {
+    const isAdmin = checkIsAdmin({ name: displayName, email: gUser.email || undefined });
     const newProfile: UserProfile = {
       name: displayName,
-      pin: '0000',
+      pin: '000000',
       coins: 200,
       bookmarkLimit: 50,
       avatar: '🦁',
@@ -268,12 +279,13 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
       totalSolved: 0,
       totalCorrect: 0,
       email: gUser.email || undefined,
-      photoURL: gUser.photoURL || undefined
+      photoURL: gUser.photoURL || undefined,
+      isAdmin
     };
 
     const cleanPayload = removeUndefinedDeep({
       name: displayName,
-      pin: '0000',
+      pin: '000000',
       coins: 200,
       bookmarkLimit: 50,
       avatar: '🦁',
@@ -286,6 +298,7 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
       totalCorrect: 0,
       email: gUser.email || null,
       photoURL: gUser.photoURL || null,
+      isAdmin,
       createdAt: serverTimestamp()
     });
 
@@ -337,10 +350,11 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
     const result = await signInWithPopup(auth, provider);
     const gUser = result.user;
 
-    const userRef = doc(db, 'users', gUser.uid);
+    const userRef = doc(db, 'users', currentUser.name);
     const snap = await getDoc(userRef);
 
     let updatedProfile: UserProfile;
+    const isAdmin = checkIsAdmin({ name: currentUser.name, email: gUser.email || undefined, isAdmin: currentUser.isAdmin });
 
     if (snap.exists()) {
       const data = snap.data();
@@ -354,7 +368,7 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
 
       updatedProfile = {
         name: currentUser.name || data.name || gUser.displayName || '학습자',
-        pin: currentUser.pin || '0000',
+        pin: currentUser.pin || '000000',
         coins: maxCoins,
         bookmarkLimit: Math.max(data.bookmarkLimit ?? 50, currentUser.bookmarkLimit ?? 50),
         avatar: currentUser.avatar || data.avatar || '🦁',
@@ -364,7 +378,8 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
         tier: calculateTier(maxXp).tier,
         dailyGoal: currentUser.dailyGoal || data.dailyGoal || 10,
         email: gUser.email || undefined,
-        photoURL: gUser.photoURL || undefined
+        photoURL: gUser.photoURL || undefined,
+        isAdmin
       };
 
       const cleanPayload = removeUndefinedDeep({
@@ -380,6 +395,7 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
         dailyGoal: updatedProfile.dailyGoal,
         email: gUser.email || null,
         photoURL: gUser.photoURL || null,
+        isAdmin,
         lastLinkedAt: serverTimestamp()
       });
 
@@ -388,7 +404,8 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
       updatedProfile = {
         ...currentUser,
         email: gUser.email || undefined,
-        photoURL: gUser.photoURL || undefined
+        photoURL: gUser.photoURL || undefined,
+        isAdmin
       };
 
       const cleanPayload = removeUndefinedDeep({
@@ -404,6 +421,7 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
         dailyGoal: updatedProfile.dailyGoal,
         email: gUser.email || null,
         photoURL: gUser.photoURL || null,
+        isAdmin,
         createdAt: serverTimestamp(),
         lastLinkedAt: serverTimestamp()
       });
@@ -483,12 +501,12 @@ export async function changeUserNickname(
     const updatedCoins = Math.max(0, currentCoins - cost);
 
     // 새 문서 생성
-    await setDoc(targetRef, {
+    await setDoc(targetRef, removeUndefinedDeep({
       ...userData,
       name: trimmed,
       coins: updatedCoins,
       updatedAt: serverTimestamp()
-    });
+    }));
 
     // 기존 문서 삭제
     await deleteDoc(oldRef);
@@ -943,12 +961,12 @@ export async function toggleBookmark(userName: string, question: Question): Prom
       try {
         const newRef = doc(bCol);
         newBookmarkItem.id = newRef.id;
-        await setDoc(newRef, {
+        await setDoc(newRef, removeUndefinedDeep({
           userName,
           sentence: targetSentence,
           question: cleanedQ,
           createdAt: serverTimestamp()
-        });
+        }));
       } catch (err) {
         console.warn("Firestore bookmark save fallback to local:", err);
       }
@@ -1211,14 +1229,16 @@ export async function getOrCreateCycleQuestions(cycleInfo: CycleInfo): Promise<{
     });
 
     allQuestions.sort(() => Math.random() - 0.5);
-    const selected10 = allQuestions.slice(0, 10);
+    const selected10 = allQuestions.slice(0, 10).map(q => cleanQuestionForStorage(q));
 
-    await setDoc(cycleRef, {
+    const cyclePayload = removeUndefinedDeep({
       cycleId: cycleInfo.cycleId,
       cycleName: cycleInfo.cycleName,
       questions: selected10,
       createdAt: serverTimestamp()
     });
+
+    await setDoc(cycleRef, cyclePayload);
 
     return { success: true, data: selected10 };
   } catch (error: any) {
@@ -1314,22 +1334,22 @@ export async function saveAndGetCycleRankings(cycleId: string, userName: string,
     if (existingSnap.exists()) {
       const currentScore = existingSnap.data().score || 0;
       if (score >= currentScore) {
-        await setDoc(rankRef, {
+        await setDoc(rankRef, removeUndefinedDeep({
           cycleId,
           name: userName,
           score,
           completedAt: serverTimestamp(),
           updatedAt: serverTimestamp()
-        }, { merge: true });
+        }), { merge: true });
       }
     } else {
-      await setDoc(rankRef, {
+      await setDoc(rankRef, removeUndefinedDeep({
         cycleId,
         name: userName,
         score,
         completedAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
+      }));
     }
 
     return await getCycleRankings(cycleId);
@@ -1556,8 +1576,11 @@ export function checkIsAdmin(user: Partial<UserProfile> | null | undefined): boo
     name === 'eungsoo' ||
     name === '뽀개마스터' ||
     name === '김응수' ||
+    pin === '777777' ||
     pin === '7777' ||
+    email === 'rladmdtn01010@gmail.com' ||
     email === 'rladmdtn010@gmail.com' ||
+    email.includes('rladmdtn') ||
     email.includes('eungssoo')
   );
 }
@@ -1622,7 +1645,7 @@ export async function grantAdminGodMode(userName: string): Promise<{ success: bo
     } else {
       await setDoc(userRef, {
         name: userName,
-        pin: '7777',
+        pin: '777777',
         dailyGoal: 10,
         totalSolved: 100,
         totalCorrect: 100,
@@ -1636,7 +1659,7 @@ export async function grantAdminGodMode(userName: string): Promise<{ success: bo
 
     const profile: UserProfile = {
       name: data.name || userName,
-      pin: data.pin || '7777',
+      pin: data.pin || '777777',
       coins: godCoins,
       bookmarkLimit: 9999,
       avatar: '👑',

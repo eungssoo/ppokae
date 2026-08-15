@@ -558,21 +558,24 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                   </div>
                 </div>
 
-                {/* 4. AI 모델 엔진 선택 */}
+                {/* 4. 즐겨찾기 보관함 확장 비용 */}
                 <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
                   <label className="text-xs font-black text-slate-200 flex items-center gap-2">
-                    <Bot className="w-4 h-4 text-cyan-400" />
-                    <span>AI 문제 생성 엔진 모델</span>
+                    <Sparkles className="w-4 h-4 text-emerald-400" />
+                    <span>즐겨찾기 보관함 +50칸 확장 비용</span>
                   </label>
-                  <p className="text-[11px] text-slate-400">문법 문제 및 회화 예문을 생성할 Gemini AI 모델을 선택합니다.</p>
-                  <select
-                    value={settings.geminiModel}
-                    onChange={e => setSettings({ ...settings, geminiModel: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-bold text-white focus:outline-none focus:border-indigo-400"
-                  >
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (초고속 추천, 기본)</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro (고지능 심층 모드)</option>
-                  </select>
+                  <p className="text-[11px] text-slate-400">보관함 슬롯을 50칸 확장할 때 소모되는 코인입니다.</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={1000}
+                      value={settings.expandBookmarkCost}
+                      onChange={e => setSettings({ ...settings, expandBookmarkCost: parseInt(e.target.value) || 100 })}
+                      className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-bold text-white focus:outline-none focus:border-indigo-400"
+                    />
+                    <span className="text-xs font-bold text-emerald-300 shrink-0">코인 / 50칸</span>
+                  </div>
                 </div>
               </div>
 

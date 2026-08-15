@@ -130,17 +130,17 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 <input
                   type="password"
                   value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-                  placeholder="4자리 숫자 PIN (예: 1234)"
+                  onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                  placeholder="6자리 숫자 PIN (예: 123456)"
                   required
-                  maxLength={4}
+                  maxLength={6}
                   className="w-full pl-11 pr-4 py-3 bg-slate-800/90 border border-slate-700 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 tracking-widest transition-all"
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={!name.trim() || pin.length < 4 || isLoading}
+                disabled={!name.trim() || pin.length < 6 || isLoading}
                 className="w-full py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 disabled:opacity-40 disabled:grayscale flex items-center justify-center gap-2"
               >
                 <span>계정 만들고 🪙 200 코인 받기</span>
