@@ -15,10 +15,12 @@ import {
   CheckCircle2,
   BookOpen,
   Layers,
-  Star
+  Star,
+  Crown
 } from 'lucide-react';
 import { UserProfile, AvatarItem, AvatarGrade } from '../types';
 import { AVATAR_DATABASE, GRADE_CONFIG, STARTER_AVATAR_IDS } from '../services/avatarService';
+import { checkIsAdmin } from '../services/dbService';
 import { sound } from '../services/soundService';
 
 interface ProfileViewProps {
@@ -30,6 +32,7 @@ interface ProfileViewProps {
   onOpenGachaModal: () => void;
   onDeleteAccount: () => void;
   onLinkGoogleAccount?: () => void;
+  onOpenAdminCenter?: () => void;
 }
 
 const GRADE_ORDER: Record<AvatarGrade, number> = {
@@ -51,6 +54,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onOpenGachaModal,
   onDeleteAccount,
   onLinkGoogleAccount,
+  onOpenAdminCenter,
 }) => {
   const [name, setName] = useState<string>(user.name);
   const [dailyGoal, setDailyGoal] = useState<number>(user.dailyGoal || 10);
@@ -274,6 +278,34 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
           </div>
         </div>
+
+        {/* 👑 Master Admin Command Center Card (관리자만 노출) */}
+        {checkIsAdmin(user) && onOpenAdminCenter && (
+          <div className="bg-gradient-to-r from-amber-500/20 via-purple-600/20 to-pink-500/20 border-2 border-amber-500/50 rounded-2xl p-4 mb-5 text-left shadow-xl relative overflow-hidden">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Crown className="w-5 h-5 text-yellow-400 animate-pulse" />
+                <span className="text-sm font-black text-amber-300">👑 마스터 관리자 사령탑</span>
+              </div>
+              <span className="text-[10px] bg-amber-500/30 text-amber-200 font-black px-2.5 py-0.5 rounded-full border border-amber-400/40">
+                God Mode Available
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 mb-3">
+              무제한 코인 충전, 전 아바타 올 언락, 실시간 게임 경제/보상 배율 제어, 전체 푸시 공지 발송 및 유저 DB 관리 사령탑을 엽니다.
+            </p>
+            <button
+              onClick={() => {
+                sound.playReward();
+                onOpenAdminCenter();
+              }}
+              className="w-full py-3 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 hover:from-amber-300 hover:to-yellow-200 text-slate-950 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30 active:scale-95 transition-all"
+            >
+              <Crown className="w-4 h-4 fill-slate-950" />
+              <span>👑 관리자 사령탑 열기 (God Mode)</span>
+            </button>
+          </div>
+        )}
 
         {/* 🔐 Google Account Linked Status or Link Button */}
         {user.email ? (

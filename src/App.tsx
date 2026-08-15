@@ -52,7 +52,12 @@ import {
   changeUserNickname,
   drawGachaAvatar,
   equipUserAvatar,
-  checkGoogleRedirectResult
+  checkGoogleRedirectResult,
+  getSystemSettings,
+  getActiveAnnouncements,
+  claimAnnouncementReward,
+  DEFAULT_SYSTEM_SETTINGS,
+  checkIsAdmin
 } from './services/dbService';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
 import { generateBulkQuestions, generateNativeExpressions } from './services/geminiService';
@@ -77,7 +82,9 @@ import { AnalyticsDashboardView } from './components/AnalyticsDashboardView';
 import { ProfileView } from './components/ProfileView';
 import { AvatarGachaModal } from './components/AvatarGachaModal';
 import { ReportCenterModal } from './components/ReportCenterModal';
+import { AdminCenterModal } from './components/AdminCenterModal';
 import { ToastProvider, useToast } from './components/ToastContainer';
+import { SystemSettings, PushAnnouncement } from './types';
 
 function AppContent() {
   const toast = useToast();
@@ -96,9 +103,12 @@ function AppContent() {
   const [isRevengeModalOpen, setIsRevengeModalOpen] = useState<boolean>(false);
   const [previousCycleScore, setPreviousCycleScore] = useState<number>(0);
 
-  // Gacha Modal State
+  // Gacha & Report & Admin Modal State
   const [isGachaModalOpen, setIsGachaModalOpen] = useState<boolean>(false);
   const [isReportCenterOpen, setIsReportCenterOpen] = useState<boolean>(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
+  const [systemSettings, setSystemSettings] = useState<SystemSettings>(DEFAULT_SYSTEM_SETTINGS);
+  const [announcementPopup, setAnnouncementPopup] = useState<PushAnnouncement | null>(null);
 
   // Action Confirmation Modal State
   const [actionModalConfig, setActionModalConfig] = useState<ActionModalConfig | null>(null);
@@ -185,12 +195,26 @@ function AppContent() {
     return () => clearInterval(interval);
   }, [user?.name]);
 
-  // Sync user view & counts
+  // Sync user view & counts & load global system settings & push announcements
   useEffect(() => {
+    // ⚙️ Load live system settings
+    getSystemSettings().then(setSystemSettings);
+
     if (user) {
       setView('menu');
       loadTotalPublicQuestions();
       refreshUserData(user.name);
+
+      // 📢 Check active push announcements
+      getActiveAnnouncements().then(list => {
+        if (list.length > 0) {
+          const latest = list[0];
+          const seenKey = `seen_announce_${user.name}_${latest.id}`;
+          if (!localStorage.getItem(seenKey)) {
+            setAnnouncementPopup(latest);
+          }
+        }
+      });
     } else {
       setView('login');
     }
@@ -929,11 +953,13 @@ function AppContent() {
     } else {
       if (!user) return;
 
+      const coinRate = typeof systemSettings.rewardCoinsPerQuestion === 'number' ? systemSettings.rewardCoinsPerQuestion : 3;
+
       if (quizMode === 'daily') {
         setIsLoading(true);
         setLoadingText('실시간 랭킹 순위 등록 & 코인 보상 지급 중...');
         
-        const rewardCoins = correctCount * 3;
+        const rewardCoins = correctCount * coinRate;
         if (rewardCoins > 0) {
           await addCoins(user.name, rewardCoins);
           await refreshUserData(user.name);
@@ -946,7 +972,7 @@ function AppContent() {
         setView('ranking_board');
         toast.coin(`🏆 ${currentCycle.cycleName} 랭킹전 완료!`, `정답 ${correctCount}개 맞춤 ➔ 🪙 +${rewardCoins} 코인이 지급되었습니다!`);
       } else {
-        const earnedCoins = correctCount * 3;
+        const earnedCoins = correctCount * coinRate;
         if (earnedCoins > 0) {
           await addCoins(user.name, earnedCoins);
           await refreshUserData(user.name);
@@ -1017,6 +1043,63 @@ function AppContent() {
         />
       )}
 
+      {/* 👑 Master Admin Command Center Modal */}
+      {user && (
+        <AdminCenterModal
+          isOpen={isAdminModalOpen}
+          onClose={() => setIsAdminModalOpen(false)}
+          user={user}
+          onUserUpdate={(updated) => {
+            setUser(updated);
+            localStorage.setItem('ai_grammar_user', JSON.stringify(updated));
+          }}
+          onShowToast={(title, msg, type) => {
+            if (type === 'coin') toast.coin(title, msg);
+            else if (type === 'error') toast.error(title, msg);
+            else toast.info(title, msg);
+          }}
+        />
+      )}
+
+      {/* 📢 Global Push Announcement Popup Modal */}
+      {user && announcementPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in zoom-in duration-200">
+          <div className="bg-slate-900 border-2 border-pink-500/60 rounded-3xl p-6 max-w-md w-full shadow-2xl text-center space-y-4 relative">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 text-xs font-black uppercase">
+              <span>{announcementPopup.badgeType === 'event' ? '🎁 특별 이벤트' : announcementPopup.badgeType === 'update' ? '🚀 신규 업데이트' : announcementPopup.badgeType === 'maintenance' ? '🚧 서버 점검' : '📢 중요 공지'}</span>
+            </div>
+
+            <h3 className="text-xl font-black text-white">{announcementPopup.title}</h3>
+            <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed text-left bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80">
+              {announcementPopup.content}
+            </p>
+
+            {announcementPopup.rewardCoins && announcementPopup.rewardCoins > 0 ? (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 text-amber-300 text-xs font-black">
+                <span>🪙 첨부 보상: +{announcementPopup.rewardCoins} 코인 지급!</span>
+              </div>
+            ) : null}
+
+            <button
+              onClick={async () => {
+                sound.playReward();
+                if (announcementPopup.rewardCoins && announcementPopup.rewardCoins > 0) {
+                  await claimAnnouncementReward(user.name, announcementPopup.id, announcementPopup.rewardCoins);
+                  await refreshUserData(user.name);
+                  toast.coin('보상 수령 완료! 🎉', `🪙 +${announcementPopup.rewardCoins} 코인이 지급되었습니다!`);
+                }
+                const seenKey = `seen_announce_${user.name}_${announcementPopup.id}`;
+                localStorage.setItem(seenKey, 'true');
+                setAnnouncementPopup(null);
+              }}
+              className="w-full py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg active:scale-95 transition-all"
+            >
+              {announcementPopup.rewardCoins && announcementPopup.rewardCoins > 0 ? `보상 🪙 ${announcementPopup.rewardCoins} 코인 받고 닫기` : '확인 완료'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 0. Login */}
       {view === 'login' && (
         <LoginView
@@ -1047,6 +1130,7 @@ function AppContent() {
           }}
           onStartDailyChallenge={() => handleStartDailyChallenge(false)}
           onOpenReportCenter={() => setIsReportCenterOpen(true)}
+          onOpenAdminCenter={() => setIsAdminModalOpen(true)}
           onLogout={handleLogout}
         />
       )}
@@ -1073,6 +1157,7 @@ function AppContent() {
           onOpenGachaModal={() => setIsGachaModalOpen(true)}
           onDeleteAccount={handleDeleteAccount}
           onLinkGoogleAccount={handleLinkGoogleAccount}
+          onOpenAdminCenter={() => setIsAdminModalOpen(true)}
         />
       )}
 

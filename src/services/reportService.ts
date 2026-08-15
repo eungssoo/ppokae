@@ -344,3 +344,66 @@ export async function claimReportReward(reportId: string, userName: string, rewa
     return { success: false };
   }
 }
+
+// 7. 👑 관리자용 전체 신고 목록 조회
+export async function getPendingReports(): Promise<QuestionReport[]> {
+  try {
+    const reportsCol = collection(db, 'reports');
+    const snap = await getDocs(reportsCol);
+    const list: QuestionReport[] = [];
+    snap.forEach(d => {
+      list.push({ id: d.id, ...d.data() } as QuestionReport);
+    });
+    return list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+  } catch (e) {
+    console.error("getPendingReports error:", e);
+    return [];
+  }
+}
+
+// 8. 👑 관리자 직접 승인 및 코인 즉시 지급
+export async function approveReportAndReward(
+  reportId: string, 
+  reporterName: string, 
+  rewardCoins: number = 50, 
+  reason: string = '관리자 사령탑 직접 승인'
+): Promise<{ success: boolean }> {
+  try {
+    const repRef = doc(db, 'reports', reportId);
+    await updateDoc(repRef, {
+      status: 'approved',
+      rewardClaimed: true,
+      auditResult: {
+        isAccepted: true,
+        reason,
+        rewardCoins,
+        auditedAt: Date.now()
+      }
+    });
+    await addCoins(reporterName, rewardCoins);
+    return { success: true };
+  } catch (e) {
+    console.error("approveReportAndReward error:", e);
+    return { success: false };
+  }
+}
+
+// 9. 👑 관리자 직접 반려
+export async function rejectReport(reportId: string, reason: string = '관리자 사령탑 직접 반려'): Promise<{ success: boolean }> {
+  try {
+    const repRef = doc(db, 'reports', reportId);
+    await updateDoc(repRef, {
+      status: 'rejected',
+      auditResult: {
+        isAccepted: false,
+        reason,
+        rewardCoins: 0,
+        auditedAt: Date.now()
+      }
+    });
+    return { success: true };
+  } catch (e) {
+    console.error("rejectReport error:", e);
+    return { success: false };
+  }
+}

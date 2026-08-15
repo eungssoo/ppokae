@@ -141,6 +141,32 @@ class SoundManager {
       osc.stop(ctx.currentTime + 0.12);
     } catch (e) {}
   }
+
+  // 6. 🏆 축하/보상 팡파레 사운드 (C5 -> E5 -> G5 -> C6)
+  playReward() {
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+
+        gain.gain.setValueAtTime(0.22, ctx.currentTime + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.35);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(ctx.currentTime + idx * 0.08);
+        osc.stop(ctx.currentTime + idx * 0.08 + 0.35);
+      });
+    } catch (e) {}
+  }
 }
 
 export const sound = new SoundManager();

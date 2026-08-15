@@ -26,7 +26,9 @@ import {
   ExpressionItem,
   BookmarkItem,
   FormMastery,
-  AvatarItem
+  AvatarItem,
+  SystemSettings,
+  PushAnnouncement
 } from '../types';
 import { sanitizeForm } from './geminiService';
 import { STARTER_AVATAR_IDS, performGachaDraw, AVATAR_DATABASE } from './avatarService';
@@ -1521,6 +1523,267 @@ export async function saveExpressionsToFirestore(expressions: ExpressionItem[]):
     return true;
   } catch (error) {
     console.error("saveExpressionsToFirestore Error:", error);
+    return false;
+  }
+}
+
+// ==========================================
+// 👑 15. 마스터 관리자 사령탑 (Admin Master System)
+// ==========================================
+
+export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
+  rewardCoinsPerQuestion: 3,
+  starterCoins: 200,
+  gachaCost: 50,
+  changeNicknameCost: 30,
+  expandBookmarkCost: 100,
+  geminiModel: 'gemini-2.5-flash',
+  maintenanceMode: false,
+  maintenanceNotice: '현재 시스템 점검 및 서버 업그레이드 중입니다. 잠시 후 다시 접속해 주세요.'
+};
+
+// 👑 15-1. 관리자 권한 여부 확인 (이름, PIN, 이메일 다중 검증)
+export function checkIsAdmin(user: Partial<UserProfile> | null | undefined): boolean {
+  if (!user) return false;
+  if (user.isAdmin) return true;
+  const name = (user.name || '').trim().toLowerCase();
+  const email = (user.email || '').trim().toLowerCase();
+  const pin = (user.pin || '').trim();
+
+  return (
+    name === 'admin' ||
+    name === 'eungsookim' ||
+    name === 'eungsoo' ||
+    name === '뽀개마스터' ||
+    name === '김응수' ||
+    pin === '7777' ||
+    email === 'rladmdtn010@gmail.com' ||
+    email.includes('eungssoo')
+  );
+}
+
+// ⚙️ 15-2. 전역 시스템 파라미터 / 게임 경제 설정 조회
+export async function getSystemSettings(): Promise<SystemSettings> {
+  try {
+    const docRef = doc(db, 'system_configs', 'global_settings');
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return {
+        ...DEFAULT_SYSTEM_SETTINGS,
+        ...snap.data()
+      };
+    }
+  } catch (e) {
+    console.warn("getSystemSettings fallback:", e);
+  }
+  return DEFAULT_SYSTEM_SETTINGS;
+}
+
+// ⚙️ 15-3. 전역 시스템 파라미터 / 게임 경제 실시간 업데이트
+export async function updateSystemSettings(updates: Partial<SystemSettings>): Promise<boolean> {
+  try {
+    const docRef = doc(db, 'system_configs', 'global_settings');
+    const cleanUpdates = removeUndefinedDeep({
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+    await setDoc(docRef, cleanUpdates, { merge: true });
+    return true;
+  } catch (e) {
+    console.error("updateSystemSettings Error:", e);
+    return false;
+  }
+}
+
+// ⚡ 15-4. 관리자 갓 모드 (God Mode) 활성화: 코인 999,999 + 전 아바타 24종 올 언락 + 마스터 티어
+export async function grantAdminGodMode(userName: string): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
+  try {
+    const allAvatarIds = AVATAR_DATABASE.map(a => a.id);
+    const godCoins = 999999;
+    const godXp = 9999;
+
+    const userRef = doc(db, 'users', userName);
+    const snap = await getDoc(userRef);
+
+    const updates = removeUndefinedDeep({
+      isAdmin: true,
+      coins: godCoins,
+      xp: godXp,
+      tier: 'Master',
+      bookmarkLimit: 9999,
+      unlockedAvatars: allAvatarIds,
+      avatar: '👑',
+      currentAvatarId: 'emperor_dragon',
+      lastGodModeAt: serverTimestamp()
+    });
+
+    if (snap.exists()) {
+      await updateDoc(userRef, updates);
+    } else {
+      await setDoc(userRef, {
+        name: userName,
+        pin: '7777',
+        dailyGoal: 10,
+        totalSolved: 100,
+        totalCorrect: 100,
+        createdAt: serverTimestamp(),
+        ...updates
+      });
+    }
+
+    const updatedSnap = await getDoc(userRef);
+    const data = updatedSnap.data() || {};
+
+    const profile: UserProfile = {
+      name: data.name || userName,
+      pin: data.pin || '7777',
+      coins: godCoins,
+      bookmarkLimit: 9999,
+      avatar: '👑',
+      currentAvatarId: 'emperor_dragon',
+      unlockedAvatars: allAvatarIds,
+      xp: godXp,
+      tier: 'Master',
+      dailyGoal: data.dailyGoal || 10,
+      totalSolved: data.totalSolved || 100,
+      totalCorrect: data.totalCorrect || 100,
+      email: data.email,
+      photoURL: data.photoURL,
+      isAdmin: true
+    };
+
+    return { success: true, profile };
+  } catch (e: any) {
+    console.error("grantAdminGodMode Error:", e);
+    return { success: false, error: e.message || '갓 모드 적용에 실패했습니다.' };
+  }
+}
+
+// 📢 15-5. 전체 사용자 대상 실시간 푸시 공지 발송
+export async function sendGlobalAnnouncement(announcement: {
+  title: string;
+  content: string;
+  badgeType: 'event' | 'notice' | 'update' | 'maintenance';
+  rewardCoins?: number;
+  authorName: string;
+}): Promise<{ success: boolean; id?: string; error?: string }> {
+  try {
+    const col = collection(db, 'system_announcements');
+    const newDoc = doc(col);
+    const now = Date.now();
+
+    const payload = removeUndefinedDeep({
+      id: newDoc.id,
+      title: announcement.title,
+      content: announcement.content,
+      badgeType: announcement.badgeType,
+      rewardCoins: announcement.rewardCoins || 0,
+      createdAt: now,
+      expiresAt: now + (7 * 24 * 60 * 60 * 1000), // 7일 후 만료
+      isActive: true,
+      authorName: announcement.authorName,
+      serverTime: serverTimestamp()
+    });
+
+    await setDoc(newDoc, payload);
+    return { success: true, id: newDoc.id };
+  } catch (e: any) {
+    console.error("sendGlobalAnnouncement Error:", e);
+    return { success: false, error: e.message || '공지 발송 실패' };
+  }
+}
+
+// 📢 15-6. 활성화된 전체 공지 목록 조회
+export async function getActiveAnnouncements(): Promise<PushAnnouncement[]> {
+  try {
+    const col = collection(db, 'system_announcements');
+    const q = query(col, where('isActive', '==', true));
+    const snap = await getDocs(q);
+
+    const list: PushAnnouncement[] = [];
+    snap.forEach(d => {
+      const data = d.data();
+      list.push({
+        id: d.id,
+        title: data.title,
+        content: data.content,
+        badgeType: data.badgeType || 'notice',
+        rewardCoins: data.rewardCoins || 0,
+        createdAt: data.createdAt || Date.now(),
+        expiresAt: data.expiresAt,
+        isActive: data.isActive ?? true,
+        authorName: data.authorName || '관리자'
+      });
+    });
+
+    list.sort((a, b) => b.createdAt - a.createdAt);
+    return list;
+  } catch (e) {
+    console.warn("getActiveAnnouncements Error:", e);
+    return [];
+  }
+}
+
+// 🎁 15-7. 공지 첨부 보상 수령 처리
+export async function claimAnnouncementReward(userName: string, announcementId: string, coins: number): Promise<{ success: boolean; alreadyClaimed?: boolean }> {
+  try {
+    const claimKey = `claimed_announce_${userName}_${announcementId}`;
+    if (localStorage.getItem(claimKey)) {
+      return { success: false, alreadyClaimed: true };
+    }
+
+    if (coins > 0) {
+      await addCoins(userName, coins);
+    }
+    localStorage.setItem(claimKey, 'true');
+    return { success: true };
+  } catch (e) {
+    return { success: false };
+  }
+}
+
+// 👥 15-8. 관리자용 전체 유저 목록 조회
+export async function getAllUsersList(): Promise<UserProfile[]> {
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    const list: UserProfile[] = [];
+    snap.forEach(d => {
+      const data = d.data();
+      list.push({
+        name: data.name || d.id,
+        pin: data.pin || '****',
+        coins: data.coins ?? 200,
+        bookmarkLimit: data.bookmarkLimit ?? 50,
+        avatar: data.avatar || '🦁',
+        currentAvatarId: data.currentAvatarId || 'lion',
+        unlockedAvatars: data.unlockedAvatars || STARTER_AVATAR_IDS,
+        xp: data.xp || 0,
+        tier: data.tier || calculateTier(data.xp || 0).tier,
+        dailyGoal: data.dailyGoal || 10,
+        totalSolved: data.totalSolved || 0,
+        totalCorrect: data.totalCorrect || 0,
+        email: data.email,
+        photoURL: data.photoURL,
+        isAdmin: data.isAdmin
+      });
+    });
+    return list.sort((a, b) => (b.coins || 0) - (a.coins || 0));
+  } catch (e) {
+    console.error("getAllUsersList Error:", e);
+    return [];
+  }
+}
+
+// 🪙 15-9. 관리자 권한 유저 코인 직접 지급/차감
+export async function adminUpdateUserCoins(targetUserName: string, amount: number): Promise<boolean> {
+  try {
+    const userRef = doc(db, 'users', targetUserName);
+    await updateDoc(userRef, {
+      coins: amount
+    });
+    return true;
+  } catch (e) {
+    console.error("adminUpdateUserCoins Error:", e);
     return false;
   }
 }

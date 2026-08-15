@@ -21,7 +21,7 @@ import {
   BookMarked
 } from 'lucide-react';
 import { UserProfile, ViewType, CycleInfo } from '../types';
-import { calculateTier } from '../services/dbService';
+import { calculateTier, checkIsAdmin } from '../services/dbService';
 import { sound } from '../services/soundService';
 
 interface MainMenuViewProps {
@@ -32,6 +32,7 @@ interface MainMenuViewProps {
   onNavigate: (view: ViewType) => void;
   onStartDailyChallenge: () => void;
   onOpenReportCenter?: () => void;
+  onOpenAdminCenter?: () => void;
   onLogout: () => void;
 }
 
@@ -43,10 +44,12 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
   onNavigate,
   onStartDailyChallenge,
   onOpenReportCenter,
+  onOpenAdminCenter,
   onLogout,
 }) => {
   const currentXp = user.xp || 0;
   const tierInfo = calculateTier(currentXp);
+  const isAdmin = checkIsAdmin(user);
 
   return (
     <div className="min-h-screen bg-animated-gradient flex items-center justify-center p-3 sm:p-6 md:p-8">
@@ -62,6 +65,21 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 뽀개
               </span>
             </div>
+
+            {/* 👑 마스터 관리자 사령탑 버튼 (관리자만 노출) */}
+            {isAdmin && onOpenAdminCenter && (
+              <button
+                onClick={() => {
+                  sound.playReward();
+                  onOpenAdminCenter();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/40 border border-amber-200 active:scale-95 transition-all animate-pulse"
+                title="마스터 관리자 사령탑 열기"
+              >
+                <Crown className="w-3.5 h-3.5 fill-slate-950" />
+                <span>👑 관리자 사령탑</span>
+              </button>
+            )}
 
             {/* User Profile Button */}
             <button

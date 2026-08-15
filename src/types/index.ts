@@ -87,6 +87,30 @@ export interface UserProfile {
   email?: string;
   photoURL?: string;
   lastGeneratedAt?: number;
+  isAdmin?: boolean;
+}
+
+export interface SystemSettings {
+  rewardCoinsPerQuestion: number;
+  starterCoins: number;
+  gachaCost: number;
+  changeNicknameCost: number;
+  expandBookmarkCost: number;
+  geminiModel: string;
+  maintenanceMode: boolean;
+  maintenanceNotice?: string;
+}
+
+export interface PushAnnouncement {
+  id: string;
+  title: string;
+  content: string;
+  badgeType: 'event' | 'notice' | 'update' | 'maintenance';
+  rewardCoins?: number;
+  createdAt: number;
+  expiresAt?: number;
+  isActive: boolean;
+  authorName: string;
 }
 
 export interface WeaknessRecord {
