@@ -39,6 +39,28 @@ export function getTodayDateString(): string {
   return `${year}-${month}-${day}`;
 }
 
+// 🛡️ Firestore 안전 저장을 위한 undefined 재귀적 제거 헬퍼 (Unsupported field value: undefined 방지)
+export function removeUndefinedDeep<T = any>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return null as any;
+  }
+  if (Array.isArray(obj)) {
+    return obj
+      .filter(item => item !== undefined)
+      .map(item => removeUndefinedDeep(item)) as any;
+  }
+  if (typeof obj === 'object' && !(obj instanceof Date)) {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj as Record<string, any>)) {
+      if (value !== undefined) {
+        cleaned[key] = removeUndefinedDeep(value);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
 export function getCurrentCycleInfo(): CycleInfo {
   const now = new Date();
   const hour = now.getHours();
@@ -160,8 +182,7 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
             tier: calculateTier(currentXp).tier,
             dailyGoal,
             email: data.email,
-            photoURL: data.photoURL,
-            lastGeneratedAt: data.lastGeneratedAt
+            photoURL: data.photoURL
           }
         };
       } else {
@@ -183,14 +204,16 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
         totalCorrect: 0
       };
 
-      await setDoc(userRef, {
+      const cleanPayload = removeUndefinedDeep({
         ...newProfile,
         createdAt: serverTimestamp()
       });
 
+      await setDoc(userRef, cleanPayload);
+
       return { 
         success: true, 
-        isNew: true,
+        isNew: true, 
         profile: newProfile
       };
     }
@@ -246,10 +269,25 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
       photoURL: gUser.photoURL || undefined
     };
 
-    await setDoc(userRef, {
-      ...newProfile,
+    const cleanPayload = removeUndefinedDeep({
+      name: displayName,
+      pin: '0000',
+      coins: 200,
+      bookmarkLimit: 50,
+      avatar: '🦁',
+      currentAvatarId: 'lion',
+      unlockedAvatars: STARTER_AVATAR_IDS,
+      xp: 0,
+      tier: 'Bronze',
+      dailyGoal: 10,
+      totalSolved: 0,
+      totalCorrect: 0,
+      email: gUser.email || null,
+      photoURL: gUser.photoURL || null,
       createdAt: serverTimestamp()
     });
+
+    await setDoc(userRef, cleanPayload);
 
     return newProfile;
   }
@@ -327,10 +365,23 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
         photoURL: gUser.photoURL || undefined
       };
 
-      await updateDoc(userRef, {
-        ...updatedProfile,
+      const cleanPayload = removeUndefinedDeep({
+        name: updatedProfile.name,
+        pin: updatedProfile.pin,
+        coins: updatedProfile.coins,
+        bookmarkLimit: updatedProfile.bookmarkLimit,
+        avatar: updatedProfile.avatar,
+        currentAvatarId: updatedProfile.currentAvatarId,
+        unlockedAvatars: updatedProfile.unlockedAvatars,
+        xp: updatedProfile.xp,
+        tier: updatedProfile.tier,
+        dailyGoal: updatedProfile.dailyGoal,
+        email: gUser.email || null,
+        photoURL: gUser.photoURL || null,
         lastLinkedAt: serverTimestamp()
       });
+
+      await updateDoc(userRef, cleanPayload);
     } else {
       updatedProfile = {
         ...currentUser,
@@ -338,11 +389,24 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
         photoURL: gUser.photoURL || undefined
       };
 
-      await setDoc(userRef, {
-        ...updatedProfile,
+      const cleanPayload = removeUndefinedDeep({
+        name: updatedProfile.name,
+        pin: updatedProfile.pin,
+        coins: updatedProfile.coins,
+        bookmarkLimit: updatedProfile.bookmarkLimit,
+        avatar: updatedProfile.avatar,
+        currentAvatarId: updatedProfile.currentAvatarId,
+        unlockedAvatars: updatedProfile.unlockedAvatars,
+        xp: updatedProfile.xp,
+        tier: updatedProfile.tier,
+        dailyGoal: updatedProfile.dailyGoal,
+        email: gUser.email || null,
+        photoURL: gUser.photoURL || null,
         createdAt: serverTimestamp(),
         lastLinkedAt: serverTimestamp()
       });
+
+      await setDoc(userRef, cleanPayload);
     }
 
     return { success: true, profile: updatedProfile };
@@ -768,25 +832,36 @@ export async function isQuestionBookmarked(userName: string, sentence: string): 
   }
 }
 
-// Helper: Firestore 안전 저장을 위한 Question 객체 정제 (undefined 제거)
-function cleanQuestionForStorage(q: Question): any {
-  return {
-    form: sanitizeForm(q.form),
-    sentence: q.sentence || '',
-    options: (q.options || []).map(opt => ({
-      text: typeof opt === 'string' ? opt : (opt.text || ''),
-      is_correct: typeof opt === 'object' ? !!opt.is_correct : false,
-      feedback: typeof opt === 'object' ? (opt.feedback || '') : ''
-    })),
-    answer: q.answer || '',
-    translation: q.translation || '',
+// Helper: Firestore 안전 저장을 위한 Question 객체 정제 (undefined 100% 제거)
+export function cleanQuestionForStorage(q: any): any {
+  return removeUndefinedDeep({
+    form: sanitizeForm(q?.form),
+    sentence: q?.sentence || '',
+    options: Array.isArray(q?.options)
+      ? q.options.map((opt: any) => {
+          if (typeof opt === 'string') return opt;
+          return {
+            text: opt?.text || '',
+            is_correct: !!opt?.is_correct,
+            feedback: opt?.feedback || ''
+          };
+        })
+      : [],
+    answer: q?.answer || '',
+    translation: q?.translation || '',
     explanation: {
-      chunk_pattern: q.explanation?.chunk_pattern || '핵심 문형 정리',
-      nuance: q.explanation?.nuance || '자연스러운 뉘앙스 해설'
+      chunk_pattern: q?.explanation?.chunk_pattern || '핵심 문형 정리',
+      nuance: q?.explanation?.nuance || '자연스러운 뉘앙스 해설'
     },
-    components: q.components || [],
-    difficulty: q.difficulty || 'Level 1'
-  };
+    components: Array.isArray(q?.components)
+      ? q.components.map((c: any) => ({
+          chunk: c?.chunk || '',
+          role: c?.role || '수식어',
+          meaning: c?.meaning || ''
+        }))
+      : [],
+    difficulty: q?.difficulty || 'Level 1'
+  });
 }
 
 // ⭐ 즐겨찾기 토글 (추가/삭제 - Firestore + 로컬 100% 동기화)
@@ -958,15 +1033,10 @@ export async function saveQuestionsToFirestore(questions: Question[], difficulty
 
     for (const q of questions) {
       const newDocRef = doc(questionsCol);
+      const cleaned = cleanQuestionForStorage({ ...q, difficulty });
       batch.set(newDocRef, {
-        difficulty,
-        form: sanitizeForm(q.form),
-        sentence: q.sentence,
-        options: q.options || [],
-        answer: q.answer,
-        translation: q.translation,
-        explanation: q.explanation || { chunk_pattern: '데이터 누락', nuance: '데이터 누락' },
-        components: q.components || [],
+        ...cleaned,
+        difficulty: difficulty || 'Level 1',
         createdAt: serverTimestamp()
       });
     }
@@ -1032,16 +1102,11 @@ export async function savePersonalQuestionsToFirestore(userName: string, questio
 
     for (const q of questions) {
       const newDocRef = doc(personalCol);
+      const cleaned = cleanQuestionForStorage({ ...q, difficulty });
       batch.set(newDocRef, {
+        ...cleaned,
         userName,
-        difficulty,
-        form: sanitizeForm(q.form),
-        sentence: q.sentence,
-        options: q.options || [],
-        answer: q.answer,
-        translation: q.translation,
-        explanation: q.explanation || { chunk_pattern: '데이터 누락', nuance: '데이터 누락' },
-        components: q.components || [],
+        difficulty: difficulty || 'Level 1',
         createdAt: serverTimestamp()
       });
     }
@@ -1163,15 +1228,17 @@ export async function getOrCreateCycleQuestions(cycleInfo: CycleInfo): Promise<{
 // 7. 오답 저장
 export async function saveIncorrectQuestion(userName: string, qData: Question, wrongAnswer: string, difficulty?: string): Promise<boolean> {
   try {
-    await addDoc(collection(db, 'weaknesses'), {
+    const cleanPayload = removeUndefinedDeep({
       userName,
       difficulty: difficulty || '일일 랭킹전',
-      form: sanitizeForm(qData.form),
-      sentence: qData.sentence,
-      wrongAnswer,
-      correctAnswer: qData.answer,
+      form: sanitizeForm(qData?.form),
+      sentence: qData?.sentence || '',
+      wrongAnswer: wrongAnswer || '',
+      correctAnswer: qData?.answer || '',
       createdAt: serverTimestamp()
     });
+
+    await addDoc(collection(db, 'weaknesses'), cleanPayload);
     return true;
   } catch (error) {
     console.error("saveIncorrectQuestion Error:", error);

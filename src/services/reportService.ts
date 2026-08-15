@@ -12,7 +12,7 @@ import {
 import { db } from '../config/firebase';
 import { Question, UserProfile } from '../types';
 import { callGeminiProxy } from './geminiService';
-import { addCoins } from './dbService';
+import { addCoins, removeUndefinedDeep } from './dbService';
 
 export interface QuestionReport {
   id?: string;
@@ -111,7 +111,7 @@ export async function submitQuestionReport(
       dateStr: today
     };
 
-    await setDoc(newDocRef, reportData);
+    await setDoc(newDocRef, removeUndefinedDeep(reportData));
 
     // Save locally as backup
     try {
