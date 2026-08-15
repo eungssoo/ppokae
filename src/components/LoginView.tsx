@@ -45,7 +45,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
           <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">
             문법부터 단어, 회화 표현까지 전부 뽀개보자!<br />
-            가입 즉시 <strong>🪙 1,000 코인</strong> & 스타터 아바타 4종 무료 지급!
+            가입 즉시 <strong>🪙 200 코인</strong> & 스타터 아바타 4종 무료 지급!
           </p>
         </div>
 
@@ -149,7 +149,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600'
             }`}
           >
-            <span>{authMode === 'register' ? '계정 만들고 🪙 1,000 코인 받기' : 'PIN으로 로그인'}</span>
+            <span>{authMode === 'register' ? '계정 만들고 🪙 200 코인 받기' : 'PIN으로 로그인'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>

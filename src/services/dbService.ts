@@ -126,7 +126,7 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
     if (userSnap.exists()) {
       const data = userSnap.data();
       if (data.pin === formattedPin) {
-        const userCoins = typeof data.coins === 'number' ? data.coins : 1000;
+        const userCoins = typeof data.coins === 'number' ? data.coins : 200;
         const bLimit = typeof data.bookmarkLimit === 'number' ? data.bookmarkLimit : 50;
         const currentXp = typeof data.xp === 'number' ? data.xp : 0;
         const avatar = data.avatar || '🦁';
@@ -171,7 +171,7 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
       const newProfile: UserProfile = {
         name: trimmedName,
         pin: formattedPin,
-        coins: 1000,
+        coins: 200,
         bookmarkLimit: 50,
         avatar: '🦁',
         currentAvatarId: 'lion',
@@ -217,7 +217,7 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
     return {
       name: data.name || displayName,
       pin: '0000',
-      coins: data.coins ?? 1000,
+      coins: data.coins ?? 200,
       bookmarkLimit: data.bookmarkLimit ?? 50,
       avatar: data.avatar || '🦁',
       currentAvatarId: data.currentAvatarId || 'lion',
@@ -232,7 +232,7 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
     const newProfile: UserProfile = {
       name: displayName,
       pin: '0000',
-      coins: 1000,
+      coins: 200,
       bookmarkLimit: 50,
       avatar: '🦁',
       currentAvatarId: 'lion',
@@ -309,7 +309,7 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
         ...(data.unlockedAvatars || []),
         ...(currentUser.unlockedAvatars || [])
       ]));
-      const maxCoins = Math.max(data.coins ?? 1000, currentUser.coins ?? 1000);
+      const maxCoins = Math.max(data.coins ?? 200, currentUser.coins ?? 200);
       const maxXp = Math.max(data.xp || 0, currentUser.xp || 0);
 
       updatedProfile = {
