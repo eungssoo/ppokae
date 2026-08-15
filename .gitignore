@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-ssr
+*.local
+.env
+.env.*
+.DS_Store
+.vercel
+*.log
+seed_*.js
+reseed_*.js
+fix_*.js
+patch-*.cjs
+patch-*.js

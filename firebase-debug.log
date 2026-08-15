@@ -1,0 +1,18 @@
+[debug] [2026-08-15T14:59:57.357Z] ----------------------------------------------------------------------
+[debug] [2026-08-15T14:59:57.369Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\SAMSUNG\AppData\Local\npm-cache\_npx\7750544ccf494d8b\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-08-15T14:59:57.370Z] CLI Version:   15.27.0
+[debug] [2026-08-15T14:59:57.371Z] Platform:      win32
+[debug] [2026-08-15T14:59:57.371Z] Node Version:  v24.15.0
+[debug] [2026-08-15T14:59:57.372Z] Detected Agent: unknown
+[debug] [2026-08-15T14:59:57.372Z] Time:          Sun Aug 16 2026 00:29:57 GMT+0930 (호주 중부 표준시)
+[debug] [2026-08-15T14:59:57.372Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-15T14:59:57.413Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-08-15T15:01:11.974Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-15T15:01:11.975Z] > authorizing via signed-in user (rladmdtn01010@gmail.com)
+[debug] [2026-08-15T15:01:11.976Z] [iam] checking project daybreak-72ea7 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-08-15T15:01:11.983Z] Checked if tokens are valid: false, expires at: 1786099242216
+[debug] [2026-08-15T15:01:11.984Z] Checked if tokens are valid: false, expires at: 1786099242216
+[debug] [2026-08-15T15:01:11.985Z] > refreshing access token with scopes: []
+[debug] [2026-08-15T15:01:11.989Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-08-15T15:01:11.990Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
