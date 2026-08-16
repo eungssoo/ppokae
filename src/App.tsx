@@ -64,6 +64,7 @@ import {
   getQuestionFormStatsByLevel,
   getRankingQuestionPoints
 } from './services/dbService';
+import { auth } from './config/firebase';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
 import { generateBulkQuestions, generateNativeExpressions } from './services/geminiService';
 import { trackUserAction } from './services/analyticsService';
@@ -187,20 +188,24 @@ function AppContent() {
     setMasteryStats(mStats);
     setExpressionCounts(expCounts);
     setUser(prev => {
-      if (!prev) return null;
+      if (!prof && !prev) return null;
       const updated: UserProfile = {
-        ...prev,
-        coins: prof?.coins ?? prev.coins,
-        xp: prof?.xp ?? prev.xp,
-        tier: prof?.tier ?? prev.tier,
-        bookmarkLimit: prof?.bookmarkLimit ?? prev.bookmarkLimit,
-        avatar: prof?.avatar ?? prev.avatar,
-        currentAvatarId: prof?.currentAvatarId ?? prev.currentAvatarId,
-        unlockedAvatars: prof?.unlockedAvatars ?? prev.unlockedAvatars,
-        totalSolved: mStats.totalSolved || prof?.totalSolved || prev.totalSolved || 0,
-        totalCorrect: mStats.totalCorrect || prof?.totalCorrect || prev.totalCorrect || 0,
-        dailyGoal: prof?.dailyGoal ?? prev.dailyGoal ?? 10,
-        isAdmin: prof?.isAdmin ?? prev.isAdmin
+        name: prof?.name || prev?.name || userName,
+        pin: prof?.pin || prev?.pin || '000000',
+        coins: prof?.coins ?? prev?.coins ?? 200,
+        xp: prof?.xp ?? prev?.xp ?? 0,
+        tier: prof?.tier || prev?.tier || 'Bronze',
+        bookmarkLimit: prof?.bookmarkLimit ?? prev?.bookmarkLimit ?? 50,
+        avatar: prof?.avatar || prev?.avatar || '🦁',
+        currentAvatarId: prof?.currentAvatarId || prev?.currentAvatarId || 'lion',
+        unlockedAvatars: prof?.unlockedAvatars || prev?.unlockedAvatars || STARTER_AVATAR_IDS,
+        totalSolved: mStats.totalSolved || prof?.totalSolved || prev?.totalSolved || 0,
+        totalCorrect: mStats.totalCorrect || prof?.totalCorrect || prev?.totalCorrect || 0,
+        dailyGoal: prof?.dailyGoal ?? prev?.dailyGoal ?? 10,
+        email: prof?.email || prev?.email,
+        photoURL: prof?.photoURL || prev?.photoURL,
+        isAdmin: !!prof?.isAdmin,
+        createdAt: prof?.createdAt || prev?.createdAt
       };
       localStorage.setItem('ai_grammar_user', JSON.stringify(updated));
       return updated;
@@ -361,10 +366,15 @@ function AppContent() {
     }
   };
 
-  // Logout Handler
-  const handleLogout = () => {
+  // Logout Handler (Firebase Auth 세션 및 로컬 세션 완전 초기화)
+  const handleLogout = async () => {
     sound.playClick();
     localStorage.removeItem('ai_grammar_user');
+    try {
+      await auth.signOut();
+    } catch (e) {
+      console.warn("auth.signOut error:", e);
+    }
     setUser(null);
     setView('login');
     toast.info('로그아웃되었습니다.');

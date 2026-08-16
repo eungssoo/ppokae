@@ -142,6 +142,10 @@ export async function authenticateUser(
   starterAvatarId?: string
 ): Promise<{ success: boolean; profile?: UserProfile; isNew?: boolean; error?: string }> {
   try {
+    // 🔒 이전 구글 세션이 남아있다면 안전하게 초기화 후 익명 세션 생성
+    if (auth.currentUser && !auth.currentUser.isAnonymous) {
+      await auth.signOut();
+    }
     if (!auth.currentUser) {
       await signInAnonymously(auth);
     }
@@ -927,39 +931,32 @@ export async function addXp(userName: string, amount: number): Promise<{ newXp: 
   }
 }
 
-// 👤 전체 유저 프로필 데이터 조회 (코인, XP, 티어, 북마크 한도, 아바타)
+// 👤 전체 유저 프로필 데이터 조회 (계정별 독립 Firestore 데이터 조회)
 export async function getUserProfileData(userName: string): Promise<Partial<UserProfile> | null> {
   try {
     const userRef = doc(db, 'users', userName);
-    let snap = await getDoc(userRef);
-    let uidSnapData: any = {};
-    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
-      const uidSnap = await getDoc(doc(db, 'users', auth.currentUser.uid));
-      if (uidSnap.exists()) uidSnapData = uidSnap.data();
-    }
+    const snap = await getDoc(userRef);
 
-    if (snap.exists() || Object.keys(uidSnapData).length > 0) {
-      const data = snap.exists() ? snap.data() : {};
-      const xp = Math.max(data.xp || 0, uidSnapData.xp || 0);
-      const coins = Math.max(data.coins ?? 200, uidSnapData.coins ?? 200);
-      const bookmarkLimit = Math.max(data.bookmarkLimit || 50, uidSnapData.bookmarkLimit || 50);
-      const totalSolved = Math.max(data.totalSolved || 0, uidSnapData.totalSolved || 0);
-      const totalCorrect = Math.max(data.totalCorrect || 0, uidSnapData.totalCorrect || 0);
-      const dailyGoal = data.dailyGoal || uidSnapData.dailyGoal || 10;
+    if (snap.exists()) {
+      const data = snap.data();
+      const xp = typeof data.xp === 'number' ? data.xp : 0;
+      const coins = typeof data.coins === 'number' ? data.coins : 200;
+      const bookmarkLimit = typeof data.bookmarkLimit === 'number' ? data.bookmarkLimit : 50;
+      const totalSolved = typeof data.totalSolved === 'number' ? data.totalSolved : 0;
+      const totalCorrect = typeof data.totalCorrect === 'number' ? data.totalCorrect : 0;
+      const dailyGoal = typeof data.dailyGoal === 'number' ? data.dailyGoal : 10;
 
-      const unlockedAvatars = Array.from(new Set([
-        ...STARTER_AVATAR_IDS,
-        ...(Array.isArray(data.unlockedAvatars) ? data.unlockedAvatars : []),
-        ...(Array.isArray(uidSnapData.unlockedAvatars) ? uidSnapData.unlockedAvatars : [])
-      ]));
+      const unlockedAvatars = Array.isArray(data.unlockedAvatars) && data.unlockedAvatars.length > 0 
+        ? Array.from(new Set([...STARTER_AVATAR_IDS, ...data.unlockedAvatars])) 
+        : STARTER_AVATAR_IDS;
 
-      const avatar = data.avatar || uidSnapData.avatar || '🦁';
-      const currentAvatarId = data.currentAvatarId || uidSnapData.currentAvatarId || 'lion';
-      const isAdmin = data.isAdmin || uidSnapData.isAdmin;
+      const avatar = data.avatar || '🦁';
+      const currentAvatarId = data.currentAvatarId || 'lion';
+      const isAdmin = checkIsAdmin({ name: data.name || userName, pin: data.pin, email: data.email, isAdmin: data.isAdmin });
 
       return {
-        name: data.name || uidSnapData.name || userName,
-        pin: data.pin || uidSnapData.pin,
+        name: data.name || userName,
+        pin: data.pin,
         coins,
         xp,
         tier: calculateTier(xp).tier,
@@ -970,10 +967,10 @@ export async function getUserProfileData(userName: string): Promise<Partial<User
         totalSolved,
         totalCorrect,
         dailyGoal,
-        email: data.email || uidSnapData.email,
-        photoURL: data.photoURL || uidSnapData.photoURL,
+        email: data.email,
+        photoURL: data.photoURL,
         isAdmin,
-        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : uidSnapData.createdAt?.toMillis ? uidSnapData.createdAt.toMillis() : Date.now()
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : typeof data.createdAt === 'number' ? data.createdAt : Date.now()
       };
     }
     return null;
