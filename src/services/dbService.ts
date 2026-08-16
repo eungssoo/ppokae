@@ -517,7 +517,7 @@ export async function changeUserNickname(
   }
 }
 
-// 🎰 1-2-2. 아바타 가챠 뽑기 (1회 🪙 30 / 10회 🪙 270)
+// 🎰 1-2-2. 아바타 가챠 뽑기 (1회 🪙 30 / 10회 🪙 270, 관리자 무료)
 export async function drawGachaAvatar(
   userName: string, 
   drawCount: 1 | 10 = 1
@@ -531,16 +531,32 @@ export async function drawGachaAvatar(
 }> {
   try {
     const cost = drawCount === 10 ? 270 : 30;
-    const currentCoins = await getUserCoins(userName);
-    if (currentCoins < cost) {
-      return { success: false, error: `코인이 부족합니다! (필요: ${cost} 코인 / 보유: ${currentCoins} 코인)` };
-    }
 
     const userRef = doc(db, 'users', userName);
     const snap = await getDoc(userRef);
-    if (!snap.exists()) return { success: false, error: "사용자를 찾을 수 없습니다." };
+    let data: any = {};
+    if (snap.exists()) {
+      data = snap.data();
+    } else {
+      data = {
+        name: userName,
+        coins: 200,
+        unlockedAvatars: STARTER_AVATAR_IDS,
+        avatar: '🦁',
+        currentAvatarId: 'lion',
+        createdAt: serverTimestamp()
+      };
+      await setDoc(userRef, data);
+    }
 
-    const data = snap.data();
+    const isAdmin = data.isAdmin || checkIsAdmin(data as UserProfile) || userName === 'admin';
+    const finalDrawCost = isAdmin ? 0 : cost;
+
+    const currentCoins = data.coins ?? 200;
+    if (!isAdmin && currentCoins < finalDrawCost) {
+      return { success: false, error: `코인이 부족합니다! (필요: ${finalDrawCost} 코인 / 보유: ${currentCoins} 코인)` };
+    }
+
     const currentUnlocked: string[] = Array.isArray(data.unlockedAvatars) 
       ? Array.from(new Set([...STARTER_AVATAR_IDS, ...data.unlockedAvatars])) 
       : [...STARTER_AVATAR_IDS];
@@ -561,16 +577,17 @@ export async function drawGachaAvatar(
       }
     }
 
-    const netCost = cost - totalRefund;
-    const finalCoins = Math.max(0, currentCoins - netCost);
+    const netCost = isAdmin ? 0 : Math.max(0, cost - totalRefund);
+    const finalCoins = isAdmin ? 999999 : Math.max(0, currentCoins - netCost);
 
     const newlyUnlockedArr = Array.from(newlyUnlockedSet);
     const updatedUnlockedList = Array.from(new Set([...currentUnlocked, ...newlyUnlockedArr]));
 
-    await updateDoc(userRef, {
+    await setDoc(userRef, {
       coins: finalCoins,
-      unlockedAvatars: updatedUnlockedList
-    });
+      unlockedAvatars: updatedUnlockedList,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
 
     return {
       success: true,
@@ -580,11 +597,12 @@ export async function drawGachaAvatar(
       newlyUnlockedIds: newlyUnlockedArr
     };
   } catch (e: any) {
+    console.error("drawGachaAvatar Error:", e);
     return { success: false, error: e.message || "가챠 뽑기 중 오류가 발생했습니다." };
   }
 }
 
-// 👕 1-2-3. 보유 아바타 장착 / 갈아끼우기 (🪙 10 코인 소모)
+// 👕 1-2-3. 보유 아바타 장착 / 갈아끼우기 (🪙 10 코인 소모, 스타터/관리자 무료)
 export async function equipUserAvatar(
   userName: string, 
   avatar: AvatarItem, 
@@ -592,21 +610,25 @@ export async function equipUserAvatar(
 ): Promise<{ success: boolean; newCoins?: number; error?: string }> {
   try {
     const isStarter = STARTER_AVATAR_IDS.includes(avatar.id);
-    const finalCost = isStarter ? 0 : cost; // 기본 스타터는 무료 교체, 가챠 아바타는 🪙 10
+    const userRef = doc(db, 'users', userName);
+    const snap = await getDoc(userRef);
+    const data = snap.exists() ? snap.data() : {};
+    const isAdmin = data.isAdmin || checkIsAdmin(data as UserProfile) || userName === 'admin';
+    const finalCost = (isStarter || isAdmin) ? 0 : cost;
 
     if (finalCost > 0) {
-      const currentCoins = await getUserCoins(userName);
+      const currentCoins = data.coins ?? 200;
       if (currentCoins < finalCost) {
         return { success: false, error: `코인이 부족합니다! (필요: ${finalCost} 코인 / 보유: ${currentCoins} 코인)` };
       }
       await deductCoins(userName, finalCost);
     }
 
-    const userRef = doc(db, 'users', userName);
-    await updateDoc(userRef, {
+    await setDoc(userRef, {
       avatar: avatar.icon,
-      currentAvatarId: avatar.id
-    });
+      currentAvatarId: avatar.id,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
 
     const newCoins = await getUserCoins(userName);
     return { success: true, newCoins };
@@ -660,7 +682,7 @@ export async function recordQuizResultStats(userName: string, form: number, isCo
       updates[formKeyCorrect] = increment(1);
     }
 
-    await updateDoc(userRef, updates);
+    await setDoc(userRef, updates, { merge: true });
   } catch (e) {
     console.error("recordQuizResultStats Error:", e);
   }
@@ -737,9 +759,10 @@ export async function getUserCoins(userName: string): Promise<number> {
 export async function addCoins(userName: string, amount: number): Promise<number> {
   try {
     const userRef = doc(db, 'users', userName);
-    await updateDoc(userRef, {
-      coins: increment(amount)
-    });
+    await setDoc(userRef, {
+      coins: increment(amount),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
     return await getUserCoins(userName);
   } catch (e) {
     console.error("addCoins error:", e);

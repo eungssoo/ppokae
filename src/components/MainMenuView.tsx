@@ -140,7 +140,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
             sound.playClick();
             onStartDailyChallenge();
           }}
-          className="w-full mb-5 group p-5 sm:p-6 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 rounded-[2rem] transition-all shadow-[0_10px_30px_rgba(249,115,22,0.3)] hover:shadow-[0_15px_40px_rgba(249,115,22,0.45)] hover:-translate-y-0.5 active:scale-[0.99] text-left relative overflow-hidden border border-orange-400/40"
+          className="w-full mb-4 group p-5 sm:p-6 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 rounded-[2rem] transition-all shadow-[0_10px_30px_rgba(249,115,22,0.3)] hover:shadow-[0_15px_40px_rgba(249,115,22,0.45)] hover:-translate-y-0.5 active:scale-[0.99] text-left relative overflow-hidden border border-orange-400/40"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
           
@@ -166,6 +166,51 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
             모두에게 똑같은 공식 10문제! 빠른 완주로 1위 탈환 & <strong>보상 코인</strong> 획득! ⚡
           </p>
         </button>
+
+        {/* 📊 1.5. 나의 실시간 티어 & 성장 대시보드 (Highlight Growth & Tier Progress) */}
+        <div 
+          onClick={() => {
+            sound.playClick();
+            onNavigate('analytics_view');
+          }}
+          className="w-full mb-5 cursor-pointer group p-4 sm:p-5 bg-gradient-to-br from-indigo-950/70 via-purple-950/80 to-slate-900/90 rounded-[2rem] border border-indigo-500/40 hover:border-indigo-400 shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-0.5 transition-all text-left relative overflow-hidden active:scale-[0.99]"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-xl shadow-md flex-shrink-0">
+                {tierInfo.icon}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black uppercase text-purple-300">나의 실시간 성장 리포트</span>
+                  <span className={`bg-gradient-to-r ${tierInfo.badgeColor} text-white font-black text-[10px] px-2 py-0.2 rounded-full`}>
+                    {tierInfo.tier}
+                  </span>
+                </div>
+                <div className="text-sm font-black text-white">
+                  누적 {currentXp.toLocaleString()} XP • 정답률 {user.totalSolved ? Math.round(((user.totalCorrect || 0) / user.totalSolved) * 100) : 100}%
+                </div>
+              </div>
+            </div>
+
+            <div className="text-xs font-black text-indigo-300 group-hover:text-white flex items-center gap-1 bg-indigo-500/20 group-hover:bg-indigo-500/40 px-3 py-1.5 rounded-xl border border-indigo-500/40 transition-all">
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>성장 분석 대시보드 ➔</span>
+            </div>
+          </div>
+
+          {/* XP Progress Bar */}
+          <div className="w-full bg-slate-950/80 h-2 rounded-full overflow-hidden border border-slate-800">
+            <div
+              className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500"
+              style={{ width: `${tierInfo.progress}%` }}
+            />
+          </div>
+          <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1 font-mono">
+            <span>{tierInfo.tier}</span>
+            <span>{tierInfo.maxXp === Infinity ? '최고 티어 도달 👑' : `${Math.max(0, tierInfo.maxXp - currentXp).toLocaleString()} XP 남음 (${tierInfo.progress}%)`}</span>
+          </div>
+        </div>
 
         {/* 🚀 2. Core Study Hub: 문제 풀이 핵심 존 (2x2 그리드 최상단 배치) */}
         <div className="mb-5">

@@ -1170,6 +1170,8 @@ function AppContent() {
       {view === 'profile_view' && user && (
         <ProfileView
           user={user}
+          masteryStats={masteryStats}
+          bookmarkCount={bookmarks.length}
           onBack={() => setView('menu')}
           onUpdateDailyGoal={handleUpdateDailyGoal}
           onRequestChangeNickname={handleRequestChangeNickname}
@@ -1178,6 +1180,7 @@ function AppContent() {
           onDeleteAccount={handleDeleteAccount}
           onLinkGoogleAccount={handleLinkGoogleAccount}
           onOpenAdminCenter={() => setIsAdminModalOpen(true)}
+          onGoAnalytics={() => setView('analytics_view')}
         />
       )}
 

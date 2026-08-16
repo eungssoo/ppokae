@@ -43,6 +43,7 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
   const [totalRefund, setTotalRefund] = useState<number>(0);
   const [lastCount, setLastCount] = useState<1 | 10>(1);
   const [equippedId, setEquippedId] = useState<string | undefined>(currentAvatarId);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -51,6 +52,7 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
     setLastCount(count);
     setIsDrawing(true);
     setDrawResults(null);
+    setErrorMsg(null);
 
     // Simulate chest opening shake & sound
     sound.playStar();
@@ -68,12 +70,16 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
         setDrawResults(sorted);
         setTotalRefund(res.totalRefund || 0);
         sound.playCoin();
+      } else {
+        sound.playIncorrect();
+        setErrorMsg(res.error || "코인이 부족하거나 가챠를 진행할 수 없습니다.");
       }
-    }, 1300);
+    }, 1000);
   };
 
   const handleReset = () => {
     setDrawResults(null);
+    setErrorMsg(null);
   };
 
   const handleDirectEquip = (avatar: AvatarItem) => {
@@ -122,6 +128,19 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
             </span>
           </div>
         </div>
+
+        {/* ⚠️ Error Alert Screen */}
+        {errorMsg && !isDrawing && (
+          <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/40 rounded-2xl animate-fade-in flex flex-col items-center justify-center gap-2">
+            <div className="text-sm font-black text-rose-300 flex items-center gap-2">
+              <span>⚠️</span>
+              <span>{errorMsg}</span>
+            </div>
+            <p className="text-xs text-slate-400">
+              일반 퀴즈나 실시간 랭킹전에 참여하시면 🪙 코인을 보상으로 획득할 수 있습니다!
+            </p>
+          </div>
+        )}
 
         {/* 🎲 Case 1: Drawing Animation Screen */}
         {isDrawing && (

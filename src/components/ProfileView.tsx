@@ -16,15 +16,27 @@ import {
   BookOpen,
   Layers,
   Star,
-  Crown
+  Crown,
+  BarChart3,
+  TrendingUp,
+  Zap,
+  Award,
+  ChevronRight
 } from 'lucide-react';
-import { UserProfile, AvatarItem, AvatarGrade } from '../types';
+import { UserProfile, AvatarItem, AvatarGrade, FormMastery } from '../types';
 import { AVATAR_DATABASE, GRADE_CONFIG, STARTER_AVATAR_IDS } from '../services/avatarService';
-import { checkIsAdmin } from '../services/dbService';
+import { checkIsAdmin, calculateTier } from '../services/dbService';
 import { sound } from '../services/soundService';
 
 interface ProfileViewProps {
   user: UserProfile;
+  masteryStats?: {
+    formMasteries: FormMastery[];
+    totalSolved: number;
+    totalCorrect: number;
+    overallAccuracy: number;
+  };
+  bookmarkCount?: number;
   onBack: () => void;
   onUpdateDailyGoal: (goal: number) => void;
   onRequestChangeNickname: (newName: string) => void;
@@ -33,6 +45,7 @@ interface ProfileViewProps {
   onDeleteAccount: () => void;
   onLinkGoogleAccount?: () => void;
   onOpenAdminCenter?: () => void;
+  onGoAnalytics?: () => void;
 }
 
 const GRADE_ORDER: Record<AvatarGrade, number> = {
@@ -45,8 +58,18 @@ const GRADE_ORDER: Record<AvatarGrade, number> = {
   starter: 7
 };
 
+const FORM_SHORT_NAMES: Record<number, { title: string; desc: string }> = {
+  1: { title: '1형식 (S+V)', desc: '완전자동사' },
+  2: { title: '2형식 (S+V+C)', desc: '불완전자동사/보어' },
+  3: { title: '3형식 (S+V+O)', desc: '완전타동사/목적어' },
+  4: { title: '4형식 (S+V+IO+DO)', desc: '수여동사/간접목적어' },
+  5: { title: '5형식 (S+V+O+OC)', desc: '목적격보어/사역·지각' }
+};
+
 export const ProfileView: React.FC<ProfileViewProps> = ({
   user,
+  masteryStats,
+  bookmarkCount = 0,
   onBack,
   onUpdateDailyGoal,
   onRequestChangeNickname,
@@ -55,10 +78,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDeleteAccount,
   onLinkGoogleAccount,
   onOpenAdminCenter,
+  onGoAnalytics,
 }) => {
   const [name, setName] = useState<string>(user.name);
   const [dailyGoal, setDailyGoal] = useState<number>(user.dailyGoal || 10);
   const [filterMode, setFilterMode] = useState<'all' | 'owned'>('all');
+
+  const currentXp = user.xp || 0;
+  const tierInfo = calculateTier(currentXp);
 
   const unlockedIds = Array.isArray(user.unlockedAvatars) && user.unlockedAvatars.length > 0 
     ? Array.from(new Set([...STARTER_AVATAR_IDS, ...user.unlockedAvatars])) 
@@ -76,6 +103,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     : sortedAvatars;
 
   const unlockedCount = AVATAR_DATABASE.filter(a => unlockedIds.includes(a.id)).length;
+
+  const totalSolvedCount = masteryStats?.totalSolved ?? user.totalSolved ?? 0;
+  const overallAcc = masteryStats?.overallAccuracy ?? (user.totalSolved ? Math.round(((user.totalCorrect || 0) / user.totalSolved) * 100) : 0);
 
   const handleNicknameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,46 +132,177 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <span>메인으로</span>
           </button>
 
-          {/* Coin Badge */}
-          <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-full text-xs font-black text-amber-300 shadow-sm">
-            <Coins className="w-3.5 h-3.5 text-yellow-400" />
-            <span>{user.coins ?? 200} 코인</span>
+          <div className="flex items-center gap-2">
+            {/* Coin Badge */}
+            <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-full text-xs font-black text-amber-300 shadow-sm">
+              <Coins className="w-3.5 h-3.5 text-yellow-400" />
+              <span>{user.coins ?? 200} 코인</span>
+            </div>
           </div>
         </div>
 
-        {/* Current User Hero Badge */}
-        <div className="bg-gradient-to-br from-indigo-900/60 via-purple-950/80 to-slate-900/90 rounded-3xl p-4 sm:p-5 border border-purple-500/30 shadow-lg mb-5 flex flex-col sm:flex-row items-center justify-between gap-3.5">
-          <div className="flex items-center gap-3.5 w-full sm:w-auto">
-            <div className="w-16 h-16 rounded-2xl bg-slate-800/90 border border-purple-400/40 flex items-center justify-center text-4xl shadow-inner flex-shrink-0">
-              {user.avatar || '🦁'}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-purple-300">현재 대표 프로필</span>
-                <span className="bg-purple-500/20 text-purple-200 text-[10px] font-black px-2 py-0.5 rounded-full border border-purple-500/30">
-                  도감 {unlockedCount} / {AVATAR_DATABASE.length} 수집
-                </span>
+        {/* 🌟 1. Current User Hero Profile Banner */}
+        <div className="bg-gradient-to-br from-indigo-900/70 via-purple-950/85 to-slate-900/95 rounded-3xl p-5 sm:p-6 border border-purple-500/40 shadow-xl mb-5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <div className="w-20 h-20 rounded-3xl bg-slate-800/90 border-2 border-purple-400/50 flex items-center justify-center text-5xl shadow-[0_0_25px_rgba(168,85,247,0.4)] flex-shrink-0 animate-pulse">
+                {user.avatar || '🦁'}
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                {user.name}
-              </h2>
+              <div>
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className={`bg-gradient-to-r ${tierInfo.badgeColor} text-white text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-sm flex items-center gap-1`}>
+                    <span>{tierInfo.icon}</span>
+                    <span>{tierInfo.tier}</span>
+                  </span>
+                  <span className="bg-purple-500/20 text-purple-200 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-purple-500/30">
+                    아바타 도감 {unlockedCount} / {AVATAR_DATABASE.length} 수집
+                  </span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                  <span>{user.name}</span>
+                  <span className="text-sm font-bold text-slate-400">님</span>
+                </h2>
+                <p className="text-xs text-purple-200/80 font-medium">
+                  {tierInfo.tier} 티어 • 누적 {currentXp.toLocaleString()} XP
+                </p>
+              </div>
+            </div>
+
+            {/* 🎰 Gacha Button */}
+            <button
+              onClick={() => {
+                sound.playClick();
+                onOpenGachaModal();
+              }}
+              className="w-full sm:w-auto px-6 py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white font-black text-xs sm:text-sm rounded-2xl shadow-[0_10px_30px_rgba(236,72,153,0.4)] transition-all active:scale-95 flex items-center justify-center gap-2 border border-pink-400/50"
+            >
+              <Gift className="w-4 h-4 text-yellow-200 animate-bounce" />
+              <span>아바타 가챠 소환 🎰</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 📊 2. 나의 실시간 영문법 성장 대시보드 (Highlight Growth & Mastery) */}
+        <div className="bg-slate-900/90 rounded-3xl p-4 sm:p-5 border border-indigo-500/30 shadow-lg mb-6">
+          <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2.5">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-sm sm:text-base font-black text-white">
+                나의 영문법 성장 대시보드 📊
+              </h3>
+            </div>
+            {onGoAnalytics && (
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  onGoAnalytics();
+                }}
+                className="text-[11px] font-black text-indigo-300 hover:text-white flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/30 px-2.5 py-1 rounded-xl border border-indigo-500/40 transition-all active:scale-95"
+              >
+                <span>상세 분석 보기</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Tier & XP Progress Bar */}
+          <div className="bg-slate-950/60 rounded-2xl p-3.5 border border-slate-800 mb-3.5">
+            <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+              <span className="text-slate-300 flex items-center gap-1">
+                <span>{tierInfo.icon}</span>
+                <span>다음 티어 승급까지</span>
+              </span>
+              <span className="text-indigo-300 font-mono">
+                {tierInfo.maxXp === Infinity 
+                  ? '최고 마스터 도달 👑' 
+                  : `${Math.max(0, tierInfo.maxXp - currentXp).toLocaleString()} XP 남음 (${tierInfo.progress}%)`}
+              </span>
+            </div>
+            <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700/60">
+              <div
+                className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500"
+                style={{ width: `${tierInfo.progress}%` }}
+              />
             </div>
           </div>
 
-          {/* 🎰 Gacha Button */}
-          <button
-            onClick={() => {
-              sound.playClick();
-              onOpenGachaModal();
-            }}
-            className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-amber-500 hover:from-pink-600 hover:to-amber-600 text-white font-black text-xs sm:text-sm rounded-2xl shadow-[0_8px_25px_rgba(236,72,153,0.35)] transition-all active:scale-95 flex items-center justify-center gap-2 border border-pink-400/50"
-          >
-            <Gift className="w-4 h-4 text-yellow-200" />
-            <span>아바타 가챠 소환 🎰</span>
-          </button>
+          {/* 4-Box Key Metrics Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3.5">
+            {/* Total Solved */}
+            <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
+                총 푼 문제
+              </div>
+              <div className="text-base sm:text-lg font-black text-white">
+                {totalSolvedCount} <span className="text-xs text-slate-400 font-normal">문제</span>
+              </div>
+            </div>
+
+            {/* Overall Accuracy */}
+            <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
+                종합 정답률
+              </div>
+              <div className={`text-base sm:text-lg font-black ${
+                overallAcc >= 90 ? 'text-emerald-400' : overallAcc >= 70 ? 'text-cyan-400' : 'text-amber-400'
+              }`}>
+                {overallAcc}%
+              </div>
+            </div>
+
+            {/* Total Coins */}
+            <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
+                보유 코인
+              </div>
+              <div className="text-base sm:text-lg font-black text-amber-300">
+                {user.coins ?? 200} <span className="text-xs text-amber-200/80 font-normal">🪙</span>
+              </div>
+            </div>
+
+            {/* Bookmark Limit */}
+            <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
+                즐겨찾기 보관함
+              </div>
+              <div className="text-base sm:text-lg font-black text-purple-300">
+                {bookmarkCount} <span className="text-xs text-slate-400 font-normal">/ {user.bookmarkLimit || 50}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 1~5 Form Mastery Quick Bar */}
+          {masteryStats?.formMasteries && masteryStats.formMasteries.length > 0 && (
+            <div className="bg-slate-950/50 rounded-2xl p-3 border border-slate-800">
+              <div className="text-[11px] font-bold text-slate-300 mb-2 flex items-center justify-between">
+                <span>1~5형식 문형별 숙련도 현황</span>
+                <span className="text-[10px] text-slate-500 font-normal">S등급(90%+) A등급(75%+)</span>
+              </div>
+              <div className="grid grid-cols-5 gap-1.5">
+                {masteryStats.formMasteries.map(m => {
+                  const gradeColor = 
+                    m.grade === 'S' ? 'bg-amber-500 text-slate-950' :
+                    m.grade === 'A' ? 'bg-purple-500 text-white' :
+                    m.grade === 'B' ? 'bg-cyan-500 text-slate-950' : 'bg-slate-700 text-slate-300';
+
+                  return (
+                    <div key={m.form} className="bg-slate-900/80 p-2 rounded-xl border border-slate-800 text-center">
+                      <div className="text-[10px] font-black text-slate-400">{m.form}형식</div>
+                      <div className={`text-[10px] font-black px-1 py-0.2 rounded-md my-0.5 inline-block ${gradeColor}`}>
+                        {m.grade}
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-300">{m.accuracy}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* 📖 Avatar Collection Book (도감 및 보유 전용 필터) */}
+        {/* 📖 3. Avatar Collection Book (도감 및 보유 전용 필터) */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
             <div>
