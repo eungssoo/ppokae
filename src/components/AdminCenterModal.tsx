@@ -26,9 +26,16 @@ import {
   Shuffle,
   BarChart3,
   Activity,
-  Smartphone
+  Smartphone,
+  Download,
+  Upload,
+  FileJson,
+  Edit3,
+  Shield,
+  Award,
+  BookOpen
 } from 'lucide-react';
-import { UserProfile, SystemSettings, PushAnnouncement, RankingItem } from '../types';
+import { UserProfile, SystemSettings, PushAnnouncement, RankingItem, Question } from '../types';
 import { 
   getSystemSettings, 
   updateSystemSettings, 
@@ -38,6 +45,12 @@ import {
   deleteAnnouncement,
   getAllUsersList, 
   adminUpdateUserCoins,
+  adminUpdateUserXp,
+  adminUpdateUserBookmarkLimit,
+  adminUnlockUserAvatar,
+  adminDeleteUserDirect,
+  adminBulkImportQuestions,
+  adminExportAllQuestions,
   adminInjectGhostRanking,
   RANDOM_GHOST_NAMES,
   getCycleRankings,
@@ -84,11 +97,20 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   const [reports, setReports] = useState<QuestionReport[]>([]);
   const [reportFilter, setReportFilter] = useState<'all' | 'pending' | 'resolved'>('all');
 
-  // Users State
+  // Users State & Super Control
   const [userList, setUserList] = useState<UserProfile[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [selectedUserForCoin, setSelectedUserForCoin] = useState<UserProfile | null>(null);
-  const [manualCoinAmount, setManualCoinAmount] = useState<number>(500);
+  const [selectedUserForDetail, setSelectedUserForDetail] = useState<UserProfile | null>(null);
+  const [editUserCoins, setEditUserCoins] = useState<number>(200);
+  const [editUserXp, setEditUserXp] = useState<number>(0);
+  const [editUserBookmarkLimit, setEditUserBookmarkLimit] = useState<number>(50);
+  const [selectedAvatarToGift, setSelectedAvatarToGift] = useState<string>('gemini_god');
+
+  // Question Bank Pro State (Import / Export)
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [bulkImportJsonText, setBulkImportJsonText] = useState('');
+  const [isExportingQuestions, setIsExportingQuestions] = useState(false);
+  const [isImportingQuestions, setIsImportingQuestions] = useState(false);
 
   // Ghost Rankings State
   const [ghostCycleIndex, setGhostCycleIndex] = useState<1 | 2 | 3>(1);
@@ -329,23 +351,123 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
     }
   };
 
-  // 👥 6. 유저 코인 수동 변경
-  const handleUpdateUserCoins = async () => {
-    if (!selectedUserForCoin) return;
+  // 👥 6. 유저 통합 슈퍼 제어 (코인, XP, 티어, 북마크, 아바타, 계정 삭제)
+  const handleOpenUserDetail = (u: UserProfile) => {
+    sound.playClick();
+    setSelectedUserForDetail(u);
+    setEditUserCoins(u.coins ?? 200);
+    setEditUserXp(u.xp || 0);
+    setEditUserBookmarkLimit(u.bookmarkLimit || 50);
+  };
+
+  const handleSaveUserDetail = async () => {
+    if (!selectedUserForDetail) return;
     sound.playReward();
     setIsLoading(true);
     try {
-      const success = await adminUpdateUserCoins(selectedUserForCoin.name, manualCoinAmount);
+      const targetName = selectedUserForDetail.name;
+      await Promise.all([
+        adminUpdateUserCoins(targetName, editUserCoins),
+        adminUpdateUserXp(targetName, editUserXp),
+        adminUpdateUserBookmarkLimit(targetName, editUserBookmarkLimit)
+      ]);
+      onShowToast('👑 유저 프로필 수정 완료', `[${targetName}]님의 코인(${editUserCoins}), XP(${editUserXp}), 보관함(${editUserBookmarkLimit}칸)이 즉시 반영되었습니다.`, 'coin');
+      setSelectedUserForDetail(null);
+      const updatedUsers = await getAllUsersList();
+      setUserList(updatedUsers);
+    } catch (e: any) {
+      onShowToast('수정 실패', e.message || '오류가 발생했습니다.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 🎁 6-1. 유저 아바타 즉시 선물 / 전체 해금
+  const handleGiftAvatarToUser = async (avatarIdOrAll: string | 'ALL') => {
+    if (!selectedUserForDetail) return;
+    sound.playReward();
+    setIsLoading(true);
+    try {
+      const targetName = selectedUserForDetail.name;
+      const success = await adminUnlockUserAvatar(targetName, avatarIdOrAll);
       if (success) {
-        onShowToast('🪙 코인 지급/수정 완료', `${selectedUserForCoin.name}님의 코인이 ${manualCoinAmount}개로 설정되었습니다.`, 'coin');
-        setSelectedUserForCoin(null);
+        const avatarName = avatarIdOrAll === 'ALL' ? '24종 전체 아바타' : AVATAR_DATABASE.find(a => a.id === avatarIdOrAll)?.name || avatarIdOrAll;
+        onShowToast('🎁 아바타 선물 완료', `[${targetName}]님에게 [${avatarName}]이(가) 즉시 해금되었습니다!`, 'coin');
+        const updatedUsers = await getAllUsersList();
+        setUserList(updatedUsers);
+        const updatedSelf = updatedUsers.find(u => u.name === targetName);
+        if (updatedSelf) setSelectedUserForDetail(updatedSelf);
+      }
+    } catch (e: any) {
+      onShowToast('해금 오류', e.message || '오류가 발생했습니다.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 🗑️ 6-2. 유저 계정 강제 삭제
+  const handleDeleteUserDirectly = async (targetName: string) => {
+    if (!window.confirm(`정말로 [${targetName}] 유저의 계정과 학습 데이터를 완전 삭제하시겠습니까? (되돌릴 수 없습니다)`)) {
+      return;
+    }
+    sound.playClick();
+    setIsLoading(true);
+    try {
+      const success = await adminDeleteUserDirect(targetName);
+      if (success) {
+        onShowToast('🗑️ 계정 삭제 완료', `[${targetName}] 계정이 영구 삭제되었습니다.`, 'info');
+        setSelectedUserForDetail(null);
         const updatedUsers = await getAllUsersList();
         setUserList(updatedUsers);
       }
     } catch (e: any) {
-      onShowToast('오류', e.message, 'error');
+      onShowToast('삭제 오류', e.message || '오류가 발생했습니다.', 'error');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 📥 7. 문제 데이터 전체 백업 다운로드 (Export JSON)
+  const handleExportQuestions = async () => {
+    sound.playReward();
+    setIsExportingQuestions(true);
+    try {
+      const questions = await adminExportAllQuestions();
+      const jsonStr = JSON.stringify(questions, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ppokae_grammar_questions_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      onShowToast('📥 백업 다운로드 완료', `총 ${questions.length}개의 문제 데이터가 JSON 파일로 저장되었습니다.`, 'coin');
+    } catch (e: any) {
+      onShowToast('백업 오류', e.message || '문제 추출 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setIsExportingQuestions(false);
+    }
+  };
+
+  // 📤 8. 문제 데이터 일괄 대량 등록 (Bulk Import JSON)
+  const handleBulkImportQuestions = async () => {
+    if (!bulkImportJsonText.trim()) {
+      onShowToast('오류', 'JSON 문제 데이터를 입력해 주세요.', 'error');
+      return;
+    }
+    sound.playReward();
+    setIsImportingQuestions(true);
+    try {
+      const parsed = JSON.parse(bulkImportJsonText);
+      const questionsArr = Array.isArray(parsed) ? parsed : [parsed];
+      const res = await adminBulkImportQuestions(questionsArr);
+      onShowToast('📤 일괄 등록 완료', `총 ${res.importedCount}개 문제가 성공적으로 등록되었습니다! (오류: ${res.errors}개)`, 'coin');
+      setBulkImportJsonText('');
+      setIsBulkImportOpen(false);
+    } catch (e: any) {
+      onShowToast('JSON 구문 오류', '올바른 JSON 배열 형식인지 확인해 주세요. (예: [{"sentence": "...", "answer": "...", "options": [...] }])', 'error');
+    } finally {
+      setIsImportingQuestions(false);
     }
   };
 
@@ -754,6 +876,42 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                   className="w-full px-4 py-2.5 bg-slate-900/90 border border-rose-700/60 rounded-xl text-xs font-bold text-white placeholder-slate-500 focus:outline-none"
                 />
               </div>
+
+              {/* 📚 문제 데이터베이스 백업 & 일괄 대량 주입 (Pro Tools) */}
+              <div className="p-5 rounded-3xl bg-slate-800/60 border border-slate-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-indigo-400" />
+                    <span className="text-sm font-black text-white">문제 은행 백업 & 대량 등록 (Pro Tools)</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-bold">JSON 데이터베이스 연동</span>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Firestore에 등록된 모든 문제(1~4레벨, 1~5형식)를 백업 파일로 추출하거나, JSON 포맷의 문제를 수십~수백 개씩 일괄 대량 등록합니다.
+                </p>
+                <div className="flex flex-wrap gap-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleExportQuestions}
+                    disabled={isExportingQuestions}
+                    className="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 border border-slate-600 text-white font-bold text-xs flex items-center gap-2 transition-all active:scale-95 shadow-md"
+                  >
+                    <Download className="w-4 h-4 text-emerald-400" />
+                    <span>{isExportingQuestions ? '데이터 추출 중...' : '📥 전체 문제 JSON 백업 다운로드'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playClick();
+                      setIsBulkImportOpen(true);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 border border-indigo-500 text-white font-bold text-xs flex items-center gap-2 transition-all active:scale-95 shadow-md"
+                  >
+                    <Upload className="w-4 h-4 text-cyan-300" />
+                    <span>📤 문제 JSON 일괄 대량 등록</span>
+                  </button>
+                </div>
+              </div>
             </form>
           )}
 
@@ -1077,92 +1235,285 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                       <th className="p-3.5">보유 코인</th>
                       <th className="p-3.5">티어 / XP</th>
                       <th className="p-3.5">푼 문제 수</th>
-                      <th className="p-3.5">계정 유형</th>
-                      <th className="p-3.5 text-right">코인 관리</th>
+                      <th className="p-3.5">아바타 보유수</th>
+                      <th className="p-3.5">보관함 용량</th>
+                      <th className="p-3.5 text-right">슈퍼 제어</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
-                    {filteredUsers.map((u, idx) => (
-                      <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
-                        <td className="p-3.5 flex items-center gap-2.5">
-                          <span className="text-xl">{u.avatar || '🦁'}</span>
-                          <div>
-                            <span className="font-bold text-white">{u.name}</span>
-                            {u.email && <p className="text-[10px] text-slate-500">{u.email}</p>}
-                          </div>
-                        </td>
-                        <td className="p-3.5">
-                          <span className="font-black text-amber-300">🪙 {(u.coins ?? 200).toLocaleString()}</span>
-                        </td>
-                        <td className="p-3.5">
-                          <span className="font-bold text-purple-300">{u.tier || 'Bronze'}</span>
-                          <span className="text-[10px] text-slate-500 block">{u.xp || 0} XP</span>
-                        </td>
-                        <td className="p-3.5 font-bold text-slate-300">
-                          {u.totalSolved || 0}문제 ({u.totalCorrect || 0}정답)
-                        </td>
-                        <td className="p-3.5">
-                          {u.isAdmin ? (
-                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black">
-                              👑 관리자
-                            </span>
-                          ) : u.email ? (
-                            <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold">
-                              구글 연동
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px]">
-                              PIN 계정
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3.5 text-right">
-                          <button
-                            onClick={() => {
-                              setSelectedUserForCoin(u);
-                              setManualCoinAmount(u.coins ?? 200);
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 font-bold text-xs transition-all active:scale-95"
-                          >
-                            코인 설정
-                          </button>
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-slate-500 font-bold">
+                          검색 조건에 일치하는 등록 유저가 없습니다.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredUsers.map((u, idx) => (
+                        <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
+                          <td className="p-3.5 flex items-center gap-2.5">
+                            <span className="text-2xl">{u.avatar || '🦁'}</span>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-black text-white">{u.name}</span>
+                                {u.isAdmin && (
+                                  <span className="px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-black">
+                                    👑 관리자
+                                  </span>
+                                )}
+                                {u.email && (
+                                  <span className="px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 text-[9px] font-bold">
+                                    구글
+                                  </span>
+                                )}
+                              </div>
+                              {u.email && <p className="text-[10px] text-slate-500">{u.email}</p>}
+                            </div>
+                          </td>
+                          <td className="p-3.5">
+                            <span className="font-black text-amber-300">🪙 {(u.coins ?? 200).toLocaleString()}</span>
+                          </td>
+                          <td className="p-3.5">
+                            <span className="font-bold text-purple-300">{u.tier || 'Bronze'}</span>
+                            <span className="text-[10px] text-slate-500 block">{(u.xp || 0).toLocaleString()} XP</span>
+                          </td>
+                          <td className="p-3.5 font-bold text-slate-300">
+                            {u.totalSolved || 0}문제 
+                            <span className="text-[10px] text-emerald-400 block font-normal">
+                              ({u.totalSolved ? Math.round(((u.totalCorrect || 0) / u.totalSolved) * 100) : 0}% 정답)
+                            </span>
+                          </td>
+                          <td className="p-3.5 font-bold text-slate-300">
+                            <span className="px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+                              {(u.unlockedAvatars || []).length} / 24종
+                            </span>
+                          </td>
+                          <td className="p-3.5 font-bold text-emerald-300 font-mono">
+                            {u.bookmarkLimit || 50}칸
+                          </td>
+                          <td className="p-3.5 text-right">
+                            <button
+                              onClick={() => handleOpenUserDetail(u)}
+                              className="px-3.5 py-1.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-black text-xs transition-all active:scale-95 flex items-center gap-1.5 ml-auto shadow-md"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-cyan-300" />
+                              <span>관리 & 제어</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
 
-              {/* User Coin Adjust Modal Overlay */}
-              {selectedUserForCoin && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
-                  <div className="bg-slate-900 border border-amber-500/60 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center">
-                    <h4 className="text-base font-black text-white">
-                      [{selectedUserForCoin.name}] 코인 직접 수정
-                    </h4>
-                    <p className="text-xs text-slate-400">
-                      변경할 코인 수량을 입력하고 저장하면 해당 유저의 계정에 즉시 반영됩니다.
-                    </p>
-                    <input
-                      type="number"
-                      value={manualCoinAmount}
-                      onChange={e => setManualCoinAmount(parseInt(e.target.value) || 0)}
-                      className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-2xl text-lg font-black text-amber-300 text-center focus:outline-none"
-                    />
-                    <div className="flex gap-2">
+              {/* 👑 User Super Control Modal Overlay */}
+              {selectedUserForDetail && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
+                  <div className="bg-slate-900 border-2 border-indigo-500/60 rounded-3xl p-5 sm:p-7 max-w-lg w-full space-y-5 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                    
+                    {/* Header */}
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl">{selectedUserForDetail.avatar || '🦁'}</span>
+                        <div>
+                          <h4 className="text-base font-black text-white flex items-center gap-2">
+                            <span>[{selectedUserForDetail.name}] 슈퍼 제어 콘솔</span>
+                          </h4>
+                          <p className="text-xs text-slate-400">
+                            {selectedUserForDetail.email || 'PIN 로그인 계정'}
+                          </p>
+                        </div>
+                      </div>
                       <button
-                        onClick={() => setSelectedUserForCoin(null)}
-                        className="flex-1 py-2.5 rounded-xl bg-slate-800 font-bold text-xs text-slate-400 hover:text-white"
+                        onClick={() => setSelectedUserForDetail(null)}
+                        className="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
                       >
-                        취소
-                      </button>
-                      <button
-                        onClick={handleUpdateUserCoins}
-                        className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg"
-                      >
-                        코인 저장
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
+
+                    {/* Scrollable Form Body */}
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-1 text-xs custom-scrollbar">
+                      
+                      {/* 1. 코인 조정 */}
+                      <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+                        <label className="font-black text-amber-300 flex items-center gap-1.5">
+                          <Coins className="w-4 h-4" />
+                          <span>보유 코인 직접 설정</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={editUserCoins}
+                            onChange={e => setEditUserCoins(parseInt(e.target.value) || 0)}
+                            className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm font-black text-amber-300 focus:outline-none"
+                          />
+                          <span className="text-xs font-bold text-amber-400 shrink-0">코인</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {[+100, +500, +1000, +5000].map(amt => (
+                            <button
+                              key={amt}
+                              type="button"
+                              onClick={() => setEditUserCoins(prev => Math.max(0, prev + amt))}
+                              className="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 font-bold text-[11px] text-amber-300"
+                            >
+                              +{amt}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => setEditUserCoins(999999)}
+                            className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold text-[11px]"
+                          >
+                            999,999 맥스
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 2. 경험치 (XP) & 티어 설정 */}
+                      <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+                        <label className="font-black text-purple-300 flex items-center gap-1.5">
+                          <Award className="w-4 h-4" />
+                          <span>경험치(XP) 및 티어 직접 설정</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={editUserXp}
+                            onChange={e => setEditUserXp(parseInt(e.target.value) || 0)}
+                            className="w-full px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm font-black text-purple-300 focus:outline-none"
+                          />
+                          <span className="text-xs font-bold text-purple-400 shrink-0">XP</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-1.5 pt-1">
+                          {[
+                            { label: '🥉 Bronze', xp: 0 },
+                            { label: '🥈 Silver', xp: 200 },
+                            { label: '🥇 Gold', xp: 500 },
+                            { label: '💎 Platinum', xp: 1000 },
+                            { label: '🔷 Diamond', xp: 2000 },
+                            { label: '👑 Master', xp: 3500 },
+                            { label: '🔮 GM', xp: 5000 },
+                            { label: '⚡ Challenger', xp: 8000 },
+                          ].map(t => (
+                            <button
+                              key={t.label}
+                              type="button"
+                              onClick={() => setEditUserXp(t.xp)}
+                              className={`py-1 rounded-lg text-[10px] font-bold border transition-all ${
+                                editUserXp === t.xp 
+                                  ? 'bg-purple-600 text-white border-purple-400' 
+                                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300 border-slate-600'
+                              }`}
+                            >
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 3. 북마크 보관함 용량 */}
+                      <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+                        <label className="font-black text-emerald-300 flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4" />
+                          <span>즐겨찾기 보관함 용량 한도</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          {[50, 100, 200, 500, 9999].map(limit => (
+                            <button
+                              key={limit}
+                              type="button"
+                              onClick={() => setEditUserBookmarkLimit(limit)}
+                              className={`flex-1 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                                editUserBookmarkLimit === limit
+                                  ? 'bg-emerald-500 text-slate-950 font-black border-emerald-400'
+                                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300 border-slate-600'
+                              }`}
+                            >
+                              {limit}칸
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* 4. 아바타 선물 & 전체 올 해금 */}
+                      <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2.5">
+                        <label className="font-black text-pink-300 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <Gift className="w-4 h-4" />
+                            <span>아바타 강제 해금 & 선물</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-normal">
+                            보유: {(selectedUserForDetail.unlockedAvatars || []).length}/24종
+                          </span>
+                        </label>
+                        <div className="flex gap-2">
+                          <select
+                            value={selectedAvatarToGift}
+                            onChange={e => setSelectedAvatarToGift(e.target.value)}
+                            className="flex-1 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none"
+                          >
+                            <optgroup label="✨ 신화 / 전설 / 에픽 아바타">
+                              {AVATAR_DATABASE.filter(a => a.grade !== 'starter').map(a => (
+                                <option key={a.id} value={a.id}>
+                                  {a.icon} {a.name} [{a.grade.toUpperCase()}]
+                                </option>
+                              ))}
+                            </optgroup>
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleGiftAvatarToUser(selectedAvatarToGift)}
+                            className="px-3.5 py-2 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs shrink-0 shadow-md"
+                          >
+                            🎁 해금 선물
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleGiftAvatarToUser('ALL')}
+                          className="w-full py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-black text-xs shadow-md active:scale-95 transition-all"
+                        >
+                          ✨ 24종 전설 아바타 전체 올 해금 (God Mode)
+                        </button>
+                      </div>
+
+                      {/* 5. 위험 구역: 계정 영구 삭제 */}
+                      <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-600/40 flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-rose-300 block text-xs">계정 및 학습 기록 완전 삭제</span>
+                          <span className="text-[10px] text-slate-400">오답노트, 북마크, 랭킹 기록 포함 삭제</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteUserDirectly(selectedUserForDetail.name)}
+                          className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shrink-0"
+                        >
+                          🗑️ 계정 삭제
+                        </button>
+                      </div>
+
+                    </div>
+
+                    {/* Footer Actions */}
+                    <div className="pt-3 border-t border-slate-800 flex gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedUserForDetail(null)}
+                        className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition-all"
+                      >
+                        닫기
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveUserDetail}
+                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black text-xs shadow-lg active:scale-95 transition-all"
+                      >
+                        👑 변경사항 즉시 저장
+                      </button>
+                    </div>
+
                   </div>
                 </div>
               )}
@@ -1609,6 +1960,87 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
           )}
 
         </div>
+
+        {/* 📤 문제 JSON 일괄 대량 등록 모달 (Bulk Import Modal) */}
+        {isBulkImportOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+            <div className="bg-slate-900 border-2 border-indigo-500/70 rounded-3xl p-6 max-w-2xl w-full shadow-2xl space-y-4 max-h-[88vh] flex flex-col">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-300">
+                    <FileJson className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-white">문제 데이터 JSON 일괄 대량 등록 (Bulk Import)</h4>
+                    <p className="text-xs text-slate-400">JSON 형식의 문제 배열을 입력하여 Firestore에 즉시 등록합니다.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsBulkImportOpen(false)}
+                  className="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2 flex-1 flex flex-col">
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>JSON 배열 형식 (form: 1~5, level: level1~4, sentence, answer, options)</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sample = [
+                        {
+                          form: 1,
+                          level: "level1",
+                          sentence: "The train ___ on time every morning.",
+                          answer: "arrives",
+                          korean: "그 기차는 매일 아침 정시에 도착한다.",
+                          options: [
+                            { text: "arrives", isCorrect: true, feedback: "1형식 완전자동사 arrives가 올바릅니다." },
+                            { text: "arrive", isCorrect: false, feedback: "3인칭 단수 주어입니다." },
+                            { text: "arriving", isCorrect: false, feedback: "본동사 자리입니다." },
+                            { text: "arrival", isCorrect: false, feedback: "명사는 동사 자리에 올 수 없습니다." }
+                          ]
+                        }
+                      ];
+                      setBulkImportJsonText(JSON.stringify(sample, null, 2));
+                    }}
+                    className="text-indigo-400 hover:text-indigo-300 font-bold underline"
+                  >
+                    샘플 템플릿 채우기
+                  </button>
+                </div>
+
+                <textarea
+                  value={bulkImportJsonText}
+                  onChange={e => setBulkImportJsonText(e.target.value)}
+                  placeholder='[\n  {\n    "form": 1,\n    "level": "level1",\n    "sentence": "The dog ___ loudly.",\n    "answer": "barked",\n    "options": [\n      { "text": "barked", "isCorrect": true, "feedback": "1형식 동사입니다." },\n      { "text": "barking", "isCorrect": false, "feedback": "동사 자리입니다." }\n    ]\n  }\n]'
+                  className="w-full flex-1 min-h-[220px] p-3.5 bg-slate-950 border border-slate-700 rounded-2xl text-xs font-mono text-emerald-300 focus:outline-none focus:border-indigo-400 custom-scrollbar"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkImportOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkImportQuestions}
+                  disabled={isImportingQuestions || !bulkImportJsonText.trim()}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-black text-xs shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>{isImportingQuestions ? '데이터 등록 중...' : '📤 Firestore에 일괄 등록 실행'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

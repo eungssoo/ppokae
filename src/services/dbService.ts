@@ -2355,32 +2355,65 @@ export async function getUserAnnouncementStatusMap(userName: string): Promise<Re
   return result;
 }
 
-// 👥 15-8. 관리자용 전체 유저 목록 조회
+// 👥 15-8. 관리자용 전체 유저 목록 조회 (중복 사용자 완전 병합 및 정렬)
 export async function getAllUsersList(): Promise<UserProfile[]> {
   try {
     const snap = await getDocs(collection(db, 'users'));
-    const list: UserProfile[] = [];
+    const map = new Map<string, UserProfile>();
+
     snap.forEach(d => {
       const data = d.data();
-      list.push({
-        name: data.name || d.id,
-        pin: data.pin || '****',
-        coins: data.coins ?? 200,
-        bookmarkLimit: data.bookmarkLimit ?? 50,
-        avatar: data.avatar || '🦁',
-        currentAvatarId: data.currentAvatarId || 'lion',
-        unlockedAvatars: data.unlockedAvatars || STARTER_AVATAR_IDS,
-        xp: data.xp || 0,
-        tier: data.tier || calculateTier(data.xp || 0).tier,
-        dailyGoal: data.dailyGoal || 10,
-        totalSolved: data.totalSolved || 0,
-        totalCorrect: data.totalCorrect || 0,
-        email: data.email,
-        photoURL: data.photoURL,
-        isAdmin: data.isAdmin
-      });
+      const canonicalName = (data.name || d.id).trim();
+      if (!canonicalName) return;
+
+      const userKey = data.email ? `email_${data.email}` : (data.uid ? `uid_${data.uid}` : `name_${canonicalName}`);
+      const existing = map.get(userKey) || map.get(`name_${canonicalName}`);
+
+      const coins = Math.max(existing?.coins ?? 0, data.coins ?? 200);
+      const xp = Math.max(existing?.xp ?? 0, data.xp ?? 0);
+      const bookmarkLimit = Math.max(existing?.bookmarkLimit ?? 50, data.bookmarkLimit ?? 50);
+      const totalSolved = Math.max(existing?.totalSolved ?? 0, data.totalSolved ?? 0);
+      const totalCorrect = Math.max(existing?.totalCorrect ?? 0, data.totalCorrect || 0);
+      const dailyGoal = data.dailyGoal || existing?.dailyGoal || 10;
+      const avatar = (data.avatar && data.avatar !== '🦁') ? data.avatar : (existing?.avatar || data.avatar || '🦁');
+      const currentAvatarId = (data.currentAvatarId && data.currentAvatarId !== 'lion') ? data.currentAvatarId : (existing?.currentAvatarId || data.currentAvatarId || 'lion');
+
+      const unlockedAvatars = Array.from(new Set([
+        ...STARTER_AVATAR_IDS,
+        ...(existing?.unlockedAvatars || []),
+        ...(Array.isArray(data.unlockedAvatars) ? data.unlockedAvatars : [])
+      ]));
+
+      const mergedUser: UserProfile = {
+        name: canonicalName,
+        pin: data.pin || existing?.pin || '****',
+        coins,
+        bookmarkLimit,
+        avatar,
+        currentAvatarId,
+        unlockedAvatars,
+        xp,
+        tier: calculateTier(xp).tier,
+        dailyGoal,
+        totalSolved,
+        totalCorrect,
+        email: data.email || existing?.email,
+        photoURL: data.photoURL || existing?.photoURL,
+        isAdmin: data.isAdmin || existing?.isAdmin,
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : existing?.createdAt || (typeof data.createdAt === 'number' ? data.createdAt : undefined)
+      };
+
+      map.set(userKey, mergedUser);
+      map.set(`name_${canonicalName}`, mergedUser);
     });
-    return list.sort((a, b) => (b.coins || 0) - (a.coins || 0));
+
+    const uniqueUsers = Array.from(new Set(map.values()));
+    const finalMap = new Map<string, UserProfile>();
+    for (const u of uniqueUsers) {
+      finalMap.set(u.name, u);
+    }
+
+    return Array.from(finalMap.values()).sort((a, b) => (b.coins || 0) - (a.coins || 0));
   } catch (e) {
     console.error("getAllUsersList Error:", e);
     return [];
@@ -2391,14 +2424,115 @@ export async function getAllUsersList(): Promise<UserProfile[]> {
 export async function adminUpdateUserCoins(targetUserName: string, amount: number): Promise<boolean> {
   try {
     const userRef = doc(db, 'users', targetUserName);
-    await updateDoc(userRef, {
-      coins: amount
-    });
+    await setDoc(userRef, {
+      coins: amount,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
     return true;
   } catch (e) {
     console.error("adminUpdateUserCoins Error:", e);
     return false;
   }
+}
+
+// 🏆 15-9-1. 관리자 권한 유저 XP & 티어 직접 설정
+export async function adminUpdateUserXp(targetUserName: string, newXp: number): Promise<boolean> {
+  try {
+    const tier = calculateTier(newXp).tier;
+    const updates = { xp: newXp, tier, updatedAt: serverTimestamp() };
+    const userRef = doc(db, 'users', targetUserName);
+    await setDoc(userRef, updates, { merge: true });
+    return true;
+  } catch (e) {
+    console.error("adminUpdateUserXp error:", e);
+    return false;
+  }
+}
+
+// ⭐ 15-9-2. 관리자 권한 유저 북마크 한도 직접 조정
+export async function adminUpdateUserBookmarkLimit(targetUserName: string, newLimit: number): Promise<boolean> {
+  try {
+    const userRef = doc(db, 'users', targetUserName);
+    await setDoc(userRef, { bookmarkLimit: newLimit, updatedAt: serverTimestamp() }, { merge: true });
+    return true;
+  } catch (e) {
+    console.error("adminUpdateUserBookmarkLimit error:", e);
+    return false;
+  }
+}
+
+// 🎁 15-9-3. 관리자 권한 유저 특정 아바타 해금 또는 전체 해금
+export async function adminUnlockUserAvatar(targetUserName: string, avatarIdOrAll: string | 'ALL'): Promise<boolean> {
+  try {
+    const userRef = doc(db, 'users', targetUserName);
+    const snap = await getDoc(userRef);
+    const data = snap.exists() ? snap.data() : {};
+    const currentUnlocked: string[] = Array.isArray(data.unlockedAvatars) && data.unlockedAvatars.length > 0 
+      ? Array.from(new Set([...STARTER_AVATAR_IDS, ...data.unlockedAvatars]))
+      : STARTER_AVATAR_IDS;
+
+    const newUnlocked = avatarIdOrAll === 'ALL'
+      ? AVATAR_DATABASE.map(a => a.id)
+      : Array.from(new Set([...currentUnlocked, avatarIdOrAll]));
+
+    await setDoc(userRef, { unlockedAvatars: newUnlocked, updatedAt: serverTimestamp() }, { merge: true });
+    return true;
+  } catch (e) {
+    console.error("adminUnlockUserAvatar error:", e);
+    return false;
+  }
+}
+
+// 🗑️ 15-9-4. 관리자 권한 유저 계정 강제 삭제
+export async function adminDeleteUserDirect(targetUserName: string): Promise<boolean> {
+  try {
+    await deleteDoc(doc(db, 'users', targetUserName));
+    await deleteDoc(doc(db, 'user_analytics', targetUserName));
+    return true;
+  } catch (e) {
+    console.error("adminDeleteUserDirect error:", e);
+    return false;
+  }
+}
+
+// 📦 15-9-5. 관리자 문제 대량 일괄 등록 (Bulk Import)
+export async function adminBulkImportQuestions(questions: Question[]): Promise<{ importedCount: number; errors: number }> {
+  let importedCount = 0;
+  let errors = 0;
+  for (const q of questions) {
+    try {
+      if (!q.sentence || !q.answer || !q.options || q.options.length < 2) {
+        errors++;
+        continue;
+      }
+      const lvl = q.level || 'level1';
+      const colRef = collection(db, 'custom_questions', lvl, 'items');
+      await setDoc(doc(colRef), removeUndefinedDeep({
+        ...q,
+        form: Number(q.form) || 1,
+        createdAt: serverTimestamp()
+      }));
+      importedCount++;
+    } catch {
+      errors++;
+    }
+  }
+  return { importedCount, errors };
+}
+
+// 📤 15-9-6. 관리자 전체 문제 JSON 내보내기 (Export All Questions)
+export async function adminExportAllQuestions(): Promise<Question[]> {
+  const levels = ['level1', 'level2', 'level3', 'level4'];
+  const allList: Question[] = [];
+  for (const lvl of levels) {
+    try {
+      const snap = await getDocs(collection(db, 'custom_questions', lvl, 'items'));
+      snap.forEach(d => {
+        allList.push({ id: d.id, level: lvl, ...d.data() } as Question);
+      });
+    } catch {}
+  }
+  return allList;
 }
 
 // 🎲 자연스러운 고스트 플레이어 닉네임 목록

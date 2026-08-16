@@ -145,38 +145,56 @@ export async function trackUserAction(
 }
 
 /**
- * 📊 2. 관리자 페이지용 전체 유저 행동 지표 목록 조회
+ * 📊 2. 관리자 페이지용 전체 유저 행동 지표 목록 조회 (중복 사용자 완벽 병합)
  */
 export async function getAllUserAnalytics(): Promise<UserAnalyticsSummary[]> {
   try {
     const colRef = collection(db, 'user_analytics');
-    const q = query(colRef, orderBy('lastActiveAt', 'desc'), limit(100));
+    const q = query(colRef, orderBy('lastActiveAt', 'desc'), limit(150));
     const snap = await getDocs(q);
 
-    const list: UserAnalyticsSummary[] = [];
+    const map = new Map<string, UserAnalyticsSummary>();
+
     snap.forEach((d) => {
       const data = d.data();
-      list.push({
+      const rawName = (data.userName || d.id).trim();
+      const authUid = data.authUid || (d.id.length > 20 ? d.id : '');
+      const dedupeKey = (rawName && rawName !== 'anonymous' && rawName !== '게스트') ? `name_${rawName}` : `uid_${authUid || d.id}`;
+
+      const existing = map.get(dedupeKey) || (authUid ? map.get(`uid_${authUid}`) : null);
+
+      const merged: UserAnalyticsSummary = {
         userId: d.id,
-        userName: data.userName || d.id,
-        authUid: data.authUid || '',
-        totalVisits: data.totalVisits || 1,
-        totalSolved: data.totalSolved || 0,
-        totalCorrect: data.totalCorrect || 0,
-        rankingPlayedCount: data.rankingPlayedCount || 0,
-        expressionStudiedCount: data.expressionStudiedCount || 0,
-        gachaPullsCount: data.gachaPullsCount || 0,
-        bookmarkCount: data.bookmarkCount || 0,
-        addToHomeClicks: data.addToHomeClicks || 0,
-        isStandalone: !!data.isStandalone,
-        platform: data.platform || 'Web',
-        lastActiveAt: data.lastActiveAt,
-        firstSeenAt: data.firstSeenAt,
-        recentActions: data.recentActions || []
-      });
+        userName: (rawName && rawName !== '게스트') ? rawName : (existing?.userName || rawName),
+        authUid: authUid || existing?.authUid || '',
+        totalVisits: (existing?.totalVisits || 0) + (data.totalVisits || 1),
+        totalSolved: Math.max(existing?.totalSolved || 0, data.totalSolved || 0),
+        totalCorrect: Math.max(existing?.totalCorrect || 0, data.totalCorrect || 0),
+        rankingPlayedCount: Math.max(existing?.rankingPlayedCount || 0, data.rankingPlayedCount || 0),
+        expressionStudiedCount: Math.max(existing?.expressionStudiedCount || 0, data.expressionStudiedCount || 0),
+        gachaPullsCount: Math.max(existing?.gachaPullsCount || 0, data.gachaPullsCount || 0),
+        bookmarkCount: Math.max(existing?.bookmarkCount || 0, data.bookmarkCount || 0),
+        addToHomeClicks: Math.max(existing?.addToHomeClicks || 0, data.addToHomeClicks || 0),
+        isStandalone: !!data.isStandalone || !!existing?.isStandalone,
+        platform: data.platform && data.platform !== 'Web' ? data.platform : (existing?.platform || data.platform || 'Web'),
+        lastActiveAt: data.lastActiveAt || existing?.lastActiveAt,
+        firstSeenAt: existing?.firstSeenAt || data.firstSeenAt,
+        recentActions: [...(data.recentActions || []), ...(existing?.recentActions || [])]
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(0, 25)
+      };
+
+      map.set(dedupeKey, merged);
+      if (authUid) map.set(`uid_${authUid}`, merged);
+      if (rawName) map.set(`name_${rawName}`, merged);
     });
 
-    return list;
+    const uniqueList = Array.from(new Set(map.values()));
+    return uniqueList.sort((a, b) => {
+      const timeA = a.lastActiveAt?.toMillis ? a.lastActiveAt.toMillis() : 0;
+      const timeB = b.lastActiveAt?.toMillis ? b.lastActiveAt.toMillis() : 0;
+      return timeB - timeA;
+    });
   } catch (err) {
     console.error('getAllUserAnalytics error:', err);
     return [];
