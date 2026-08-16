@@ -162,10 +162,31 @@ export async function authenticateUser(
         const avatar = data.avatar || '🦁';
         const currentAvatarId = data.currentAvatarId || 'lion';
         const dailyGoal = data.dailyGoal || 10;
+        const totalSolved = typeof data.totalSolved === 'number' ? data.totalSolved : 0;
+        const totalCorrect = typeof data.totalCorrect === 'number' ? data.totalCorrect : 0;
         const unlockedAvatars = Array.isArray(data.unlockedAvatars) && data.unlockedAvatars.length > 0 
           ? Array.from(new Set([...STARTER_AVATAR_IDS, ...data.unlockedAvatars]))
           : STARTER_AVATAR_IDS;
         const isAdmin = checkIsAdmin({ name: trimmedName, pin: formattedPin, email: data.email, isAdmin: data.isAdmin });
+
+        const profile: UserProfile = { 
+          name: trimmedName, 
+          pin: formattedPin, 
+          coins: userCoins,
+          bookmarkLimit: bLimit,
+          avatar,
+          currentAvatarId,
+          unlockedAvatars,
+          xp: currentXp,
+          tier: calculateTier(currentXp).tier,
+          dailyGoal,
+          totalSolved,
+          totalCorrect,
+          email: data.email,
+          photoURL: data.photoURL,
+          isAdmin,
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : typeof data.createdAt === 'number' ? data.createdAt : undefined
+        };
 
         await setDoc(userRef, {
           coins: userCoins,
@@ -181,21 +202,7 @@ export async function authenticateUser(
         return { 
           success: true, 
           isNew: false, 
-          profile: { 
-            name: trimmedName, 
-            pin: formattedPin, 
-            coins: userCoins,
-            bookmarkLimit: bLimit,
-            avatar,
-            currentAvatarId,
-            unlockedAvatars,
-            xp: currentXp,
-            tier: calculateTier(currentXp).tier,
-            dailyGoal,
-            email: data.email,
-            photoURL: data.photoURL,
-            isAdmin
-          }
+          profile
         };
       } else {
         return { success: false, error: "PIN 번호가 일치하지 않습니다." };
@@ -239,42 +246,66 @@ export async function authenticateUser(
   }
 }
 
-// 🔐 1-0. Google User Profile Creator / Getter (UID 및 displayName 양방향 동기화)
+// 🔐 1-0. Google User Profile Creator / Getter (UID 및 displayName 양방향 완벽 동기화 및 데이터 유실 방지)
 export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserProfile> {
   const displayName = gUser.displayName || (gUser.email ? gUser.email.split('@')[0] : '학습자');
   const uidRef = doc(db, 'users', gUser.uid);
   const nameRef = doc(db, 'users', displayName);
 
   const [uidSnap, nameSnap] = await Promise.all([getDoc(uidRef), getDoc(nameRef)]);
-  const existingSnap = nameSnap.exists() ? nameSnap : uidSnap.exists() ? uidSnap : null;
+  const uidData = uidSnap.exists() ? uidSnap.data() : {};
+  const nameData = nameSnap.exists() ? nameSnap.data() : {};
+  const hasExisting = uidSnap.exists() || nameSnap.exists();
 
-  if (existingSnap && existingSnap.exists()) {
-    const data = existingSnap.data();
-    const currentXp = data.xp || 0;
-    const unlockedAvatars = Array.isArray(data.unlockedAvatars) && data.unlockedAvatars.length > 0 
-      ? Array.from(new Set([...STARTER_AVATAR_IDS, ...data.unlockedAvatars]))
-      : STARTER_AVATAR_IDS;
+  if (hasExisting) {
+    const currentXp = Math.max(nameData.xp || 0, uidData.xp || 0);
+    const coins = Math.max(nameData.coins ?? 200, uidData.coins ?? 200);
+    const bookmarkLimit = Math.max(nameData.bookmarkLimit || 50, uidData.bookmarkLimit || 50);
+    const totalSolved = Math.max(nameData.totalSolved || 0, uidData.totalSolved || 0);
+    const totalCorrect = Math.max(nameData.totalCorrect || 0, uidData.totalCorrect || 0);
+    const dailyGoal = nameData.dailyGoal || uidData.dailyGoal || 10;
 
-    const isAdmin = checkIsAdmin({ name: data.name || displayName, email: gUser.email || undefined, isAdmin: data.isAdmin });
+    const unlockedAvatars = Array.from(new Set([
+      ...STARTER_AVATAR_IDS,
+      ...(Array.isArray(nameData.unlockedAvatars) ? nameData.unlockedAvatars : []),
+      ...(Array.isArray(uidData.unlockedAvatars) ? uidData.unlockedAvatars : [])
+    ]));
+
+    const avatar = nameData.avatar || uidData.avatar || '🦁';
+    const currentAvatarId = nameData.currentAvatarId || uidData.currentAvatarId || 'lion';
+    const isAdmin = checkIsAdmin({ name: displayName, email: gUser.email || undefined, isAdmin: nameData.isAdmin || uidData.isAdmin });
+
+    // 문형별 마스터리 통계 양방향 병합
+    const formStats: Record<string, number> = {};
+    for (let f = 1; f <= 5; f++) {
+      const tot = Math.max(nameData[`stats_form_${f}_total`] || 0, uidData[`stats_form_${f}_total`] || 0);
+      const cor = Math.max(nameData[`stats_form_${f}_correct`] || 0, uidData[`stats_form_${f}_correct`] || 0);
+      if (tot > 0) formStats[`stats_form_${f}_total`] = tot;
+      if (cor > 0) formStats[`stats_form_${f}_correct`] = cor;
+    }
 
     const profile: UserProfile = {
-      name: data.name || displayName,
-      pin: data.pin || '000000',
-      coins: data.coins ?? 200,
-      bookmarkLimit: data.bookmarkLimit ?? 50,
-      avatar: data.avatar || '🦁',
-      currentAvatarId: data.currentAvatarId || 'lion',
+      name: nameData.name || displayName,
+      pin: nameData.pin || uidData.pin || '000000',
+      coins,
+      bookmarkLimit,
+      avatar,
+      currentAvatarId,
       unlockedAvatars,
       xp: currentXp,
       tier: calculateTier(currentXp).tier,
-      dailyGoal: data.dailyGoal || 10,
+      dailyGoal,
+      totalSolved,
+      totalCorrect,
       email: gUser.email || undefined,
       photoURL: gUser.photoURL || undefined,
-      isAdmin
+      isAdmin,
+      createdAt: nameData.createdAt?.toMillis ? nameData.createdAt.toMillis() : uidData.createdAt?.toMillis ? uidData.createdAt.toMillis() : Date.now()
     };
 
     const cleanPayload = removeUndefinedDeep({
       ...profile,
+      ...formStats,
       uid: gUser.uid,
       email: gUser.email || null,
       photoURL: gUser.photoURL || null,
@@ -648,11 +679,17 @@ export async function drawGachaAvatar(
     const newlyUnlockedArr = Array.from(newlyUnlockedSet);
     const updatedUnlockedList = Array.from(new Set([...currentUnlocked, ...newlyUnlockedArr]));
 
-    await setDoc(userRef, {
+    const writePayload = {
       coins: finalCoins,
       unlockedAvatars: updatedUnlockedList,
       updatedAt: serverTimestamp()
-    }, { merge: true });
+    };
+
+    const writePromises = [setDoc(userRef, writePayload, { merge: true })];
+    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+      writePromises.push(setDoc(doc(db, 'users', auth.currentUser.uid), writePayload, { merge: true }));
+    }
+    await Promise.all(writePromises);
 
     return {
       success: true,
@@ -686,11 +723,17 @@ export async function equipUserAvatar(
       await deductCoins(userName, cost);
     }
 
-    await setDoc(userRef, {
+    const equipPayload = {
       avatar: avatar.icon,
       currentAvatarId: avatar.id,
       updatedAt: serverTimestamp()
-    }, { merge: true });
+    };
+
+    const writePromises = [setDoc(userRef, equipPayload, { merge: true })];
+    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+      writePromises.push(setDoc(doc(db, 'users', auth.currentUser.uid), equipPayload, { merge: true }));
+    }
+    await Promise.all(writePromises);
 
     const newCoins = await getUserCoins(userName);
     return { success: true, newCoins };
@@ -716,6 +759,9 @@ export async function deleteUserAccount(userName: string): Promise<boolean> {
 
     const userRef = doc(db, 'users', userName);
     await deleteDoc(userRef);
+    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+      await deleteDoc(doc(db, 'users', auth.currentUser.uid));
+    }
 
     return true;
   } catch (e) {
@@ -744,7 +790,11 @@ export async function recordQuizResultStats(userName: string, form: number, isCo
       updates[formKeyCorrect] = increment(1);
     }
 
-    await setDoc(userRef, updates, { merge: true });
+    const promises = [setDoc(userRef, updates, { merge: true })];
+    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+      promises.push(setDoc(doc(db, 'users', auth.currentUser.uid), updates, { merge: true }));
+    }
+    await Promise.all(promises);
   } catch (e) {
     console.error("recordQuizResultStats Error:", e);
   }
@@ -754,39 +804,35 @@ export async function recordQuizResultStats(userName: string, form: number, isCo
 export async function getUserMasteryStats(userName: string): Promise<{ formMasteries: FormMastery[]; totalSolved: number; totalCorrect: number; overallAccuracy: number }> {
   try {
     const userRef = doc(db, 'users', userName);
-    const snap = await getDoc(userRef);
+    let [userSnap, uidSnap] = await Promise.all([
+      getDoc(userRef),
+      auth.currentUser?.uid && auth.currentUser.uid !== userName ? getDoc(doc(db, 'users', auth.currentUser.uid)) : Promise.resolve(null)
+    ]);
+
+    const dataA = userSnap.exists() ? userSnap.data() : {};
+    const dataB = uidSnap && uidSnap.exists() ? uidSnap.data() : {};
+
+    const totalSolved = Math.max(dataA.totalSolved || 0, dataB.totalSolved || 0);
+    const totalCorrect = Math.max(dataA.totalCorrect || 0, dataB.totalCorrect || 0);
 
     const formMasteries: FormMastery[] = [];
-    let totalSolved = 0;
-    let totalCorrect = 0;
+    for (let f = 1; f <= 5; f++) {
+      const total = Math.max(dataA[`stats_form_${f}_total`] || 0, dataB[`stats_form_${f}_total`] || 0);
+      const correct = Math.max(dataA[`stats_form_${f}_correct`] || 0, dataB[`stats_form_${f}_correct`] || 0);
+      const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
 
-    if (snap.exists()) {
-      const data = snap.data();
-      totalSolved = data.totalSolved || 0;
-      totalCorrect = data.totalCorrect || 0;
+      let grade: 'S' | 'A' | 'B' | 'C' = 'C';
+      if (accuracy >= 90 && total >= 5) grade = 'S';
+      else if (accuracy >= 75) grade = 'A';
+      else if (accuracy >= 50) grade = 'B';
 
-      for (let f = 1; f <= 5; f++) {
-        const total = data[`stats_form_${f}_total`] || 0;
-        const correct = data[`stats_form_${f}_correct`] || 0;
-        const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
-
-        let grade: 'S' | 'A' | 'B' | 'C' = 'C';
-        if (accuracy >= 90 && total >= 5) grade = 'S';
-        else if (accuracy >= 75) grade = 'A';
-        else if (accuracy >= 50) grade = 'B';
-
-        formMasteries.push({
-          form: f,
-          total,
-          correct,
-          accuracy,
-          grade
-        });
-      }
-    } else {
-      for (let f = 1; f <= 5; f++) {
-        formMasteries.push({ form: f, total: 0, correct: 0, accuracy: 0, grade: 'C' });
-      }
+      formMasteries.push({
+        form: f,
+        total,
+        correct,
+        accuracy,
+        grade
+      });
     }
 
     const overallAccuracy = totalSolved > 0 ? Math.round((totalCorrect / totalSolved) * 100) : 0;
@@ -810,6 +856,10 @@ export async function getUserCoins(userName: string): Promise<number> {
     if (snap.exists()) {
       return snap.data().coins ?? 200;
     }
+    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+      const uidSnap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      if (uidSnap.exists()) return uidSnap.data().coins ?? 200;
+    }
     return 200;
   } catch (e) {
     console.error("getUserCoins error:", e);
@@ -821,10 +871,15 @@ export async function getUserCoins(userName: string): Promise<number> {
 export async function addCoins(userName: string, amount: number): Promise<number> {
   try {
     const userRef = doc(db, 'users', userName);
-    await setDoc(userRef, {
-      coins: increment(amount),
-      updatedAt: serverTimestamp()
-    }, { merge: true });
+    const writePromises = [
+      setDoc(userRef, { coins: increment(amount), updatedAt: serverTimestamp() }, { merge: true })
+    ];
+    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+      writePromises.push(
+        setDoc(doc(db, 'users', auth.currentUser.uid), { coins: increment(amount), updatedAt: serverTimestamp() }, { merge: true })
+      );
+    }
+    await Promise.all(writePromises);
     return await getUserCoins(userName);
   } catch (e) {
     console.error("addCoins error:", e);
@@ -836,16 +891,26 @@ export async function addCoins(userName: string, amount: number): Promise<number
 export async function addXp(userName: string, amount: number): Promise<{ newXp: number; newTier: string }> {
   try {
     const userRef = doc(db, 'users', userName);
-    await setDoc(userRef, {
-      xp: increment(amount),
-      updatedAt: serverTimestamp()
-    }, { merge: true });
+    const writePromises = [
+      setDoc(userRef, { xp: increment(amount), updatedAt: serverTimestamp() }, { merge: true })
+    ];
+    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+      writePromises.push(
+        setDoc(doc(db, 'users', auth.currentUser.uid), { xp: increment(amount), updatedAt: serverTimestamp() }, { merge: true })
+      );
+    }
+    await Promise.all(writePromises);
 
     const snap = await getDoc(userRef);
     const xp = snap.exists() ? (snap.data().xp || 0) : 0;
     const tier = calculateTier(xp).tier;
 
-    await setDoc(userRef, { tier, updatedAt: serverTimestamp() }, { merge: true });
+    const tierPromises = [setDoc(userRef, { tier, updatedAt: serverTimestamp() }, { merge: true })];
+    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+      tierPromises.push(setDoc(doc(db, 'users', auth.currentUser.uid), { tier, updatedAt: serverTimestamp() }, { merge: true }));
+    }
+    await Promise.all(tierPromises);
+
     return { newXp: xp, newTier: tier };
   } catch (e) {
     console.error("addXp error:", e);
@@ -857,18 +922,49 @@ export async function addXp(userName: string, amount: number): Promise<{ newXp: 
 export async function getUserProfileData(userName: string): Promise<Partial<UserProfile> | null> {
   try {
     const userRef = doc(db, 'users', userName);
-    const snap = await getDoc(userRef);
-    if (snap.exists()) {
-      const data = snap.data();
-      const xp = data.xp || 0;
+    let snap = await getDoc(userRef);
+    let uidSnapData: any = {};
+    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+      const uidSnap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      if (uidSnap.exists()) uidSnapData = uidSnap.data();
+    }
+
+    if (snap.exists() || Object.keys(uidSnapData).length > 0) {
+      const data = snap.exists() ? snap.data() : {};
+      const xp = Math.max(data.xp || 0, uidSnapData.xp || 0);
+      const coins = Math.max(data.coins ?? 200, uidSnapData.coins ?? 200);
+      const bookmarkLimit = Math.max(data.bookmarkLimit || 50, uidSnapData.bookmarkLimit || 50);
+      const totalSolved = Math.max(data.totalSolved || 0, uidSnapData.totalSolved || 0);
+      const totalCorrect = Math.max(data.totalCorrect || 0, uidSnapData.totalCorrect || 0);
+      const dailyGoal = data.dailyGoal || uidSnapData.dailyGoal || 10;
+
+      const unlockedAvatars = Array.from(new Set([
+        ...STARTER_AVATAR_IDS,
+        ...(Array.isArray(data.unlockedAvatars) ? data.unlockedAvatars : []),
+        ...(Array.isArray(uidSnapData.unlockedAvatars) ? uidSnapData.unlockedAvatars : [])
+      ]));
+
+      const avatar = data.avatar || uidSnapData.avatar || '🦁';
+      const currentAvatarId = data.currentAvatarId || uidSnapData.currentAvatarId || 'lion';
+      const isAdmin = data.isAdmin || uidSnapData.isAdmin;
+
       return {
-        coins: data.coins ?? 200,
+        name: data.name || uidSnapData.name || userName,
+        pin: data.pin || uidSnapData.pin,
+        coins,
         xp,
         tier: calculateTier(xp).tier,
-        bookmarkLimit: data.bookmarkLimit || 50,
-        avatar: data.avatar || '🦁',
-        currentAvatarId: data.currentAvatarId || 'lion',
-        unlockedAvatars: data.unlockedAvatars || STARTER_AVATAR_IDS
+        bookmarkLimit,
+        avatar,
+        currentAvatarId,
+        unlockedAvatars,
+        totalSolved,
+        totalCorrect,
+        dailyGoal,
+        email: data.email || uidSnapData.email,
+        photoURL: data.photoURL || uidSnapData.photoURL,
+        isAdmin,
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : uidSnapData.createdAt?.toMillis ? uidSnapData.createdAt.toMillis() : Date.now()
       };
     }
     return null;

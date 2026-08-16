@@ -195,11 +195,9 @@ function AppContent() {
     setBookmarkLimit(prof?.bookmarkLimit || 50);
     setMasteryStats(mStats);
     setExpressionCounts(expCounts);
-    setQuestionCounts(qCounts);
-
     setUser(prev => {
       if (!prev) return null;
-      const updated = {
+      const updated: UserProfile = {
         ...prev,
         coins: prof?.coins ?? prev.coins,
         xp: prof?.xp ?? prev.xp,
@@ -207,7 +205,11 @@ function AppContent() {
         bookmarkLimit: prof?.bookmarkLimit ?? prev.bookmarkLimit,
         avatar: prof?.avatar ?? prev.avatar,
         currentAvatarId: prof?.currentAvatarId ?? prev.currentAvatarId,
-        unlockedAvatars: prof?.unlockedAvatars ?? prev.unlockedAvatars
+        unlockedAvatars: prof?.unlockedAvatars ?? prev.unlockedAvatars,
+        totalSolved: mStats.totalSolved || prof?.totalSolved || prev.totalSolved || 0,
+        totalCorrect: mStats.totalCorrect || prof?.totalCorrect || prev.totalCorrect || 0,
+        dailyGoal: prof?.dailyGoal ?? prev.dailyGoal ?? 10,
+        isAdmin: prof?.isAdmin ?? prev.isAdmin
       };
       localStorage.setItem('ai_grammar_user', JSON.stringify(updated));
       return updated;
@@ -274,7 +276,7 @@ function AppContent() {
     } else if (res.alreadyClaimed) {
       toast.warning('이미 수령된 보상', '이미 지급받으신 보상입니다.');
     } else {
-      toast.error('수령 오류', '잠시 후 다시 시도해 주세요.');
+      toast.error('수령 실패', '보상 수령 중 오류가 발생했습니다.');
     }
     const updated = await getUserAnnouncementStatusMap(user.name);
     setAnnouncementStatusMap(updated);
@@ -333,6 +335,7 @@ function AppContent() {
       setUser(result.profile);
       setBookmarkLimit(result.profile.bookmarkLimit || 50);
       setView('menu');
+      await refreshUserData(result.profile.name);
       toast.coin(`환영합니다, ${result.profile.name}님!`, `🪙 ${result.profile.coins} 코인이 충전되었습니다.`);
       trackUserAction('LOGIN', `PIN Login: ${result.profile.name}`, result.profile);
     } else {
@@ -342,12 +345,13 @@ function AppContent() {
 
   // 🔐 Check Google Redirect Auth Result on app startup
   useEffect(() => {
-    checkGoogleRedirectResult().then(profile => {
+    checkGoogleRedirectResult().then(async profile => {
       if (profile) {
         localStorage.setItem('ai_grammar_user', JSON.stringify(profile));
         setUser(profile);
         setBookmarkLimit(profile.bookmarkLimit || 50);
         setView('menu');
+        await refreshUserData(profile.name);
         toast.coin(`구글 로그인 완료! 🎉`, `환영합니다, ${profile.name}님!`);
         trackUserAction('LOGIN', `Google Redirect: ${profile.name}`, profile);
       }
@@ -380,6 +384,7 @@ function AppContent() {
         setUser(result.profile);
         setBookmarkLimit(result.profile.bookmarkLimit || 50);
         setView('menu');
+        await refreshUserData(result.profile.name);
         toast.coin(`구글 로그인 성공! 🎉`, `환영합니다, ${result.profile.name}님!`);
         trackUserAction('LOGIN', `Google OAuth: ${result.profile.name}`, result.profile);
       } else {
