@@ -558,25 +558,30 @@ function AppContent() {
   const handlePromptGenerateBulk = async (levelInfo: DifficultyLevel, isWeakness: boolean = false) => {
     if (!user) return;
 
-    const cd = await checkGenerationCooldown(user.name);
-    if (!cd.canGenerate) {
-      toast.warning(
-        '생성 쿨타임 진행 중 ⏱️',
-        `${Math.floor(cd.remainingSeconds / 60)}분 ${cd.remainingSeconds % 60}초 후에 다시 생성할 수 있습니다.`
-      );
-      return;
+    const isAdminUser = checkIsAdmin(user);
+    if (!isAdminUser) {
+      const cd = await checkGenerationCooldown(user);
+      if (!cd.canGenerate) {
+        toast.warning(
+          '생성 쿨타임 진행 중 ⏱️',
+          `${Math.floor(cd.remainingSeconds / 60)}분 ${cd.remainingSeconds % 60}초 후에 다시 생성할 수 있습니다.`
+        );
+        return;
+      }
     }
+
+    const genCost = isAdminUser ? 0 : 50;
 
     setActionModalConfig({
       isOpen: true,
       type: 'generate_grammar',
       title: `[${levelInfo.label}] 40문제 AI 출제`,
       subtitle: `Gemini AI가 ${levelInfo.label} 수준의 고품질 영문법 40문제를 생성하여 공용 DB에 즉시 적재합니다.`,
-      cost: 50,
+      cost: genCost,
       icon: '⚡',
-      confirmButtonText: '40문제 생성 시작 (🪙 50 소모)',
+      confirmButtonText: isAdminUser ? '40문제 생성 시작 (관리자 무료)' : '40문제 생성 시작 (🪙 50 소모)',
       notices: [
-        '시작 즉시 🪙 50 코인이 차감되며 3분의 생성 쿨타임이 적용됩니다.',
+        isAdminUser ? '👑 관리자 권한: 코인 소모 및 쿨타임이 완전 면제됩니다.' : '시작 즉시 🪙 50 코인이 차감되며 3분의 생성 쿨타임이 적용됩니다.',
         '생성된 문제는 공용 DB에 영구 보관되어 모든 학습자가 함께 풀 수 있습니다.',
         '100% 한국어 상세 해설 및 1~5형식 표준 문형 검증이 자동 적용됩니다.'
       ],
@@ -598,14 +603,19 @@ function AppContent() {
     setIsLoading(true);
     setLoadingText('코인 차감 및 AI 문제 출제 준비 중...');
 
-    const deducted = await deductCoins(user.name, 50);
+    const isAdminUser = checkIsAdmin(user);
+    const genCost = isAdminUser ? 0 : 50;
+
+    const deducted = await deductCoins(user.name, genCost, user);
     if (!deducted) {
       setIsLoading(false);
       toast.error('코인 부족', '보유 코인이 부족하여 생성할 수 없습니다.');
       return;
     }
 
-    await recordGenerationTimestamp(user.name);
+    if (!isAdminUser) {
+      await recordGenerationTimestamp(user.name);
+    }
     await refreshUserData(user.name);
 
     setLoadingText(`Gemini AI가 [${levelInfo.label}] 40문제를 생성하고 있습니다...`);
@@ -648,27 +658,31 @@ function AppContent() {
   const handlePromptGenerateExpressions = async (category: 'daily' | 'business' | 'travel' | 'pattern') => {
     if (!user) return;
 
-    const cd = await checkGenerationCooldown(user.name);
-    if (!cd.canGenerate) {
-      toast.warning(
-        '생성 쿨타임 진행 중 ⏱️',
-        `${Math.floor(cd.remainingSeconds / 60)}분 ${cd.remainingSeconds % 60}초 후에 다시 생성할 수 있습니다.`
-      );
-      return;
+    const isAdminUser = checkIsAdmin(user);
+    if (!isAdminUser) {
+      const cd = await checkGenerationCooldown(user);
+      if (!cd.canGenerate) {
+        toast.warning(
+          '생성 쿨타임 진행 중 ⏱️',
+          `${Math.floor(cd.remainingSeconds / 60)}분 ${cd.remainingSeconds % 60}초 후에 다시 생성할 수 있습니다.`
+        );
+        return;
+      }
     }
 
     const catName = EXPRESSION_CATEGORIES.find(c => c.id === category)?.title || category;
+    const genCost = isAdminUser ? 0 : 50;
 
     setActionModalConfig({
       isOpen: true,
       type: 'generate_expression',
       title: `[${catName}] 새 표현 5개 AI 생성`,
       subtitle: `이미 배운 표현과 중복되지 않는 현지 원어민 실전 표현 5개를 새롭게 조제합니다.`,
-      cost: 50,
+      cost: genCost,
       icon: '🌟',
-      confirmButtonText: '새 표현 5개 생성 (🪙 50 소모)',
+      confirmButtonText: isAdminUser ? '새 표현 5개 생성 (관리자 무료)' : '새 표현 5개 생성 (🪙 50 소모)',
       notices: [
-        '시작 즉시 🪙 50 코인이 차감되며 3분의 생성 쿨타임이 적용됩니다.',
+        isAdminUser ? '👑 관리자 권한: 코인 소모 및 쿨타임이 완전 면제됩니다.' : '시작 즉시 🪙 50 코인이 차감되며 3분의 생성 쿨타임이 적용됩니다.',
         '기존 DB 표현과의 중복 배제 필터링이 자동 적용됩니다.',
         '원어민 TTS 발음, A/B 롤플레이 대화문 및 4지선다 퀴즈가 함께 생성됩니다.'
       ],
@@ -690,14 +704,19 @@ function AppContent() {
     setIsLoading(true);
     setLoadingText('코인 차감 및 기존 표현 중복 검사 중...');
 
-    const deducted = await deductCoins(user.name, 50);
+    const isAdminUser = checkIsAdmin(user);
+    const genCost = isAdminUser ? 0 : 50;
+
+    const deducted = await deductCoins(user.name, genCost, user);
     if (!deducted) {
       setIsLoading(false);
       toast.error('코인 부족', '보유 코인이 부족합니다.');
       return;
     }
 
-    await recordGenerationTimestamp(user.name);
+    if (!isAdminUser) {
+      await recordGenerationTimestamp(user.name);
+    }
     await refreshUserData(user.name);
 
     const existingList = await getExpressionsByCategory(category);

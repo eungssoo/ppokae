@@ -338,3 +338,107 @@ export async function askAiTutor(
 
   return { success: false, error: "AI 튜터 응답을 가져오지 못했습니다. 잠시 후 다시 질문해 주세요." };
 }
+
+// 🏆 랭킹전 전용 10문제 (Level 1: 2문제, Level 2: 3문제, Level 3: 3문제, Level 4: 2문제) 신규 생성
+export async function generateRankingCycleQuestions(
+  cycleId: string,
+  cycleName: string
+): Promise<{ success: boolean; questions?: Question[]; error?: string }> {
+  const models = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+
+  const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사 및 공인 랭킹전 출제위원장입니다.
+오늘의 실시간 명예의 전당 랭킹전(${cycleName})을 위해 객관식 4지선다 영문법 문제를 **정확히 10문제** 생성하세요.
+
+[🚨 난이도별 엄격한 문항 배분 원칙 - 총 10문제]
+1. 1~2번 문제 (2문제): Level 1 (입문/초급 - 기초 수일치, 기본 시제, 조동사, 1~3형식)
+2. 3~5번 문제 (3문제): Level 2 (실력 중급 - 관계사, 5형식 사역/지각, 수동태, 현재완료, 분사)
+3. 6~8번 문제 (3문제): Level 3 (고득점 도약 - 분사구문, 가정법, 부정어 도치, 제안/요구 동사)
+4. 9~10번 문제 (2문제): Level 4 (실전 마스터 - 특수 도치, 혼합가정법, 고급 전치사구/관용표현)
+
+[🚨 4대 출제 원칙]
+1. 100% 한국어 상세 해설(feedback, nuance, chunk_pattern, translation)
+2. 문장 형식(form)은 반드시 1, 2, 3, 4, 5 중 하나만 사용
+3. 복수 정답 불가, 명백한 시간 단서/문맥 포함
+4. 각 문제 객체에 "level": "Level 1" | "Level 2" | "Level 3" | "Level 4" 필드를 반드시 명시할 것`;
+
+  const userPrompt = `오늘의 랭킹전 회차: ${cycleId} (${cycleName})
+위 기준에 따라 1번부터 10번까지 완벽한 난이도 밸런스(Level 1: 2문제, Level 2: 3문제, Level 3: 3문제, Level 4: 2문제)의 랭킹전 전용 10문제를 JSON으로 출력하세요.`;
+
+  const schema = {
+    type: "OBJECT",
+    properties: {
+      questions: {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            sentence: { type: "STRING" },
+            options: { type: "ARRAY", items: { type: "STRING" } },
+            answer: { type: "STRING" },
+            translation: { type: "STRING" },
+            form: { type: "INTEGER" },
+            level: { type: "STRING" },
+            explanation: {
+              type: "OBJECT",
+              properties: {
+                correct_reason: { type: "STRING" },
+                chunk_pattern: { type: "STRING" },
+                feedback: {
+                  type: "OBJECT",
+                  properties: {
+                    A: { type: "STRING" },
+                    B: { type: "STRING" },
+                    C: { type: "STRING" },
+                    D: { type: "STRING" }
+                  },
+                  required: ["A", "B", "C", "D"]
+                },
+                nuance: { type: "STRING" }
+              },
+              required: ["correct_reason", "chunk_pattern", "feedback", "nuance"]
+            }
+          },
+          required: ["sentence", "options", "answer", "translation", "form", "level", "explanation"]
+        }
+      }
+    },
+    required: ["questions"]
+  };
+
+  const payload = {
+    contents: [{ parts: [{ text: userPrompt }] }],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: schema,
+      temperature: 0.3
+    }
+  };
+
+  for (const model of models) {
+    try {
+      const resultData = await callGeminiProxy(model, payload);
+      const rawText = resultData?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawText) {
+        const parsed = JSON.parse(rawText);
+        if (parsed.questions && Array.isArray(parsed.questions) && parsed.questions.length >= 10) {
+          const formatted: Question[] = parsed.questions.map((q: any, i: number) => ({
+            id: `ranking_${cycleId}_q${i + 1}`,
+            form: sanitizeForm(q.form),
+            sentence: q.sentence,
+            options: q.options,
+            answer: q.answer,
+            translation: q.translation,
+            explanation: q.explanation,
+            level: q.level || (i < 2 ? 'Level 1' : i < 5 ? 'Level 2' : i < 8 ? 'Level 3' : 'Level 4')
+          }));
+          return { success: true, questions: formatted };
+        }
+      }
+    } catch (e: any) {
+      console.warn(`Ranking cycle generation error with ${model}:`, e);
+    }
+  }
+
+  return { success: false, error: "랭킹전 문제를 AI로 생성하지 못했습니다." };
+}

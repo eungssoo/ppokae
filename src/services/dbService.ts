@@ -30,7 +30,7 @@ import {
   SystemSettings,
   PushAnnouncement
 } from '../types';
-import { sanitizeForm } from './geminiService';
+import { sanitizeForm, generateRankingCycleQuestions } from './geminiService';
 import { STARTER_AVATAR_IDS, performGachaDraw, AVATAR_DATABASE } from './avatarService';
 
 export function getTodayDateString(): string {
@@ -747,13 +747,26 @@ export async function addCoins(userName: string, amount: number): Promise<number
   }
 }
 
-// 🪙 코인 차감
-export async function deductCoins(userName: string, amount: number): Promise<boolean> {
+// 🪙 코인 차감 (관리자는 무제한 무료 패스)
+export async function deductCoins(userName: string, amount: number, userObj?: Partial<UserProfile> | null): Promise<boolean> {
   try {
-    const current = await getUserCoins(userName);
-    if (current < amount) return false;
+    if (userObj && checkIsAdmin(userObj)) return true;
 
     const userRef = doc(db, 'users', userName);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) {
+      if (userObj && checkIsAdmin(userObj)) return true;
+      return false;
+    }
+
+    const data = snap.data();
+    if (data.isAdmin || checkIsAdmin(data as UserProfile)) {
+      return true;
+    }
+
+    const current = data.coins ?? 0;
+    if (current < amount) return false;
+
     await updateDoc(userRef, {
       coins: increment(-amount)
     });
@@ -764,14 +777,23 @@ export async function deductCoins(userName: string, amount: number): Promise<boo
   }
 }
 
-// ⏱️ 3분 문제 생성 쿨타임 검사 (180초)
-export async function checkGenerationCooldown(userName: string): Promise<{ canGenerate: boolean; remainingSeconds: number }> {
+// ⏱️ 3분 문제 생성 쿨타임 검사 (180초, 관리자는 0초 즉시 패스)
+export async function checkGenerationCooldown(userNameOrUser: string | Partial<UserProfile>): Promise<{ canGenerate: boolean; remainingSeconds: number }> {
   try {
+    if (typeof userNameOrUser === 'object' && checkIsAdmin(userNameOrUser)) {
+      return { canGenerate: true, remainingSeconds: 0 };
+    }
+    const userName = typeof userNameOrUser === 'string' ? userNameOrUser : userNameOrUser.name || '';
     const userRef = doc(db, 'users', userName);
     const snap = await getDoc(userRef);
     if (!snap.exists()) return { canGenerate: true, remainingSeconds: 0 };
 
-    const last = snap.data().lastGeneratedAt;
+    const data = snap.data();
+    if (data.isAdmin || checkIsAdmin(data as UserProfile)) {
+      return { canGenerate: true, remainingSeconds: 0 };
+    }
+
+    const last = data.lastGeneratedAt;
     if (!last) return { canGenerate: true, remainingSeconds: 0 };
 
     const now = Date.now();
@@ -1189,7 +1211,7 @@ export async function getRandomPersonalQuestions(userName: string, difficultyLab
   }
 }
 
-// 6. 🔥 3사이클 고정 랭킹전 문제 조회 및 자동 생성
+// 6. 🔥 3사이클 고정 랭킹전 문제 조회 및 AI 자동 10문제 생성 (Level 1: 2문제, Level 2: 3문제, Level 3: 3문제, Level 4: 2문제)
 export async function getOrCreateCycleQuestions(cycleInfo: CycleInfo): Promise<{ success: boolean; data?: Question[]; error?: string }> {
   try {
     const cycleRef = doc(db, 'cycle_challenges', cycleInfo.cycleId);
@@ -1205,40 +1227,72 @@ export async function getOrCreateCycleQuestions(cycleInfo: CycleInfo): Promise<{
       }
     }
 
-    const snapshot = await getDocs(collection(db, 'questions'));
-    if (snapshot.size < 10) {
-      return { 
-        success: false, 
-        error: `공용 DB에 저장된 문제가 부족합니다 (현재 ${snapshot.size}개 / 최소 10개 필요). 먼저 [문제 공장]에서 문제를 생성해주세요!` 
-      };
+    // 🚀 새로운 회차가 시작되었을 때: Gemini AI를 호출하여 2, 3, 3, 2 난이도별 10문제를 전용 생성
+    let selected10: Question[] = [];
+    const genRes = await generateRankingCycleQuestions(cycleInfo.cycleId, cycleInfo.cycleName);
+
+    if (genRes.success && genRes.questions && genRes.questions.length >= 10) {
+      selected10 = genRes.questions.map(q => cleanQuestionForStorage(q));
+    } else {
+      // AI 호출 실패 시 기존 DB의 문제에서 난이도별/랜덤으로 폴백 구성
+      const snapshot = await getDocs(collection(db, 'questions'));
+      if (snapshot.size >= 10) {
+        const allQuestions: Question[] = [];
+        snapshot.forEach(docSnap => {
+          const d = docSnap.data();
+          allQuestions.push({
+            id: docSnap.id,
+            form: sanitizeForm(d.form),
+            sentence: d.sentence,
+            options: [...(d.options || [])],
+            answer: d.answer,
+            translation: d.translation,
+            explanation: d.explanation,
+            components: d.components
+          });
+        });
+        allQuestions.sort(() => Math.random() - 0.5);
+        selected10 = allQuestions.slice(0, 10).map(q => cleanQuestionForStorage(q));
+      } else {
+        return { 
+          success: false, 
+          error: genRes.error || "랭킹전 전용 문제를 생성하지 못했습니다. 잠시 후 다시 시도해주세요." 
+        };
+      }
     }
 
-    const allQuestions: Question[] = [];
-    snapshot.forEach(docSnap => {
-      const d = docSnap.data();
-      allQuestions.push({
-        id: docSnap.id,
-        form: sanitizeForm(d.form),
-        sentence: d.sentence,
-        options: [...(d.options || [])],
-        answer: d.answer,
-        translation: d.translation,
-        explanation: d.explanation,
-        components: d.components
-      });
-    });
-
-    allQuestions.sort(() => Math.random() - 0.5);
-    const selected10 = allQuestions.slice(0, 10).map(q => cleanQuestionForStorage(q));
-
+    // 1) 랭킹전 전용 회차 문서(cycle_challenges)에 저장
     const cyclePayload = removeUndefinedDeep({
       cycleId: cycleInfo.cycleId,
       cycleName: cycleInfo.cycleName,
       questions: selected10,
       createdAt: serverTimestamp()
     });
-
     await setDoc(cycleRef, cyclePayload);
+
+    // 2) 생성된 문제들을 난이도별로 공용 DB(questions 컬렉션)에도 영구 보관 (Level 1: 2문제, Level 2: 3문제, Level 3: 3문제, Level 4: 2문제)
+    try {
+      const byLevel: Record<string, Question[]> = {
+        'Level 1': [],
+        'Level 2': [],
+        'Level 3': [],
+        'Level 4': []
+      };
+
+      selected10.forEach((q, idx) => {
+        const lvl = (q as any).level || (idx < 2 ? 'Level 1' : idx < 5 ? 'Level 2' : idx < 8 ? 'Level 3' : 'Level 4');
+        if (byLevel[lvl]) byLevel[lvl].push(q);
+        else byLevel['Level 2'].push(q);
+      });
+
+      for (const [lvlKey, qList] of Object.entries(byLevel)) {
+        if (qList.length > 0) {
+          await saveQuestionsToFirestore(qList, lvlKey);
+        }
+      }
+    } catch (saveErr) {
+      console.warn("Auto-saving cycle questions to questions collection failed:", saveErr);
+    }
 
     return { success: true, data: selected10 };
   } catch (error: any) {
