@@ -34,7 +34,8 @@ export const BookmarkedListView: React.FC<BookmarkedListViewProps> = ({
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
 
-    const fullText = sentence.replace(/_{2,}/g, answer);
+    const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
+    const fullText = sentence.replace(BLANK_REGEX, answer || '');
     const utterance = new SpeechSynthesisUtterance(fullText);
     utterance.rate = 0.9;
     utterance.lang = 'en-US';
@@ -160,7 +161,27 @@ export const BookmarkedListView: React.FC<BookmarkedListViewProps> = ({
                       </div>
 
                       <p className="text-white font-bold text-sm sm:text-base leading-snug">
-                        {q.sentence.replace(/_{2,}/g, `[ ${q.answer} ]`)}
+                        {(() => {
+                          const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
+                          const parts = q.sentence.split(BLANK_REGEX);
+                          if (parts.length <= 1) {
+                            return <span>{q.sentence} <span className="text-emerald-400 font-black">({q.answer})</span></span>;
+                          }
+                          return (
+                            <span>
+                              {parts.map((part, idx) => (
+                                <React.Fragment key={idx}>
+                                  {part}
+                                  {idx < parts.length - 1 && (
+                                    <span className="inline-block mx-1.5 px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-black font-sans text-xs sm:text-sm shadow-sm">
+                                      {q.answer}
+                                    </span>
+                                  )}
+                                </React.Fragment>
+                              ))}
+                            </span>
+                          );
+                        })()}
                       </p>
                       <p className="text-slate-400 text-xs mt-1">
                         {q.translation}

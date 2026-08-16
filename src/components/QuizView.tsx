@@ -97,9 +97,10 @@ export const QuizView: React.FC<QuizViewProps> = ({
     if (!currentQuestion || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
 
+    const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
     const sentenceToRead = isSubmitted
-      ? currentQuestion.sentence.replace(/_{2,}/g, currentQuestion.answer)
-      : currentQuestion.sentence.replace(/_{2,}/g, ' , ');
+      ? currentQuestion.sentence.replace(BLANK_REGEX, currentQuestion.answer)
+      : currentQuestion.sentence.replace(BLANK_REGEX, ' , ');
 
     const utterance = new SpeechSynthesisUtterance(sentenceToRead);
     utterance.rate = 0.9;

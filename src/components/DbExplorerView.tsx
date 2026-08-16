@@ -106,7 +106,27 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                         >
                           <div className="flex justify-between items-start mb-2 gap-4">
                             <p className="font-bold text-base sm:text-lg text-white leading-relaxed font-serif">
-                              {q.sentence.replace(/(?:_{2,}|\[blank\]|\(blank\)|<blank>|\[빈칸\]|\(빈칸\)|\(_{1,}\)|\[_{1,}\]|\[___+\])/gi, `[ ${q.answer} ]`)}
+                              {(() => {
+                                const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
+                                const parts = q.sentence.split(BLANK_REGEX);
+                                if (parts.length <= 1) {
+                                  return <span>{q.sentence} <span className="text-emerald-400 font-black">({q.answer})</span></span>;
+                                }
+                                return (
+                                  <span>
+                                    {parts.map((part, idx) => (
+                                      <React.Fragment key={idx}>
+                                        {part}
+                                        {idx < parts.length - 1 && (
+                                          <span className="inline-block mx-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-black font-sans text-sm sm:text-base shadow-sm">
+                                            {q.answer}
+                                          </span>
+                                        )}
+                                      </React.Fragment>
+                                    ))}
+                                  </span>
+                                );
+                              })()}
                             </p>
                             {q.createdAt && (
                               <span className="text-[10px] font-bold text-slate-400 bg-slate-900 px-2 py-1 rounded whitespace-nowrap border border-slate-800">

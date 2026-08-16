@@ -826,6 +826,52 @@ export async function addCoins(userName: string, amount: number): Promise<number
   }
 }
 
+// 🏆 경험치(XP) 지급 및 티어 자동 승급
+export async function addXp(userName: string, amount: number): Promise<{ newXp: number; newTier: string }> {
+  try {
+    const userRef = doc(db, 'users', userName);
+    await setDoc(userRef, {
+      xp: increment(amount),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+
+    const snap = await getDoc(userRef);
+    const xp = snap.exists() ? (snap.data().xp || 0) : 0;
+    const tier = calculateTier(xp).tier;
+
+    await setDoc(userRef, { tier, updatedAt: serverTimestamp() }, { merge: true });
+    return { newXp: xp, newTier: tier };
+  } catch (e) {
+    console.error("addXp error:", e);
+    return { newXp: 0, newTier: 'Bronze' };
+  }
+}
+
+// 👤 전체 유저 프로필 데이터 조회 (코인, XP, 티어, 북마크 한도, 아바타)
+export async function getUserProfileData(userName: string): Promise<Partial<UserProfile> | null> {
+  try {
+    const userRef = doc(db, 'users', userName);
+    const snap = await getDoc(userRef);
+    if (snap.exists()) {
+      const data = snap.data();
+      const xp = data.xp || 0;
+      return {
+        coins: data.coins ?? 200,
+        xp,
+        tier: calculateTier(xp).tier,
+        bookmarkLimit: data.bookmarkLimit || 50,
+        avatar: data.avatar || '🦁',
+        currentAvatarId: data.currentAvatarId || 'lion',
+        unlockedAvatars: data.unlockedAvatars || STARTER_AVATAR_IDS
+      };
+    }
+    return null;
+  } catch (e) {
+    console.error("getUserProfileData error:", e);
+    return null;
+  }
+}
+
 // 🪙 코인 차감 (관리자는 무제한 무료 패스)
 export async function deductCoins(userName: string, amount: number, userObj?: Partial<UserProfile> | null): Promise<boolean> {
   try {
@@ -954,10 +1000,23 @@ export async function isQuestionBookmarked(userName: string, sentence: string): 
   }
 }
 
-// 🔤 빈칸 표기 표준화 헬퍼 ([blank], (blank), [빈칸], ___ 등을 ______ 로 통일)
+// 🔤 모든 형태의 빈칸 감지 정규식 (언더스코어, [blank], [Blank], (blank), <blank>, [빈칸], 단독 blank 단어 등)
+export const BLANK_PATTERN = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
+
+// 🔤 빈칸 표기 표준화 헬퍼 (모든 비정형 빈칸을 ______ 로 통일)
 export function normalizeSentenceBlank(sentence: string): string {
   if (!sentence || typeof sentence !== 'string') return '';
-  return sentence.replace(/(?:_{2,}|\[blank\]|\(blank\)|<blank>|\[빈칸\]|\(빈칸\)|\(_{1,}\)|\[_{1,}\]|\[___+\])/gi, '______');
+  return sentence.replace(BLANK_PATTERN, '______');
+}
+
+// 🔤 문장에 정답을 깔끔하게 채워 넣는 헬퍼 (문제집, 북마크, 오답노트용)
+export function fillSentenceAnswer(sentence: string, answer: string): string {
+  if (!sentence || typeof sentence !== 'string') return '';
+  const cleanAns = (answer || '').trim();
+  if (BLANK_PATTERN.test(sentence)) {
+    return sentence.replace(BLANK_PATTERN, `[ ${cleanAns} ]`);
+  }
+  return sentence;
 }
 
 // Helper: Firestore 안전 저장을 위한 Question 객체 정제 (undefined 100% 제거)

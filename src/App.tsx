@@ -59,7 +59,10 @@ import {
   claimAnnouncementReward,
   DEFAULT_SYSTEM_SETTINGS,
   checkIsAdmin,
-  calculateCycleReward
+  calculateCycleReward,
+  addXp,
+  getUserProfileData,
+  calculateTier
 } from './services/dbService';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
 import { generateBulkQuestions, generateNativeExpressions } from './services/geminiService';
@@ -160,24 +163,32 @@ function AppContent() {
   const [incorrectList, setIncorrectList] = useState<WeaknessRecord[]>([]);
   const [dbData, setDbData] = useState<Record<string, Question[]>>({});
 
-  // Refresh user data & counts from DB
+  // Refresh user data & counts from DB (코인, 경험치 XP, 티어, 북마크 완벽 동기화)
   const refreshUserData = async (userName: string) => {
-    const c = await getUserCoins(userName);
-    const bLimit = await getBookmarkLimit(userName);
+    const prof = await getUserProfileData(userName);
     const bList = await getBookmarks(userName);
     const mStats = await getUserMasteryStats(userName);
     const expCounts = await getExpressionCounts();
     const qCounts = await getQuestionCountsByLevel();
 
     setBookmarks(bList);
-    setBookmarkLimit(bLimit);
+    setBookmarkLimit(prof?.bookmarkLimit || 50);
     setMasteryStats(mStats);
     setExpressionCounts(expCounts);
     setQuestionCounts(qCounts);
 
     setUser(prev => {
       if (!prev) return null;
-      const updated = { ...prev, coins: c, bookmarkLimit: bLimit };
+      const updated = {
+        ...prev,
+        coins: prof?.coins ?? prev.coins,
+        xp: prof?.xp ?? prev.xp,
+        tier: prof?.tier ?? prev.tier,
+        bookmarkLimit: prof?.bookmarkLimit ?? prev.bookmarkLimit,
+        avatar: prof?.avatar ?? prev.avatar,
+        currentAvatarId: prof?.currentAvatarId ?? prev.currentAvatarId,
+        unlockedAvatars: prof?.unlockedAvatars ?? prev.unlockedAvatars
+      };
       localStorage.setItem('ai_grammar_user', JSON.stringify(updated));
       return updated;
     });
@@ -961,13 +972,26 @@ function AppContent() {
     setView('incorrect_list');
   };
 
-  // 12. Check Answer in Quiz & Record Analytics
+  // 12. Check Answer in Quiz & Record Analytics (실시간 경험치 누적 및 티어 업데이트)
   const handleCheckAnswer = (userInput: string) => {
     if (!currentQ || !user) return { isCorrect: false };
     const isCorrect = userInput.trim() === currentQ.answer;
 
-    // Record stats and XP for learning analytics
+    // Record stats and XP in Firestore
     recordQuizResultStats(user.name, currentQ.form, isCorrect);
+
+    const xpEarned = isCorrect ? 10 : 2;
+    setUser(prev => {
+      if (!prev) return null;
+      const nextXp = (prev.xp || 0) + xpEarned;
+      const updated = {
+        ...prev,
+        xp: nextXp,
+        tier: calculateTier(nextXp).tier
+      };
+      localStorage.setItem('ai_grammar_user', JSON.stringify(updated));
+      return updated;
+    });
 
     if (isCorrect) {
       setCorrectCount(prev => prev + 1);
@@ -994,13 +1018,15 @@ function AppContent() {
 
       if (quizMode === 'daily') {
         setIsLoading(true);
-        setLoadingText('실시간 랭킹 순위 등록 & 코인 보상 지급 중...');
+        setLoadingText('실시간 랭킹 순위 등록 & 코인/XP 보상 지급 중...');
         
         const rewardCoins = correctCount * coinRate;
         if (rewardCoins > 0) {
           await addCoins(user.name, rewardCoins);
-          await refreshUserData(user.name);
         }
+        // 랭킹전 완주 보너스 +50 XP
+        await addXp(user.name, 50);
+        await refreshUserData(user.name);
 
         const updatedLeaderboard = await saveAndGetCycleRankings(
           currentCycle.cycleId, 
@@ -1012,7 +1038,7 @@ function AppContent() {
         setSelectedCycleTab(currentCycle.cycleIndex);
         setIsLoading(false);
         setView('ranking_board');
-        toast.coin(`🏆 ${currentCycle.cycleName} 랭킹전 완료!`, `정답 ${correctCount}개 맞춤 ➔ 🪙 +${rewardCoins} 코인이 지급되었습니다!`);
+        toast.coin(`🏆 ${currentCycle.cycleName} 랭킹전 완료!`, `정답 ${correctCount}개 맞춤 ➔ 🪙 +${rewardCoins} 코인 & 🏆 +50 XP 획득!`);
       } else {
         const earnedCoins = correctCount * coinRate;
         if (earnedCoins > 0) {
@@ -1020,6 +1046,7 @@ function AppContent() {
           await refreshUserData(user.name);
           toast.coin('학습 완료! 🎉', `정답 ${correctCount}개 맞춤 ➔ 🪙 +${earnedCoins} 코인 획득!`);
         } else {
+          await refreshUserData(user.name);
           toast.info('학습 완료! 🎉', '준비된 모든 문제를 풀었습니다.');
         }
         setView(quizMode === 'expression' ? 'expression_select' : quizMode === 'bookmark' ? 'bookmark_view' : 'menu');
