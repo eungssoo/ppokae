@@ -1816,6 +1816,52 @@ export async function getQuestionCountsByLevel(): Promise<Record<string, number>
   }
 }
 
+// 📊 12-2. 특정 난이도의 1~5형식별 문제 수 현황 집계 및 부족한 형식 분석
+export async function getQuestionFormStatsByLevel(difficultyLabel: string): Promise<{
+  countsByForm: Record<number, number>;
+  total: number;
+  underrepresentedForms: number[];
+}> {
+  try {
+    const snapshot = await getDocs(collection(db, 'questions'));
+    const countsByForm: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let total = 0;
+
+    snapshot.forEach(docSnap => {
+      const d = docSnap.data();
+      const diff = d.difficulty || '';
+      const matches = 
+        diff === difficultyLabel ||
+        (difficultyLabel.includes('Level 1') && (diff.includes('Level 1') || diff.includes('초급'))) ||
+        (difficultyLabel.includes('Level 2') && (diff.includes('Level 2') || diff.includes('중급'))) ||
+        (difficultyLabel.includes('Level 3') && (diff.includes('Level 3') || diff.includes('고득점'))) ||
+        (difficultyLabel.includes('Level 4') && (diff.includes('Level 4') || diff.includes('실전')));
+
+      if (matches) {
+        const form = sanitizeForm(d.form);
+        countsByForm[form] = (countsByForm[form] || 0) + 1;
+        total++;
+      }
+    });
+
+    // 부족한 형식 순위 계산 (오름차순 정렬)
+    const sortedForms = [1, 2, 3, 4, 5].sort((a, b) => (countsByForm[a] || 0) - (countsByForm[b] || 0));
+
+    return {
+      countsByForm,
+      total,
+      underrepresentedForms: sortedForms
+    };
+  } catch (e) {
+    console.error("getQuestionFormStatsByLevel error:", e);
+    return {
+      countsByForm: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      total: 0,
+      underrepresentedForms: [1, 2, 3, 4, 5]
+    };
+  }
+}
+
 // 🌟 13. 실전 원어민 표현 테마별 목록 조회
 export async function getExpressionsByCategory(category: string): Promise<ExpressionItem[]> {
   try {

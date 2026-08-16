@@ -62,7 +62,8 @@ import {
   calculateCycleReward,
   addXp,
   getUserProfileData,
-  calculateTier
+  calculateTier,
+  getQuestionFormStatsByLevel
 } from './services/dbService';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
 import { generateBulkQuestions, generateNativeExpressions } from './services/geminiService';
@@ -602,7 +603,12 @@ function AppContent() {
     }
     await refreshUserData(user.name);
 
-    setLoadingText(`Gemini AI가 [${levelInfo.label}] 40문제를 생성하고 있습니다...`);
+    // 📊 난이도별 1~5형식 분포 통계 분석 (부족한 문형 자동 파악 및 균등 배분)
+    const formStats = await getQuestionFormStatsByLevel(levelInfo.label);
+    const formSummary = Object.entries(formStats.countsByForm).map(([f, cnt]) => `${f}형식(${cnt}개)`).join(' ');
+    console.log(`[DB Form Analysis for ${levelInfo.label}]:`, formSummary);
+
+    setLoadingText(`Gemini AI가 [${levelInfo.label}] 1~5형식 문형 균형을 맞춰 40문제를 생성하고 있습니다...`);
 
     let focus = '';
     if (isWeakness && weaknessData.total > 0) {
@@ -610,7 +616,7 @@ function AppContent() {
       focus = sortedForms.slice(0, 2).map(f => `${f[0]}형식`).join(', ');
     }
 
-    const genResult = await generateBulkQuestions(levelInfo.label, focus);
+    const genResult = await generateBulkQuestions(levelInfo.label, focus, 40, formStats);
 
     if (!genResult.success || !genResult.questions) {
       setIsLoading(false);

@@ -85,7 +85,8 @@ export async function callGeminiProxy(model: string, payload: any): Promise<any>
 async function generateSingleBatch(
   difficultyLabel: string,
   weaknessFocus: string = "",
-  batchCount: number = 20
+  batchCount: number = 20,
+  targetForms?: number[]
 ): Promise<Question[]> {
   const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash'];
   
@@ -109,6 +110,11 @@ async function generateSingleBatch(
   let userPrompt = `난이도: ${difficultyLabel}\n[기준]\n${matchedRule}\n`;
   if (weaknessFocus) {
     userPrompt += `[맞춤] 취약 문법 형식(${weaknessFocus})을 집중 포함하세요.\n`;
+  }
+  if (targetForms && targetForms.length > 0) {
+    userPrompt += `[🚨 형식 균등 배분 필수] 반드시 ${targetForms.map(f => `${f}형식`).join(', ')} 문장을 균등하게 집중 출제하세요. (form 필드 값에 ${targetForms.join(', ')} 중 하나를 부여)\n`;
+  } else {
+    userPrompt += `[🚨 1~5형식 골고루 출제 필수] 1형식, 2형식, 3형식, 4형식, 5형식 문장을 치우침 없이 골고루 균등하게 섞어서 출제하세요.\n`;
   }
   userPrompt += `정확히 ${batchCount}개의 4지선다 JSON 배열을 생성하세요. sentence의 빈칸 자리는 반드시 '______' 로 작성하세요.`;
 
@@ -177,20 +183,28 @@ async function generateSingleBatch(
   return [];
 }
 
-// 🚀 초고속 4채널 병렬(Ultra-Parallel) 대량 문제 생성 함수
+// 🚀 초고속 4채널 병렬(Ultra-Parallel) 대량 문제 생성 함수 (1~5형식 완벽 균형 배분)
 export async function generateBulkQuestions(
   difficultyLabel: string,
   weaknessFocus: string = "",
-  count: number = 40
+  count: number = 40,
+  formStats?: { countsByForm: Record<number, number>; underrepresentedForms: number[] }
 ): Promise<{ success: boolean; questions?: Question[]; error?: string }> {
   try {
     if (count >= 30) {
-      // ⚡ 4채널(10개 x 4) 초고속 병렬 동시 호출: 단일 요청 대비 속도 300% 이상 폭발적 향상 (3~4초 완결)
+      // ⚡ 4채널(10개 x 4) 초고속 병렬 동시 호출: 각 채널별로 형식을 분할 지정하여 1~5형식 완벽 균형 달성
+      // Channel 1: 1형식, 2형식 중심
+      // Channel 2: 2형식, 3형식 중심
+      // Channel 3: 4형식, 5형식 중심
+      // Channel 4: DB에서 가장 부족한 형식 우선 보강
+      const deficient = formStats?.underrepresentedForms || [1, 2, 3, 4, 5];
+      const boostForms = deficient.slice(0, 3);
+
       const batches = await Promise.all([
-        generateSingleBatch(difficultyLabel, weaknessFocus, 10),
-        generateSingleBatch(difficultyLabel, weaknessFocus, 10),
-        generateSingleBatch(difficultyLabel, weaknessFocus, 10),
-        generateSingleBatch(difficultyLabel, weaknessFocus, 10)
+        generateSingleBatch(difficultyLabel, weaknessFocus, 10, [1, 2]),
+        generateSingleBatch(difficultyLabel, weaknessFocus, 10, [2, 3]),
+        generateSingleBatch(difficultyLabel, weaknessFocus, 10, [4, 5]),
+        generateSingleBatch(difficultyLabel, weaknessFocus, 10, boostForms)
       ]);
 
       const merged = batches.flat();
@@ -203,8 +217,8 @@ export async function generateBulkQuestions(
       const count2 = count - count1;
 
       const [batch1, batch2] = await Promise.all([
-        generateSingleBatch(difficultyLabel, weaknessFocus, count1),
-        generateSingleBatch(difficultyLabel, weaknessFocus, count2)
+        generateSingleBatch(difficultyLabel, weaknessFocus, count1, [1, 2, 3]),
+        generateSingleBatch(difficultyLabel, weaknessFocus, count2, [3, 4, 5])
       ]);
 
       const merged = [...batch1, ...batch2];
@@ -214,7 +228,7 @@ export async function generateBulkQuestions(
     }
 
     // 단일 배치 생성
-    const singleResult = await generateSingleBatch(difficultyLabel, weaknessFocus, count);
+    const singleResult = await generateSingleBatch(difficultyLabel, weaknessFocus, count, [1, 2, 3, 4, 5]);
     if (singleResult.length > 0) {
       return { success: true, questions: singleResult };
     }
