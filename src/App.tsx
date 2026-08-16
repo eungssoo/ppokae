@@ -57,7 +57,8 @@ import {
   getActiveAnnouncements,
   claimAnnouncementReward,
   DEFAULT_SYSTEM_SETTINGS,
-  checkIsAdmin
+  checkIsAdmin,
+  calculateCycleReward
 } from './services/dbService';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
 import { generateBulkQuestions, generateNativeExpressions } from './services/geminiService';
@@ -1272,6 +1273,11 @@ function AppContent() {
           onChangeCycleTab={(idx) => handleViewRanking(idx)}
           onBack={() => setView('menu')}
           onStartChallenge={() => handleStartDailyChallenge(false)}
+          onClaimReward={async (cycleId, rank) => {
+            const reward = calculateCycleReward(rank);
+            setUser(prev => prev ? { ...prev, coins: (prev.coins ?? 0) + reward.coins, xp: (prev.xp ?? 0) + reward.xp } : prev);
+            toast.coin('🎁 랭킹전 순위 보상 수령!', `${selectedCycleTab}차전 ${rank}위 달성 보상으로 🪙 +${reward.coins} 코인 & 🏆 +${reward.xp} XP를 획득했습니다!`);
+          }}
         />
       )}
 

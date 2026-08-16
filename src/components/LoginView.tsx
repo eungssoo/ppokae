@@ -78,7 +78,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <div className="flex-1 border-t border-slate-700/60" />
             </div>
 
-            {/* 계정 만들기 버튼 (클릭 시 닉네임/PIN 입력창 열림) */}
+            {/* 계정 생성 / PIN 로그인 버튼 (클릭 시 닉네임/PIN 입력창 열림) */}
             <button
               type="button"
               onClick={() => {
@@ -88,11 +88,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
               className="w-full py-3.5 px-4 bg-slate-800/90 hover:bg-slate-750 text-slate-200 hover:text-white rounded-2xl font-black text-xs sm:text-sm transition-all border border-slate-700 active:scale-95 flex items-center justify-center gap-2"
             >
               <UserPlus className="w-4 h-4 text-purple-400" />
-              <span>계정 만들기</span>
+              <span>계정 생성 / PIN 로그인</span>
             </button>
           </div>
         ) : (
-          /* 📝 2. 계정 만들기 클릭 시 펼쳐지는 아이디 & PIN 입력창 및 데이터 백업 안내 */
+          /* 📝 2. 계정 생성 / PIN 로그인 클릭 시 펼쳐지는 아이디 & PIN 입력창 및 데이터 백업 안내 */
           <div className="space-y-4 relative z-10 text-left animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
               <span className="text-xs font-black text-purple-300 flex items-center gap-1.5">
@@ -143,7 +143,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 disabled={!name.trim() || pin.length < 6 || isLoading}
                 className="w-full py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 disabled:opacity-40 disabled:grayscale flex items-center justify-center gap-2"
               >
-                <span>계정 만들고 🪙 200 코인 받기</span>
+                <span>시작하기 (신규 가입 시 🪙 200 코인)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>

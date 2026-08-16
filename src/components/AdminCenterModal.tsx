@@ -21,9 +21,11 @@ import {
   Clock, 
   ChevronRight, 
   Search,
-  MessageSquare
+  MessageSquare,
+  Trophy,
+  Shuffle
 } from 'lucide-react';
-import { UserProfile, SystemSettings, PushAnnouncement } from '../types';
+import { UserProfile, SystemSettings, PushAnnouncement, RankingItem } from '../types';
 import { 
   getSystemSettings, 
   updateSystemSettings, 
@@ -32,6 +34,10 @@ import {
   getActiveAnnouncements, 
   getAllUsersList, 
   adminUpdateUserCoins,
+  adminInjectGhostRanking,
+  RANDOM_GHOST_NAMES,
+  getCycleRankings,
+  getTodayDateString,
   DEFAULT_SYSTEM_SETTINGS
 } from '../services/dbService';
 import { getPendingReports, approveReportAndReward, rejectReport, QuestionReport } from '../services/reportService';
@@ -52,7 +58,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   onUserUpdate,
   onShowToast
 }) => {
-  const [activeTab, setActiveTab] = useState<'god_mode' | 'variables' | 'announcements' | 'reports' | 'users'>('god_mode');
+  const [activeTab, setActiveTab] = useState<'god_mode' | 'variables' | 'announcements' | 'reports' | 'users' | 'ghost_rankings'>('god_mode');
   const [isLoading, setIsLoading] = useState(false);
 
   // Settings State
@@ -76,9 +82,18 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   const [selectedUserForCoin, setSelectedUserForCoin] = useState<UserProfile | null>(null);
   const [manualCoinAmount, setManualCoinAmount] = useState<number>(500);
 
+  // Ghost Rankings State
+  const [ghostCycleIndex, setGhostCycleIndex] = useState<1 | 2 | 3>(1);
+  const [ghostName, setGhostName] = useState<string>('토익만점가자');
+  const [ghostCorrectCount, setGhostCorrectCount] = useState<number>(9);
+  const [ghostMinutesAgo, setGhostMinutesAgo] = useState<number>(25);
+  const [ghostLeaderboard, setGhostLeaderboard] = useState<RankingItem[]>([]);
+  const [isInjectingGhost, setIsInjectingGhost] = useState<boolean>(false);
+
   useEffect(() => {
     if (isOpen) {
       loadInitialData();
+      loadGhostLeaderboard(ghostCycleIndex);
     }
   }, [isOpen]);
 
@@ -99,6 +114,51 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
       console.error("Admin loadInitialData error:", e);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadGhostLeaderboard = async (cIndex: 1 | 2 | 3) => {
+    try {
+      const cycleId = `${getTodayDateString()}_cycle${cIndex}`;
+      const list = await getCycleRankings(cycleId);
+      setGhostLeaderboard(list);
+    } catch (e) {
+      console.error("loadGhostLeaderboard error:", e);
+    }
+  };
+
+  const handleRandomizeGhostName = () => {
+    sound.playClick();
+    const random = RANDOM_GHOST_NAMES[Math.floor(Math.random() * RANDOM_GHOST_NAMES.length)];
+    setGhostName(random);
+  };
+
+  const handleInjectGhostPlayer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ghostName.trim()) return;
+    sound.playReward();
+    setIsInjectingGhost(true);
+
+    try {
+      const cycleId = `${getTodayDateString()}_cycle${ghostCycleIndex}`;
+      const res = await adminInjectGhostRanking({
+        cycleId,
+        name: ghostName.trim(),
+        correctCount: ghostCorrectCount,
+        minutesAgo: ghostMinutesAgo
+      });
+
+      if (res.success) {
+        onShowToast('🎭 랭커 데이터 주입 완료!', `[${ghostName.trim()}] 님이 ${ghostCycleIndex}차전(${ghostCorrectCount * 10}점)에 등록되었습니다.`, 'coin');
+        await loadGhostLeaderboard(ghostCycleIndex);
+        handleRandomizeGhostName();
+      } else {
+        onShowToast('오류', res.error || '주입 실패', 'error');
+      }
+    } catch (e: any) {
+      onShowToast('오류', e.message, 'error');
+    } finally {
+      setIsInjectingGhost(false);
     }
   };
 
@@ -336,6 +396,22 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
           >
             <Users className="w-4 h-4" />
             <span>👥 유저 목록 & DB</span>
+          </button>
+
+          <button
+            onClick={() => { 
+              sound.playClick(); 
+              setActiveTab('ghost_rankings'); 
+              loadGhostLeaderboard(ghostCycleIndex);
+            }}
+            className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'ghost_rankings'
+                ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white shadow-lg shadow-orange-500/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <Trophy className="w-4 h-4 text-yellow-300" />
+            <span>🎭 랭킹전 고스트 주입</span>
           </button>
         </div>
 
@@ -950,6 +1026,189 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                   </div>
                 </div>
               )}
+
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* 🎭 TAB 6. 랭킹전 고스트 플레이어 주입기 (Ghost / Dummy Leaderboard Injector) */}
+          {/* ========================================================================= */}
+          {activeTab === 'ghost_rankings' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              
+              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                <div>
+                  <h3 className="text-lg font-black text-white flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-amber-400" />
+                    <span>랭킹전 고스트 플레이어 (더미 랭커) 주입기</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    실제 일반 사용자와 100% 동일한 데이터 스키마로 자연스러운 랭킹 데이터를 실시간 생성 및 주입합니다.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* 📝 주입 폼 */}
+                <form onSubmit={handleInjectGhostPlayer} className="p-5 rounded-3xl bg-slate-800/80 border border-slate-700 space-y-4">
+                  <h4 className="text-sm font-black text-amber-300 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    <span>고스트 플레이어 프로필 & 점수 설정</span>
+                  </h4>
+
+                  {/* 차전 선택 */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-300">대상 차전 선택</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[1, 2, 3].map(idx => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setGhostCycleIndex(idx as 1 | 2 | 3);
+                            loadGhostLeaderboard(idx as 1 | 2 | 3);
+                          }}
+                          className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+                            ghostCycleIndex === idx
+                              ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+                              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-700'
+                          }`}
+                        >
+                          오늘 {idx}차전
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 닉네임 입력 + 랜덤 생성 버튼 */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-300">고스트 닉네임</label>
+                      <button
+                        type="button"
+                        onClick={handleRandomizeGhostName}
+                        className="text-[11px] text-amber-300 hover:text-amber-200 font-bold flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/30 transition-all"
+                      >
+                        <Shuffle className="w-3 h-3" />
+                        <span>🎲 자연스러운 닉네임 생성</span>
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={ghostName}
+                      onChange={e => setGhostName(e.target.value)}
+                      placeholder="플레이어 닉네임 입력"
+                      required
+                      className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  {/* 맞힌 문제 수 & 점수 */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-300">맞힌 문제 수 (정답 수)</label>
+                      <span className="text-xs font-black text-amber-300">
+                        {ghostCorrectCount}문제 / 10문제 ({ghostCorrectCount * 10}점)
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={1}
+                      max={10}
+                      value={ghostCorrectCount}
+                      onChange={e => setGhostCorrectCount(parseInt(e.target.value) || 1)}
+                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                      <span>1개(10점)</span>
+                      <span>5개(50점)</span>
+                      <span>8개(80점)</span>
+                      <span>10개(100점 만점)</span>
+                    </div>
+                  </div>
+
+                  {/* 완료 시점 오프셋 */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-300">완료 시간 설정 (얼마 전 푼 것으로 기록)</label>
+                    <select
+                      value={ghostMinutesAgo}
+                      onChange={e => setGhostMinutesAgo(parseInt(e.target.value) || 15)}
+                      className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none"
+                    >
+                      <option value={5}>5분 전 (방금 전 푼 느낌)</option>
+                      <option value={15}>15분 전</option>
+                      <option value={30}>30분 전</option>
+                      <option value={60}>1시간 전</option>
+                      <option value={120}>2시간 전</option>
+                      <option value={240}>4시간 전</option>
+                    </select>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isInjectingGhost || !ghostName.trim()}
+                    className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black text-sm rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <Trophy className="w-4 h-4 fill-slate-950" />
+                    <span>{isInjectingGhost ? '주입 중...' : `오늘 ${ghostCycleIndex}차전에 [${ghostName}] (${ghostCorrectCount * 10}점) 즉시 주입`}</span>
+                  </button>
+                </form>
+
+                {/* 📊 대상 차전 실시간 랭킹 프리뷰 */}
+                <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 flex flex-col h-[400px]">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-yellow-400" />
+                      <span className="text-xs font-black text-white">오늘 {ghostCycleIndex}차전 실시간 순위표 프리뷰</span>
+                    </div>
+                    <button
+                      onClick={() => loadGhostLeaderboard(ghostCycleIndex)}
+                      className="text-slate-400 hover:text-white p-1"
+                      title="새로고침"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto space-y-2 pt-3 custom-scrollbar">
+                    {ghostLeaderboard.length === 0 ? (
+                      <div className="h-full flex items-center justify-center text-slate-500 text-xs">
+                        등록된 랭킹 데이터가 없습니다. 왼쪽에서 고스트 데이터를 주입해보세요!
+                      </div>
+                    ) : (
+                      ghostLeaderboard.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
+                            idx === 0 
+                              ? 'bg-amber-500/20 border-amber-400/50 text-amber-200' 
+                              : idx === 1 
+                              ? 'bg-slate-700/40 border-slate-600 text-slate-200'
+                              : idx === 2
+                              ? 'bg-orange-950/40 border-orange-700/50 text-orange-200'
+                              : 'bg-slate-800/60 border-slate-800 text-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 text-center font-black">
+                              {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}`}
+                            </span>
+                            <span className="font-bold">{item.name}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-mono text-[10px] text-slate-400">
+                              {item.completedAtFormatted || '--:--'}
+                            </span>
+                            <span className="font-black text-amber-300">{item.score}점</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+              </div>
 
             </div>
           )}

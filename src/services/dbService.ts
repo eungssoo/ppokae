@@ -1810,3 +1810,91 @@ export async function adminUpdateUserCoins(targetUserName: string, amount: numbe
     return false;
   }
 }
+
+// 🎲 자연스러운 고스트 플레이어 닉네임 목록
+export const RANDOM_GHOST_NAMES = [
+  '토익만점가자', '영포자탈출러', '새벽공부왕', '하버드지망생', '단어마스터민',
+  'Chloe_99', 'Jake_Eng', '스터디윗미', '카투사준비생', '문법파괴자',
+  '영어정복자', 'Olivia_Kim', 'Ryan_Park', '수능1등급가자', '오픽AL목표',
+  '미드자막없이', '회화신동', '밤샘열공러', 'Leo_Lee', 'Sophia_W',
+  '영어괴물', 'TOEFL_Master', '기상스터디', '매일10문제', '지하철영단어',
+  'Sunny_Day', 'Alex_Grammar', '토익990', '원어민처럼'
+];
+
+// 🎭 15-10. 랭킹전 가짜 플레이어 (더미 랭커) 자연스러운 데이터 주입
+export async function adminInjectGhostRanking(payload: {
+  cycleId: string;
+  name: string;
+  correctCount: number; // 0 ~ 10
+  minutesAgo?: number; // 5 ~ 180분 전
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const trimmedName = payload.name.trim();
+    if (!trimmedName) return { success: false, error: '플레이어 이름을 입력해 주세요.' };
+
+    const score = Math.max(0, Math.min(10, payload.correctCount)) * 10;
+    const rankDocId = `${payload.cycleId}_${trimmedName}`;
+    const rankRef = doc(db, 'cycle_rankings', rankDocId);
+
+    const minutes = payload.minutesAgo ?? (Math.floor(Math.random() * 80) + 10);
+    const fakeCompletedAt = new Date(Date.now() - minutes * 60 * 1000);
+
+    const docData = removeUndefinedDeep({
+      cycleId: payload.cycleId,
+      name: trimmedName,
+      score,
+      completedAt: fakeCompletedAt,
+      updatedAt: serverTimestamp()
+    });
+
+    await setDoc(rankRef, docData);
+    return { success: true };
+  } catch (e: any) {
+    console.error("adminInjectGhostRanking Error:", e);
+    return { success: false, error: e.message || '가짜 랭킹 데이터 주입에 실패했습니다.' };
+  }
+}
+
+// 🏆 15-11. 랭킹전 차수별 순위 차등 보상 계산 및 수령
+export function calculateCycleReward(rank: number): { coins: number; xp: number; title: string } {
+  if (rank === 1) return { coins: 200, xp: 100, title: '🥇 1위 챔피언' };
+  if (rank === 2) return { coins: 120, xp: 70, title: '🥈 2위 러너업' };
+  if (rank === 3) return { coins: 80, xp: 50, title: '🥉 3위 포디움' };
+  if (rank <= 10) return { coins: 40, xp: 30, title: '🎖️ TOP 10 랭커' };
+  return { coins: 15, xp: 10, title: '🎗️ 참가상' };
+}
+
+export function isCycleRewardClaimed(userName: string, cycleId: string): boolean {
+  const claimKey = `claimed_cycle_reward_${userName}_${cycleId}`;
+  return localStorage.getItem(claimKey) === 'true';
+}
+
+export async function claimCycleRankingReward(
+  userName: string, 
+  cycleId: string, 
+  rank: number
+): Promise<{ success: boolean; coins?: number; reward?: { coins: number; xp: number; title: string } }> {
+  try {
+    const claimKey = `claimed_cycle_reward_${userName}_${cycleId}`;
+    if (localStorage.getItem(claimKey)) {
+      return { success: false };
+    }
+
+    const reward = calculateCycleReward(rank);
+    await addCoins(userName, reward.coins);
+    
+    // XP update in Firestore
+    try {
+      const userRef = doc(db, 'users', userName);
+      await updateDoc(userRef, {
+        xp: increment(reward.xp)
+      });
+    } catch {}
+
+    localStorage.setItem(claimKey, 'true');
+    return { success: true, coins: reward.coins, reward };
+  } catch (e) {
+    console.error("claimCycleRankingReward error:", e);
+    return { success: false };
+  }
+}
