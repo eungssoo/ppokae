@@ -163,19 +163,20 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
           : STARTER_AVATAR_IDS;
         const isAdmin = checkIsAdmin({ name: trimmedName, pin: formattedPin, email: data.email, isAdmin: data.isAdmin });
 
-        await updateDoc(userRef, {
+        await setDoc(userRef, {
           coins: userCoins,
           bookmarkLimit: bLimit,
           avatar,
           currentAvatarId,
           dailyGoal,
           unlockedAvatars,
-          isAdmin
-        });
+          isAdmin,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
 
         return { 
           success: true, 
-          isNew: false,
+          isNew: false, 
           profile: { 
             name: trimmedName, 
             pin: formattedPin, 
@@ -218,7 +219,7 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
         createdAt: serverTimestamp()
       });
 
-      await setDoc(userRef, cleanPayload);
+      await setDoc(userRef, cleanPayload, { merge: true });
 
       return { 
         success: true, 
@@ -232,15 +233,17 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
   }
 }
 
-// 🔐 1-0. Google User Profile Creator / Getter
+// 🔐 1-0. Google User Profile Creator / Getter (UID 및 displayName 양방향 동기화)
 export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserProfile> {
-  const userRef = doc(db, 'users', gUser.uid);
-  const snap = await getDoc(userRef);
-
   const displayName = gUser.displayName || (gUser.email ? gUser.email.split('@')[0] : '학습자');
+  const uidRef = doc(db, 'users', gUser.uid);
+  const nameRef = doc(db, 'users', displayName);
 
-  if (snap.exists()) {
-    const data = snap.data();
+  const [uidSnap, nameSnap] = await Promise.all([getDoc(uidRef), getDoc(nameRef)]);
+  const existingSnap = nameSnap.exists() ? nameSnap : uidSnap.exists() ? uidSnap : null;
+
+  if (existingSnap && existingSnap.exists()) {
+    const data = existingSnap.data();
     const currentXp = data.xp || 0;
     const unlockedAvatars = Array.isArray(data.unlockedAvatars) && data.unlockedAvatars.length > 0 
       ? Array.from(new Set([...STARTER_AVATAR_IDS, ...data.unlockedAvatars]))
@@ -248,7 +251,7 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
 
     const isAdmin = checkIsAdmin({ name: data.name || displayName, email: gUser.email || undefined, isAdmin: data.isAdmin });
 
-    return {
+    const profile: UserProfile = {
       name: data.name || displayName,
       pin: data.pin || '000000',
       coins: data.coins ?? 200,
@@ -263,6 +266,21 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
       photoURL: gUser.photoURL || undefined,
       isAdmin
     };
+
+    const cleanPayload = removeUndefinedDeep({
+      ...profile,
+      uid: gUser.uid,
+      email: gUser.email || null,
+      photoURL: gUser.photoURL || null,
+      updatedAt: serverTimestamp()
+    });
+
+    await Promise.all([
+      setDoc(uidRef, cleanPayload, { merge: true }),
+      setDoc(nameRef, cleanPayload, { merge: true })
+    ]);
+
+    return profile;
   } else {
     const isAdmin = checkIsAdmin({ name: displayName, email: gUser.email || undefined });
     const newProfile: UserProfile = {
@@ -284,25 +302,17 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
     };
 
     const cleanPayload = removeUndefinedDeep({
-      name: displayName,
-      pin: '000000',
-      coins: 200,
-      bookmarkLimit: 50,
-      avatar: '🦁',
-      currentAvatarId: 'lion',
-      unlockedAvatars: STARTER_AVATAR_IDS,
-      xp: 0,
-      tier: 'Bronze',
-      dailyGoal: 10,
-      totalSolved: 0,
-      totalCorrect: 0,
+      ...newProfile,
+      uid: gUser.uid,
       email: gUser.email || null,
       photoURL: gUser.photoURL || null,
-      isAdmin,
       createdAt: serverTimestamp()
     });
 
-    await setDoc(userRef, cleanPayload);
+    await Promise.all([
+      setDoc(uidRef, cleanPayload, { merge: true }),
+      setDoc(nameRef, cleanPayload, { merge: true })
+    ]);
 
     return newProfile;
   }
