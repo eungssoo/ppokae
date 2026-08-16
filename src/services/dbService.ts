@@ -1637,15 +1637,38 @@ export async function saveAndGetCycleRankings(
   }
 }
 
-// 11. 특정 사이클 랭킹 불러오기 (아바타 정보 및 등급 디자인 연동)
+// 11. 특정 사이클 랭킹 불러오기 (실시간 유저 최신 아바타/프로필 100% 실시간 동기화)
 export async function getCycleRankings(cycleId: string): Promise<RankingItem[]> {
   try {
     const qQuery = query(collection(db, 'cycle_rankings'), where('cycleId', '==', cycleId));
     const snapshot = await getDocs(qQuery);
 
+    if (snapshot.empty) return [];
+
+    // 🔄 유저들의 최신 장착 아바타 실시간 조회를 위한 유저 문서 병렬 페칭
+    const rawDocs = snapshot.docs.map(docSnap => docSnap.data());
+    const uniqueUserNames = Array.from(new Set(rawDocs.map(d => d.name).filter(Boolean)));
+
+    const userProfileMap = new Map<string, { currentAvatarId?: string; avatar?: string }>();
+    await Promise.all(
+      uniqueUserNames.map(async (userName) => {
+        try {
+          const uSnap = await getDoc(doc(db, 'users', userName));
+          if (uSnap.exists()) {
+            const uData = uSnap.data();
+            userProfileMap.set(userName, {
+              currentAvatarId: uData.currentAvatarId,
+              avatar: uData.avatar
+            });
+          }
+        } catch (e) {
+          // fallback quietly
+        }
+      })
+    );
+
     const list: RankingItem[] = [];
-    snapshot.forEach(docSnap => {
-      const d = docSnap.data();
+    rawDocs.forEach(d => {
       let completedAtFormatted = "--:--:--";
       let timeVal = 9999999999999;
 
@@ -1659,7 +1682,9 @@ export async function getCycleRankings(cycleId: string): Promise<RankingItem[]> 
         completedAtFormatted = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}:${String(dt.getSeconds()).padStart(2, '0')}`;
       }
 
-      const avId = d.avatarId || 'lion';
+      // 👑 실시간 프로필 우선 조회 (가챠에서 뽑아 갈아끼운 최신 아바타 즉시 반영)
+      const liveUserProf = userProfileMap.get(d.name);
+      const avId = liveUserProf?.currentAvatarId || d.avatarId || 'lion';
       const avObj = AVATAR_DATABASE.find(a => a.id === avId);
 
       list.push({
@@ -1668,7 +1693,7 @@ export async function getCycleRankings(cycleId: string): Promise<RankingItem[]> 
         completedAt: timeVal,
         completedAtFormatted,
         avatarId: avId,
-        avatarIcon: avObj?.icon || '🦁',
+        avatarIcon: liveUserProf?.avatar || avObj?.icon || '🦁',
         avatarName: avObj?.name || '라이언',
         avatarGrade: avObj?.grade || 'starter',
         avatarBgGradient: avObj?.bgGradient || 'from-slate-700 to-slate-800 border-slate-600',

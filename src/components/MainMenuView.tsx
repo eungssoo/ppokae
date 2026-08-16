@@ -31,6 +31,7 @@ interface MainMenuViewProps {
   bookmarkCount?: number;
   onNavigate: (view: ViewType) => void;
   onStartDailyChallenge: () => void;
+  onOpenGachaModal?: () => void;
   onOpenReportCenter?: () => void;
   onOpenAdminCenter?: () => void;
   onLogout: () => void;
@@ -43,6 +44,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
   bookmarkCount = 0,
   onNavigate,
   onStartDailyChallenge,
+  onOpenGachaModal,
   onOpenReportCenter,
   onOpenAdminCenter,
   onLogout,
@@ -108,17 +110,20 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Growth Analytics Quick Button */}
-            <button
-              onClick={() => {
-                sound.playClick();
-                onNavigate('analytics_view');
-              }}
-              className="p-2 text-indigo-300 hover:text-white bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-xl transition-all"
-              title="성장 분석 대시보드"
-            >
-              <BarChart3 className="w-4 h-4" />
-            </button>
+            {/* 🎰 아바타 가챠 소환소 Quick Button */}
+            {onOpenGachaModal && (
+              <button
+                onClick={() => {
+                  sound.playStar();
+                  onOpenGachaModal();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 hover:from-purple-600 hover:to-pink-600 text-white font-black text-xs shadow-md shadow-purple-500/30 border border-purple-300/40 active:scale-95 transition-all"
+                title="아바타 가챠 소환소"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
+                <span>🎰 소환소</span>
+              </button>
+            )}
 
             {/* Logout */}
             <button
@@ -323,24 +328,25 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-2.5">
             
-            {/* 성장 분석 대시보드 */}
+            {/* 🎰 아바타 가챠 소환소 */}
             <button
               onClick={() => {
-                sound.playClick();
-                onNavigate('analytics_view');
+                sound.playStar();
+                if (onOpenGachaModal) onOpenGachaModal();
+                else onNavigate('profile_view');
               }}
-              className="p-3.5 bg-slate-800/60 hover:bg-indigo-500/10 border border-slate-700/80 rounded-2xl transition-all text-left flex items-center justify-between"
+              className="p-3.5 bg-gradient-to-br from-purple-950/70 via-pink-950/60 to-slate-900/90 hover:from-purple-900/80 hover:to-pink-900/70 border border-purple-500/50 hover:border-pink-400 rounded-2xl transition-all text-left flex items-center justify-between shadow-md group active:scale-[0.98]"
             >
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-base">📊</span>
-                  <h4 className="text-xs font-extrabold text-indigo-200">성장 분석</h4>
+                  <span className="text-base animate-bounce">🎰</span>
+                  <h4 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-amber-300">
+                    아바타 소환소
+                  </h4>
                 </div>
-                <p className="text-slate-400 text-[10px]">1~5형식 마스터리 & 티어</p>
+                <p className="text-purple-200/70 text-[10px]">0.05% 태초의 신 & 전설</p>
               </div>
-              <span className={`bg-gradient-to-r ${tierInfo.badgeColor} text-white font-black text-[9px] px-1.5 py-0.2 rounded-full`}>
-                {tierInfo.tier}
-              </span>
+              <Sparkles className="w-4 h-4 text-yellow-300 group-hover:rotate-12 transition-transform" />
             </button>
 
             {/* 명예의 전당 */}

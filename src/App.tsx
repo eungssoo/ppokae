@@ -1198,6 +1198,7 @@ function AppContent() {
             else setView(targetView);
           }}
           onStartDailyChallenge={() => handleStartDailyChallenge(false)}
+          onOpenGachaModal={() => setIsGachaModalOpen(true)}
           onOpenReportCenter={() => setIsReportCenterOpen(true)}
           onOpenAdminCenter={() => setIsAdminModalOpen(true)}
           onLogout={handleLogout}
@@ -1344,6 +1345,7 @@ function AppContent() {
           onChangeCycleTab={(idx) => handleViewRanking(idx)}
           onBack={() => setView('menu')}
           onStartChallenge={() => handleStartDailyChallenge(false)}
+          onOpenGachaModal={() => setIsGachaModalOpen(true)}
           onClaimReward={async (cycleId, rank) => {
             const reward = calculateCycleReward(rank);
             setUser(prev => prev ? { ...prev, coins: (prev.coins ?? 0) + reward.coins, xp: (prev.xp ?? 0) + reward.xp } : prev);

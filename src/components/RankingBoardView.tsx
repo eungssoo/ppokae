@@ -12,6 +12,7 @@ interface RankingBoardViewProps {
   onChangeCycleTab: (cycleIndex: 1 | 2 | 3) => void;
   onBack: () => void;
   onStartChallenge: () => void;
+  onOpenGachaModal?: () => void;
   onClaimReward?: (cycleId: string, rank: number) => void;
 }
 
@@ -23,6 +24,7 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
   onChangeCycleTab,
   onBack,
   onStartChallenge,
+  onOpenGachaModal,
   onClaimReward,
 }) => {
   const CYCLES: { index: 1 | 2 | 3; label: string; time: string }[] = [
@@ -113,6 +115,37 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
           <div className="mb-5 p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-center text-xs font-bold text-slate-400">
             ✓ {selectedCycleIndex}차전 순위 보상(🪙 +{cycleReward?.coins} 코인) 수령을 완료했습니다.
           </div>
+        )}
+
+        {/* 🎰 신화 아바타 소환 바로가기 배너 */}
+        {onOpenGachaModal && (
+          <button
+            onClick={() => {
+              sound.playStar();
+              onOpenGachaModal();
+            }}
+            className="w-full mb-4 p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-purple-950/80 via-pink-950/70 to-slate-900 border border-purple-500/40 hover:border-pink-400 text-white font-bold text-xs sm:text-sm flex items-center justify-between shadow-md transition-all active:scale-[0.99] group"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl animate-bounce">🎰</span>
+              <div className="text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-amber-300">
+                    나만의 대표 아바타 뽐내기
+                  </span>
+                  <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                    0.05% 초월
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-300">
+                  가챠에서 뽑은 아바타로 랭킹 보드 프로필을 즉시 꾸며보세요!
+                </p>
+              </div>
+            </div>
+            <span className="text-amber-300 font-black text-xs flex items-center gap-1 group-hover:translate-x-1 transition-transform shrink-0">
+              <span>소환소 ➔</span>
+            </span>
+          </button>
         )}
 
         {/* Cycle Tabs (1차전, 2차전, 3차전) */}
