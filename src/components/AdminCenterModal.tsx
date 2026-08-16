@@ -1216,8 +1216,8 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-slate-300">맞힌 문제 수 (정답 수)</label>
-                      <span className="text-xs font-black text-amber-300">
-                        {ghostCorrectCount}문제 / 10문제 ({ghostCorrectCount * 10}점)
+                      <span className="text-xs font-black text-amber-300 font-mono">
+                        {ghostCorrectCount}문제 / 10문제 ({[10, 10, 15, 15, 15, 25, 25, 25, 30, 30].slice(0, ghostCorrectCount).reduce((a, b) => a + b, 0)}점)
                       </span>
                     </div>
                     <input
@@ -1230,9 +1230,9 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                     />
                     <div className="flex justify-between text-[10px] text-slate-500 font-mono">
                       <span>1개(10점)</span>
-                      <span>5개(50점)</span>
-                      <span>8개(80점)</span>
-                      <span>10개(100점 만점)</span>
+                      <span>5개(65점)</span>
+                      <span>8개(140점)</span>
+                      <span>10개(200점 만점)</span>
                     </div>
                   </div>
 

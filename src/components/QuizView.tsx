@@ -422,7 +422,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                     {isCorrect ? 'Perfect! 정답입니다 🎯' : 'Incorrect! 오답입니다 🚨'}
                     {quizMode === 'daily' && isCorrect && (
                       <span className="bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full text-xs">
-                        +10 SCORE
+                        +{scoreInfo.points} SCORE
                       </span>
                     )}
                   </h3>

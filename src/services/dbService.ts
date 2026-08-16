@@ -2149,22 +2149,84 @@ export async function getActiveAnnouncements(): Promise<PushAnnouncement[]> {
   }
 }
 
-// 🎁 15-7. 공지 첨부 보상 수령 처리
-export async function claimAnnouncementReward(userName: string, announcementId: string, coins: number): Promise<{ success: boolean; alreadyClaimed?: boolean }> {
+// 🎁 15-7. 공지 확인 및 영구 읽음 처리 (Firestore + localStorage 영구 동기화)
+export async function markAnnouncementRead(userName: string, announcementId: string): Promise<void> {
+  try {
+    const claimKey = `seen_announce_${userName}_${announcementId}`;
+    localStorage.setItem(claimKey, 'true');
+    const ref = doc(db, 'announcement_user_status', `${userName}_${announcementId}`);
+    await setDoc(ref, {
+      userName,
+      announcementId,
+      isRead: true,
+      readAt: serverTimestamp()
+    }, { merge: true });
+  } catch (e) {
+    console.warn("markAnnouncementRead Error:", e);
+  }
+}
+
+// 🎁 15-8. 공지 첨부 보상 1회 수령 처리 (Firestore 중복 방지 락)
+export async function claimAnnouncementReward(
+  userName: string, 
+  announcementId: string, 
+  coins: number
+): Promise<{ success: boolean; alreadyClaimed?: boolean }> {
   try {
     const claimKey = `claimed_announce_${userName}_${announcementId}`;
     if (localStorage.getItem(claimKey)) {
       return { success: false, alreadyClaimed: true };
     }
 
+    const ref = doc(db, 'announcement_user_status', `${userName}_${announcementId}`);
+    const snap = await getDoc(ref);
+    if (snap.exists() && snap.data()?.isClaimed) {
+      localStorage.setItem(claimKey, 'true');
+      return { success: false, alreadyClaimed: true };
+    }
+
     if (coins > 0) {
       await addCoins(userName, coins);
     }
+
+    await setDoc(ref, {
+      userName,
+      announcementId,
+      isRead: true,
+      isClaimed: true,
+      rewardCoins: coins,
+      claimedAt: serverTimestamp()
+    }, { merge: true });
+
     localStorage.setItem(claimKey, 'true');
+    localStorage.setItem(`seen_announce_${userName}_${announcementId}`, 'true');
     return { success: true };
   } catch (e) {
+    console.error("claimAnnouncementReward error:", e);
     return { success: false };
   }
+}
+
+// 🎁 15-9. 유저별 공지 읽음/수령 상태 맵 조회
+export async function getUserAnnouncementStatusMap(userName: string): Promise<Record<string, { isRead: boolean; isClaimed: boolean }>> {
+  const result: Record<string, { isRead: boolean; isClaimed: boolean }> = {};
+  try {
+    const col = collection(db, 'announcement_user_status');
+    const q = query(col, where('userName', '==', userName));
+    const snap = await getDocs(q);
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.announcementId) {
+        result[data.announcementId] = {
+          isRead: !!data.isRead,
+          isClaimed: !!data.isClaimed
+        };
+      }
+    });
+  } catch (e) {
+    console.warn("getUserAnnouncementStatusMap error:", e);
+  }
+  return result;
 }
 
 // 👥 15-8. 관리자용 전체 유저 목록 조회
@@ -2235,7 +2297,12 @@ export async function adminInjectGhostRanking(payload: {
     const trimmedName = payload.name.trim();
     if (!trimmedName) return { success: false, error: '플레이어 이름을 입력해 주세요.' };
 
-    const score = Math.max(0, Math.min(10, payload.correctCount)) * 10;
+    const pointsLadder = [10, 10, 15, 15, 15, 25, 25, 25, 30, 30];
+    let score = 0;
+    const count = Math.max(0, Math.min(10, payload.correctCount));
+    for (let i = 0; i < count; i++) {
+      score += pointsLadder[i];
+    }
     const rankDocId = `${payload.cycleId}_${trimmedName}`;
     const rankRef = doc(db, 'cycle_rankings', rankDocId);
 
@@ -2328,7 +2395,8 @@ export async function claimCycleRankingReward(
   }
 }
 
-// 🎯 16. 랭킹전 문제별 난이도 및 차등 배점 정보 계산 (Level 1: 5점, Level 2: 10점, Level 3: 15점, Level 4: 20점)
+// 🎯 16. 랭킹전 문제별 난이도 및 차등 배점 정보 계산 (10문제 만점 = 총 200점)
+// Q1~Q2: Level 1(10점 x 2 = 20점), Q3~Q5: Level 2(15점 x 3 = 45점), Q6~Q8: Level 3(25점 x 3 = 75점), Q9~Q10: Level 4(30점 x 2 = 60점) => 총 200점 만점!
 export function getRankingQuestionPoints(question: Question, questionIndex?: number): {
   levelLabel: string;
   points: number;
@@ -2342,7 +2410,7 @@ export function getRankingQuestionPoints(question: Question, questionIndex?: num
   if (diff.includes('Level 1') || diff.includes('입문') || diff.includes('초급') || idx <= 2) {
     return {
       levelLabel: 'Level 1 (입문)',
-      points: 5,
+      points: 10,
       badgeBg: 'bg-emerald-500/20',
       badgeText: 'text-emerald-300',
       badgeBorder: 'border-emerald-500/40'
@@ -2351,7 +2419,7 @@ export function getRankingQuestionPoints(question: Question, questionIndex?: num
   if (diff.includes('Level 2') || diff.includes('중급') || (idx >= 3 && idx <= 5)) {
     return {
       levelLabel: 'Level 2 (중급)',
-      points: 10,
+      points: 15,
       badgeBg: 'bg-blue-500/20',
       badgeText: 'text-blue-300',
       badgeBorder: 'border-blue-500/40'
@@ -2360,7 +2428,7 @@ export function getRankingQuestionPoints(question: Question, questionIndex?: num
   if (diff.includes('Level 3') || diff.includes('고득점') || (idx >= 6 && idx <= 8)) {
     return {
       levelLabel: 'Level 3 (고득점)',
-      points: 15,
+      points: 25,
       badgeBg: 'bg-purple-500/20',
       badgeText: 'text-purple-300',
       badgeBorder: 'border-purple-500/40'
@@ -2368,7 +2436,7 @@ export function getRankingQuestionPoints(question: Question, questionIndex?: num
   }
   return {
     levelLabel: 'Level 4 (실전 마스터)',
-    points: 20,
+    points: 30,
     badgeBg: 'bg-rose-500/20',
     badgeText: 'text-rose-300',
     badgeBorder: 'border-rose-500/40'

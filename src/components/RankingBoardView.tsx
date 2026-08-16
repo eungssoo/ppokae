@@ -191,31 +191,31 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
             </div>
             <span className="text-[10px] text-slate-400 font-medium">회차 마감 시 자동 정산</span>
           </div>
-          <div className="grid grid-cols-5 gap-1.5 text-center text-[11px]">
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2 flex flex-col justify-center">
-              <div className="font-black text-amber-300">🥇 1위</div>
+          <div className="grid grid-cols-5 gap-1 sm:gap-1.5 text-center text-[10px] sm:text-[11px]">
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
+              <div className="font-black text-amber-300 truncate">🥇 1위</div>
               <div className="text-white font-black text-xs mt-0.5">🪙 200</div>
-              <div className="text-[9px] text-amber-200/80 font-bold">+150 XP</div>
+              <div className="text-[8px] sm:text-[9px] text-amber-200/80 font-bold truncate">+150 XP</div>
             </div>
-            <div className="bg-slate-700/30 border border-slate-500/30 rounded-xl p-2 flex flex-col justify-center">
-              <div className="font-black text-slate-200">🥈 2위</div>
+            <div className="bg-slate-700/30 border border-slate-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
+              <div className="font-black text-slate-200 truncate">🥈 2위</div>
               <div className="text-white font-black text-xs mt-0.5">🪙 120</div>
-              <div className="text-[9px] text-slate-300/80 font-bold">+100 XP</div>
+              <div className="text-[8px] sm:text-[9px] text-slate-300/80 font-bold truncate">+100 XP</div>
             </div>
-            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-2 flex flex-col justify-center">
-              <div className="font-black text-orange-300">🥉 3위</div>
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
+              <div className="font-black text-orange-300 truncate">🥉 3위</div>
               <div className="text-white font-black text-xs mt-0.5">🪙 80</div>
-              <div className="text-[9px] text-orange-200/80 font-bold">+60 XP</div>
+              <div className="text-[8px] sm:text-[9px] text-orange-200/80 font-bold truncate">+60 XP</div>
             </div>
-            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-2 flex flex-col justify-center">
-              <div className="font-black text-purple-300">4~10위</div>
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
+              <div className="font-black text-purple-300 truncate">4~10위</div>
               <div className="text-white font-black text-xs mt-0.5">🪙 40</div>
-              <div className="text-[9px] text-purple-200/80 font-bold">+30 XP</div>
+              <div className="text-[8px] sm:text-[9px] text-purple-200/80 font-bold truncate">+30 XP</div>
             </div>
-            <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-2 flex flex-col justify-center">
-              <div className="font-black text-slate-400">참가자</div>
+            <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
+              <div className="font-black text-slate-400 truncate">참가</div>
               <div className="text-white font-black text-xs mt-0.5">🪙 15</div>
-              <div className="text-[9px] text-slate-400 font-bold">+10 XP</div>
+              <div className="text-[8px] sm:text-[9px] text-slate-400 font-bold truncate">+10 XP</div>
             </div>
           </div>
         </div>
