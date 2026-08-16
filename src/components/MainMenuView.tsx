@@ -37,7 +37,6 @@ interface MainMenuViewProps {
   onStartDailyChallenge: () => void;
   onOpenGachaModal?: () => void;
   onOpenInstallModal?: () => void;
-  onOpenNotificationInbox?: () => void;
   onOpenReportCenter?: () => void;
   onOpenAdminCenter?: () => void;
   onLogout: () => void;
@@ -48,13 +47,11 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
   totalPublicQuestions,
   currentCycle,
   bookmarkCount = 0,
-  unreadNotificationCount = 0,
   isStandalone = false,
   onNavigate,
   onStartDailyChallenge,
   onOpenGachaModal,
   onOpenInstallModal,
-  onOpenNotificationInbox,
   onOpenReportCenter,
   onOpenAdminCenter,
   onLogout,
@@ -120,24 +117,6 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 ml-auto">
-            {/* 🔔 알림 & 소식 보관함 Button */}
-            {onOpenNotificationInbox && (
-              <button
-                onClick={() => {
-                  sound.playClick();
-                  onOpenNotificationInbox();
-                }}
-                className="relative flex items-center justify-center p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-indigo-500/30 text-indigo-300 hover:text-white shadow-sm active:scale-95 transition-all"
-                title="알림 & 소식 보관함"
-              >
-                <Bell className="w-3.5 h-3.5" />
-                {unreadNotificationCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center shadow-md animate-pulse">
-                    {unreadNotificationCount}
-                  </span>
-                )}
-              </button>
-            )}
 
             {/* 📲 홈 화면 바로가기 추가 Quick Button (홈 화면으로 들어온 사람에게는 숨김) */}
             {onOpenInstallModal && !isStandalone && (

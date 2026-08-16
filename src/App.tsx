@@ -55,10 +55,6 @@ import {
   equipUserAvatar,
   checkGoogleRedirectResult,
   getSystemSettings,
-  getActiveAnnouncements,
-  claimAnnouncementReward,
-  markAnnouncementRead,
-  getUserAnnouncementStatusMap,
   DEFAULT_SYSTEM_SETTINGS,
   checkIsAdmin,
   calculateCycleReward,
@@ -94,9 +90,8 @@ import { AvatarGachaModal } from './components/AvatarGachaModal';
 import { ReportCenterModal } from './components/ReportCenterModal';
 import { AdminCenterModal } from './components/AdminCenterModal';
 import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
-import { NotificationInboxModal } from './components/NotificationInboxModal';
 import { ToastProvider, useToast } from './components/ToastContainer';
-import { SystemSettings, PushAnnouncement } from './types';
+import { SystemSettings } from './types';
 
 function AppContent() {
   const toast = useToast();
@@ -119,12 +114,7 @@ function AppContent() {
   const [isGachaModalOpen, setIsGachaModalOpen] = useState<boolean>(false);
   const [isReportCenterOpen, setIsReportCenterOpen] = useState<boolean>(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
-  const [isNotificationInboxOpen, setIsNotificationInboxOpen] = useState<boolean>(false);
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(DEFAULT_SYSTEM_SETTINGS);
-  const [announcementsList, setAnnouncementsList] = useState<PushAnnouncement[]>([]);
-  const [announcementStatusMap, setAnnouncementStatusMap] = useState<Record<string, { isRead: boolean; isClaimed: boolean }>>({});
-  const [announcementPopup, setAnnouncementPopup] = useState<PushAnnouncement | null>(null);
-  const [isClaimingAnnouncement, setIsClaimingAnnouncement] = useState<boolean>(false);
 
   // PWA Home Screen Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -231,7 +221,7 @@ function AppContent() {
     return () => clearInterval(interval);
   }, [user?.name]);
 
-  // Sync user view & counts & load global system settings & push announcements
+  // Sync user view & counts & load global system settings
   useEffect(() => {
     // ⚙️ Load live system settings
     getSystemSettings().then(setSystemSettings);
@@ -240,66 +230,10 @@ function AppContent() {
       setView('menu');
       loadTotalPublicQuestions();
       refreshUserData(user.name);
-
-      // 📢 Check active push announcements with Firestore read-status sync (신규 계정 가입 이전 공지 팝업 차단)
-      getActiveAnnouncements(user.name).then(async (list) => {
-        setAnnouncementsList(list);
-        if (list.length > 0) {
-          const statuses = await getUserAnnouncementStatusMap(user.name);
-          setAnnouncementStatusMap(statuses);
-
-          // Find first unread/unseen announcement (가입 시점 이후의 공지만 팝업)
-          const userCreatedAt = user.createdAt || 0;
-          const unread = list.find(a => {
-            const isUnread = !statuses[a.id]?.isRead && !localStorage.getItem(`seen_announce_${user.name}_${a.id}`);
-            const isAfterRegistration = !userCreatedAt || a.createdAt >= (userCreatedAt - 60000);
-            return isUnread && isAfterRegistration;
-          });
-          if (unread) {
-            setAnnouncementPopup(unread);
-          }
-        }
-      });
     } else {
       setView('login');
     }
   }, [user?.name]);
-
-  // 🎁 Claim announcement reward handler (동시성 락 & 연타 100% 방어)
-  const handleClaimAnnouncementReward = async (announcement: PushAnnouncement) => {
-    if (!user || isClaimingAnnouncement) return;
-    setIsClaimingAnnouncement(true);
-    sound.playReward();
-
-    try {
-      const coins = announcement.rewardCoins || 0;
-      const res = await claimAnnouncementReward(user.name, announcement.id, coins);
-      if (res.success) {
-        await refreshUserData(user.name);
-        toast.coin('보상 수령 완료! 🎉', `🪙 +${coins} 코인이 안전하게 지급되었습니다!`);
-      } else if (res.alreadyClaimed) {
-        toast.warning('이미 수령된 보상', '이미 지급받으신 보상입니다.');
-      } else {
-        toast.error('수령 실패', '보상 수령 중 오류가 발생했습니다.');
-      }
-      const updated = await getUserAnnouncementStatusMap(user.name);
-      setAnnouncementStatusMap(updated);
-      if (announcementPopup?.id === announcement.id) {
-        setAnnouncementPopup(null);
-      }
-    } finally {
-      setIsClaimingAnnouncement(false);
-    }
-  };
-
-  // ❌ Dismiss announcement popup and mark as read
-  const handleDismissAnnouncementPopup = async (announcement: PushAnnouncement) => {
-    if (!user) return;
-    await markAnnouncementRead(user.name, announcement.id);
-    const updated = await getUserAnnouncementStatusMap(user.name);
-    setAnnouncementStatusMap(updated);
-    setAnnouncementPopup(null);
-  };
 
   // Simulated progress timer when loading
   useEffect(() => {
@@ -1251,44 +1185,6 @@ function AppContent() {
         />
       )}
 
-      {/* 📢 Global Push Announcement Popup Modal (1회 노출 후 Firestore 영구 동기화) */}
-      {user && announcementPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in zoom-in duration-200">
-          <div className="bg-slate-900 border-2 border-pink-500/60 rounded-3xl p-6 max-w-md w-full shadow-2xl text-center space-y-4 relative">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 text-xs font-black uppercase">
-              <span>{announcementPopup.badgeType === 'event' ? '🎁 특별 이벤트' : announcementPopup.badgeType === 'update' ? '🚀 신규 업데이트' : announcementPopup.badgeType === 'maintenance' ? '🚧 서버 점검' : '📢 중요 공지'}</span>
-            </div>
-
-            <h3 className="text-xl font-black text-white">{announcementPopup.title}</h3>
-            <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed text-left bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80">
-              {announcementPopup.content}
-            </p>
-
-            {announcementPopup.rewardCoins && announcementPopup.rewardCoins > 0 ? (
-              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 text-amber-300 text-xs font-black">
-                <span>🪙 첨부 보상: +{announcementPopup.rewardCoins} 코인 지급!</span>
-              </div>
-            ) : null}
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleDismissAnnouncementPopup(announcementPopup)}
-                className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-bold text-xs transition-all border border-slate-700"
-              >
-                닫기
-              </button>
-              <button
-                disabled={isClaimingAnnouncement}
-                onClick={() => handleClaimAnnouncementReward(announcementPopup)}
-                className="flex-2 py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isClaimingAnnouncement ? '수령 처리 중...' : (announcementPopup.rewardCoins && announcementPopup.rewardCoins > 0 ? `🪙 ${announcementPopup.rewardCoins} 코인 받고 닫기` : '확인 완료')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* 0. Login */}
       {view === 'login' && (
         <LoginView
@@ -1306,7 +1202,6 @@ function AppContent() {
           totalPublicQuestions={totalPublicQuestions}
           currentCycle={currentCycle}
           bookmarkCount={bookmarks.length}
-          unreadNotificationCount={announcementsList.filter(a => !announcementStatusMap[a.id]?.isRead && !localStorage.getItem(`seen_announce_${user.name}_${a.id}`)).length}
           isStandalone={isAppStandalone}
           onNavigate={(targetView) => {
             if (targetView === 'ranking_board') handleViewRanking();
@@ -1323,7 +1218,6 @@ function AppContent() {
           onStartDailyChallenge={() => handleStartDailyChallenge(false)}
           onOpenGachaModal={() => setIsGachaModalOpen(true)}
           onOpenInstallModal={() => setIsAddToHomeModalOpen(true)}
-          onOpenNotificationInbox={() => setIsNotificationInboxOpen(true)}
           onOpenReportCenter={() => setIsReportCenterOpen(true)}
           onOpenAdminCenter={() => setIsAdminModalOpen(true)}
           onLogout={handleLogout}
@@ -1516,18 +1410,6 @@ function AppContent() {
         earnedCoins={quizCompletionStats.earnedCoins}
         earnedXp={quizCompletionStats.earnedXp}
       />
-
-      {/* 🔔 알림 & 푸시 공지 보관함 모달 */}
-      {user && (
-        <NotificationInboxModal
-          isOpen={isNotificationInboxOpen}
-          onClose={() => setIsNotificationInboxOpen(false)}
-          announcements={announcementsList}
-          statusMap={announcementStatusMap}
-          user={user}
-          onClaimReward={handleClaimAnnouncementReward}
-        />
-      )}
     </div>
   );
 }
