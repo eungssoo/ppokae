@@ -50,15 +50,20 @@ export const RevengeModal: React.FC<RevengeModalProps> = ({
           리벤지(Revenge) 재도전 🎟️
         </h3>
 
-        <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed mb-5">
+        <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed mb-4">
           이미 이번 <strong className="text-amber-300">[{cycleInfo.cycleName}]</strong>에 응시하셨습니다!<br />
-          아쉬운 1문제를 뒤집고 1위를 탈환하시겠습니까?
+          <span className="text-orange-400 font-bold">50 코인</span>을 소모하여 <span className="underline decoration-orange-400 decoration-2 underline-offset-2">회차당 딱 1번만 주어지는 재도전 기회</span>를 사용하시겠습니까?
         </p>
+
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 text-[11px] text-amber-200 font-medium mb-4 flex items-center justify-center gap-1.5">
+          <span>⚠️</span>
+          <span>이번 회차의 <strong>마지막 재도전 기회</strong>입니다. (최대 2회 완료 시 다음 회차 오픈)</span>
+        </div>
 
         {/* Status Card */}
         <div className="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 mb-6 flex justify-around items-center">
           <div>
-            <span className="text-[11px] font-bold text-slate-400 block mb-0.5">내 현재 기록</span>
+            <span className="text-[11px] font-bold text-slate-400 block mb-0.5">내 현재 최고 기록</span>
             <span className="text-xl sm:text-2xl font-black text-amber-400 flex items-center justify-center gap-1">
               <Trophy className="w-4 h-4 text-amber-400" />
               {previousScore}점
@@ -89,7 +94,7 @@ export const RevengeModal: React.FC<RevengeModalProps> = ({
           >
             <Zap className="w-5 h-5 text-yellow-300" />
             <span>
-              {canAfford ? '🪙 50 코인 쓰고 1위 탈환 도전!' : '코인이 부족합니다 (필요: 50개)'}
+              {canAfford ? '🪙 50 코인 쓰고 마지막 1위 탈환 도전!' : '코인이 부족합니다 (필요: 50개)'}
             </span>
           </button>
 

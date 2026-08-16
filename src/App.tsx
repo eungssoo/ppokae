@@ -799,6 +799,18 @@ function AppContent() {
       setIsLoading(false);
 
       if (check.completed) {
+        if (!check.canRetry) {
+          toast.warning(
+            '도전 횟수 완료',
+            `이번 ${cycle.cycleName}의 모든 도전 기회(무료 1회 + 50코인 재도전 1회)를 완료하셨습니다! 실시간 명예의 전당으로 이동합니다.`
+          );
+          const ranks = await getCycleRankings(cycle.cycleId);
+          setRankingData(ranks);
+          setSelectedCycleTab(cycle.cycleIndex);
+          setView('ranking_board');
+          return;
+        }
+
         setPreviousCycleScore(check.score || 0);
         setIsRevengeModalOpen(true);
         return;

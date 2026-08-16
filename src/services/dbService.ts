@@ -800,9 +800,10 @@ export async function deductCoins(userName: string, amount: number, userObj?: Pa
     const current = data.coins ?? 0;
     if (current < amount) return false;
 
-    await updateDoc(userRef, {
-      coins: increment(-amount)
-    });
+    await setDoc(userRef, {
+      coins: increment(-amount),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
     return true;
   } catch (e) {
     console.error("deductCoins error:", e);
@@ -1084,19 +1085,30 @@ export async function getBookmarks(userName: string): Promise<BookmarkItem[]> {
   }
 }
 
-// 🎟️ 해당 사이클 응시 여부 확인
-export async function hasUserCompletedCycle(cycleId: string, userName: string): Promise<{ completed: boolean; score?: number }> {
+// 🎟️ 해당 사이클 응시 여부 및 도전 횟수 확인 (최대 2회: 1회 무료 + 1회 50코인 재도전)
+export async function hasUserCompletedCycle(
+  cycleId: string, 
+  userName: string
+): Promise<{ completed: boolean; score?: number; attempts: number; canRetry: boolean }> {
   try {
     const rankDocId = `${cycleId}_${userName}`;
     const rankRef = doc(db, 'cycle_rankings', rankDocId);
     const snap = await getDoc(rankRef);
     if (snap.exists()) {
-      return { completed: true, score: snap.data().score || 0 };
+      const data = snap.data();
+      const attempts = typeof data.attempts === 'number' ? data.attempts : 1;
+      const isAdmin = checkIsAdmin({ name: userName });
+      return { 
+        completed: true, 
+        score: data.score || 0, 
+        attempts, 
+        canRetry: isAdmin || attempts < 2 
+      };
     }
-    return { completed: false };
+    return { completed: false, attempts: 0, canRetry: true };
   } catch (e) {
     console.error("hasUserCompletedCycle error:", e);
-    return { completed: false };
+    return { completed: false, attempts: 0, canRetry: true };
   }
 }
 
@@ -1419,24 +1431,35 @@ export async function saveAndGetCycleRankings(cycleId: string, userName: string,
 
     const existingSnap = await getDoc(rankRef);
     if (existingSnap.exists()) {
-      const currentScore = existingSnap.data().score || 0;
+      const data = existingSnap.data();
+      const currentScore = data.score || 0;
+      const currentAttempts = typeof data.attempts === 'number' ? data.attempts : 1;
+      const newAttempts = currentAttempts + 1;
+
       if (score >= currentScore) {
         await setDoc(rankRef, removeUndefinedDeep({
           cycleId,
           name: userName,
           score,
+          attempts: newAttempts,
           completedAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         }), { merge: true });
+      } else {
+        await setDoc(rankRef, {
+          attempts: newAttempts,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
       }
     } else {
       await setDoc(rankRef, removeUndefinedDeep({
         cycleId,
         name: userName,
         score,
+        attempts: 1,
         completedAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      }));
+      }), { merge: true });
     }
 
     return await getCycleRankings(cycleId);
