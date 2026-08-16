@@ -11,6 +11,7 @@ interface AnalyticsDashboardViewProps {
     totalSolved: number;
     totalCorrect: number;
     overallAccuracy: number;
+    levelStats?: any;
   };
   bookmarkCount: number;
   onBack: () => void;
@@ -25,7 +26,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   onGoSolveWeakness,
 }) => {
   const currentXp = user.xp || 0;
-  const tierInfo = calculateTier(currentXp);
+  const tierInfo = calculateTier(currentXp, masteryStats.levelStats);
 
   const FORM_NAMES: Record<number, { name: string; structure: string; desc: string }> = {
     1: { name: '1형식', structure: 'S + V', desc: '주어 + 완전자동사 (부사구 수식)' },
@@ -122,6 +123,12 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                 style={{ width: `${tierInfo.progress}%` }}
               />
             </div>
+            {tierInfo.capNotice && (
+              <div className="mt-3 px-3.5 py-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-bold flex items-center gap-2 shadow-sm animate-pulse">
+                <span>🔒</span>
+                <span>{tierInfo.capNotice}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -243,6 +250,11 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     <div className="text-[10px] text-slate-400 font-medium mt-1 text-right">
                       {fm.grade === 'S' ? (
                         <span className="text-amber-300 font-black">✨ 완전 정복 달성!</span>
+                      ) : fm.capNotice ? (
+                        <span className="text-amber-300 font-bold flex items-center justify-end gap-1">
+                          <span>🔒</span>
+                          <span>{fm.capNotice}</span>
+                        </span>
                       ) : (
                         <span>다음 승급까지 <strong>{remainingToTarget}문제</strong> 정답 필요</span>
                       )}

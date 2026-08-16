@@ -1008,15 +1008,34 @@ function AppContent() {
     setView('incorrect_list');
   };
 
-  // 12. Check Answer in Quiz & Record Analytics (실시간 경험치 누적 및 티어 업데이트)
+  // 12. Check Answer in Quiz & Record Analytics (실시간 경험치 누적 및 티어 난이도 연동)
   const handleCheckAnswer = (userInput: string) => {
     if (!currentQ || !user) return { isCorrect: false };
     const isCorrect = userInput.trim() === currentQ.answer;
 
-    // Record stats and XP in Firestore
-    recordQuizResultStats(user.name, currentQ.form, isCorrect);
+    // 문제 난이도 레벨 추출 (1 ~ 4)
+    let questionLevel = 1;
+    if (currentQ.level) {
+      const match = String(currentQ.level).match(/\d+/);
+      if (match) questionLevel = Number(match[0]);
+    } else if (currentQ.difficulty) {
+      const match = String(currentQ.difficulty).match(/\d+/);
+      if (match) questionLevel = Number(match[0]);
+    } else if (selectedDifficulty) {
+      const match = String(selectedDifficulty).match(/\d+/);
+      if (match) questionLevel = Number(match[0]);
+    }
+    if (quizMode === 'daily') {
+      if (questionCount <= 3) questionLevel = 1;
+      else if (questionCount <= 6) questionLevel = 2;
+      else if (questionCount <= 8) questionLevel = 3;
+      else questionLevel = 4;
+    }
 
-    const xpEarned = isCorrect ? 10 : 2;
+    // Record stats and XP in Firestore with level
+    recordQuizResultStats(user.name, currentQ.form, isCorrect, questionLevel);
+
+    const xpEarned = isCorrect ? (questionLevel * 3 + 4) : 2;
     setUser(prev => {
       if (!prev) return null;
       const nextXp = (prev.xp || 0) + xpEarned;

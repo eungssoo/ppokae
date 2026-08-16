@@ -73,6 +73,11 @@ export interface FormMastery {
   masteryScore?: number;
   nextGradeTarget?: number;
   progressPercent?: number;
+  correctLvl1?: number;
+  correctLvl2?: number;
+  correctLvl3?: number;
+  correctLvl4?: number;
+  capNotice?: string;
 }
 
 export interface UserProfile {

@@ -113,23 +113,101 @@ export function getCurrentCycleInfo(): CycleInfo {
   };
 }
 
-// 🏆 티어 계산기 (3개월 꾸준한 학습 시 마스터 티어 달성 밸런스)
-export function calculateTier(xp: number = 0): { tier: string; minXp: number; maxXp: number; progress: number; badgeColor: string; icon: string } {
+export interface TierStats {
+  lvl1Correct?: number;
+  lvl2Correct?: number;
+  lvl3Correct?: number;
+  lvl4Correct?: number;
+}
+
+// 🏆 티어 계산기 (3개월 꾸준한 학습 시 마스터 티어 달성 & 난이도별 상한선 캡 적용)
+export function calculateTier(xp: number = 0, levelStats?: TierStats): { 
+  tier: string; 
+  minXp: number; 
+  maxXp: number; 
+  progress: number; 
+  badgeColor: string; 
+  icon: string;
+  capNotice?: string;
+} {
+  const lvl2Plus = (levelStats?.lvl2Correct || 0) + (levelStats?.lvl3Correct || 0) + (levelStats?.lvl4Correct || 0);
+  const lvl3Plus = (levelStats?.lvl3Correct || 0) + (levelStats?.lvl4Correct || 0);
+  const lvl4 = levelStats?.lvl4Correct || 0;
+
+  // 1) Master: 7500+ XP (4단계 실전 문제 20개 이상 정답 필수)
   if (xp >= 7500) {
-    return { tier: 'Master', minXp: 7500, maxXp: 15000, progress: 100, badgeColor: 'from-amber-400 via-rose-500 to-purple-600', icon: '👑' };
-  } else if (xp >= 4500) {
-    const progress = Math.min(100, Math.round(((xp - 4500) / 3000) * 100));
-    return { tier: 'Diamond', minXp: 4500, maxXp: 7500, progress, badgeColor: 'from-cyan-400 to-blue-500', icon: '💎' };
-  } else if (xp >= 2000) {
-    const progress = Math.min(100, Math.round(((xp - 2000) / 2500) * 100));
-    return { tier: 'Platinum', minXp: 2000, maxXp: 4500, progress, badgeColor: 'from-emerald-400 to-teal-500', icon: '🏆' };
-  } else if (xp >= 800) {
-    const progress = Math.min(100, Math.round(((xp - 800) / 1200) * 100));
-    return { tier: 'Gold', minXp: 800, maxXp: 2000, progress, badgeColor: 'from-amber-400 to-yellow-500', icon: '🥇' };
-  } else if (xp >= 200) {
+    if (!levelStats || lvl4 >= 20) {
+      return { tier: 'Master', minXp: 7500, maxXp: 15000, progress: 100, badgeColor: 'from-amber-400 via-rose-500 to-purple-600', icon: '👑' };
+    } else {
+      return { 
+        tier: 'Diamond', 
+        minXp: 4500, 
+        maxXp: 7500, 
+        progress: 100, 
+        badgeColor: 'from-cyan-400 to-blue-500', 
+        icon: '💎',
+        capNotice: `마스터 승급을 위해 4단계 문제 ${Math.max(0, 20 - lvl4)}개 정답이 더 필요합니다.`
+      };
+    }
+  } 
+  // 2) Diamond: 4500 ~ 7499 XP (3단계 이상 문제 25개 이상 정답 필수)
+  else if (xp >= 4500) {
+    if (!levelStats || lvl3Plus >= 25) {
+      const progress = Math.min(100, Math.round(((xp - 4500) / 3000) * 100));
+      return { tier: 'Diamond', minXp: 4500, maxXp: 7500, progress, badgeColor: 'from-cyan-400 to-blue-500', icon: '💎' };
+    } else {
+      return {
+        tier: 'Gold',
+        minXp: 800,
+        maxXp: 2000,
+        progress: 100,
+        badgeColor: 'from-amber-400 to-yellow-500',
+        icon: '🥇',
+        capNotice: `다이아 승급을 위해 3단계 이상 문제 ${Math.max(0, 25 - lvl3Plus)}개 정답이 더 필요합니다.`
+      };
+    }
+  } 
+  // 3) Platinum: 2000 ~ 4499 XP (3단계 이상 문제 10개 이상 정답 필수)
+  else if (xp >= 2000) {
+    if (!levelStats || lvl3Plus >= 10) {
+      const progress = Math.min(100, Math.round(((xp - 2000) / 2500) * 100));
+      return { tier: 'Platinum', minXp: 2000, maxXp: 4500, progress, badgeColor: 'from-emerald-400 to-teal-500', icon: '🏆' };
+    } else {
+      return {
+        tier: 'Gold',
+        minXp: 800,
+        maxXp: 2000,
+        progress: 100,
+        badgeColor: 'from-amber-400 to-yellow-500',
+        icon: '🥇',
+        capNotice: `플래티넘 승급을 위해 3단계 이상 문제 ${Math.max(0, 10 - lvl3Plus)}개 정답이 더 필요합니다.`
+      };
+    }
+  } 
+  // 4) Gold: 800 ~ 1999 XP (2단계 이상 문제 10개 이상 정답 필수)
+  else if (xp >= 800) {
+    if (!levelStats || lvl2Plus >= 10) {
+      const progress = Math.min(100, Math.round(((xp - 800) / 1200) * 100));
+      return { tier: 'Gold', minXp: 800, maxXp: 2000, progress, badgeColor: 'from-amber-400 to-yellow-500', icon: '🥇' };
+    } else {
+      return {
+        tier: 'Silver',
+        minXp: 200,
+        maxXp: 800,
+        progress: 100,
+        badgeColor: 'from-slate-300 to-slate-400',
+        icon: '🥈',
+        capNotice: `골드 승급을 위해 2단계 이상 문제 ${Math.max(0, 10 - lvl2Plus)}개 정답이 더 필요합니다.`
+      };
+    }
+  } 
+  // 5) Silver: 200 ~ 799 XP (1단계 문제로 달성 가능)
+  else if (xp >= 200) {
     const progress = Math.min(100, Math.round(((xp - 200) / 600) * 100));
     return { tier: 'Silver', minXp: 200, maxXp: 800, progress, badgeColor: 'from-slate-300 to-slate-400', icon: '🥈' };
-  } else {
+  } 
+  // 6) Bronze: 0 ~ 199 XP
+  else {
     const progress = Math.min(100, Math.round((xp / 200) * 100));
     return { tier: 'Bronze', minXp: 0, maxXp: 200, progress, badgeColor: 'from-amber-700 to-orange-800', icon: '🥉' };
   }
@@ -783,24 +861,39 @@ export async function deleteUserAccount(userName: string): Promise<boolean> {
   }
 }
 
-// 📊 1-4. 퀴즈 풀이 결과 통계 & XP 누적
-export async function recordQuizResultStats(userName: string, form: number, isCorrect: boolean): Promise<void> {
+// 📊 1-4. 퀴즈 풀이 결과 통계 & XP 누적 (난이도 레벨별 통계 동시 누적)
+export async function recordQuizResultStats(
+  userName: string, 
+  form: number, 
+  isCorrect: boolean, 
+  level: number = 1
+): Promise<void> {
   try {
     const userRef = doc(db, 'users', userName);
+    const validLevel = Math.max(1, Math.min(4, Math.round(level) || 1));
     const formKeyTotal = `stats_form_${form}_total`;
     const formKeyCorrect = `stats_form_${form}_correct`;
+    const formLevelKeyTotal = `stats_form_${form}_lvl_${validLevel}_total`;
+    const formLevelKeyCorrect = `stats_form_${form}_lvl_${validLevel}_correct`;
+    const levelKeyTotal = `stats_lvl_${validLevel}_total`;
+    const levelKeyCorrect = `stats_lvl_${validLevel}_correct`;
 
-    const xpEarned = isCorrect ? 10 : 2;
+    // 난이도가 높을수록 더 많은 XP 획득 (Level 1: 7XP, Level 2: 10XP, Level 3: 13XP, Level 4: 16XP)
+    const xpEarned = isCorrect ? (validLevel * 3 + 4) : 2;
 
     const updates: any = {
       totalSolved: increment(1),
       xp: increment(xpEarned),
-      [formKeyTotal]: increment(1)
+      [formKeyTotal]: increment(1),
+      [formLevelKeyTotal]: increment(1),
+      [levelKeyTotal]: increment(1)
     };
 
     if (isCorrect) {
       updates.totalCorrect = increment(1);
       updates[formKeyCorrect] = increment(1);
+      updates[formLevelKeyCorrect] = increment(1);
+      updates[levelKeyCorrect] = increment(1);
     }
 
     const promises = [setDoc(userRef, updates, { merge: true })];
@@ -813,8 +906,14 @@ export async function recordQuizResultStats(userName: string, form: number, isCo
   }
 }
 
-// 📊 1-5. 문형별 마스터리 통계 조회
-export async function getUserMasteryStats(userName: string): Promise<{ formMasteries: FormMastery[]; totalSolved: number; totalCorrect: number; overallAccuracy: number }> {
+// 📊 1-5. 문형별 마스터리 통계 조회 (난이도별 상한선 Gating 적용)
+export async function getUserMasteryStats(userName: string): Promise<{ 
+  formMasteries: FormMastery[]; 
+  totalSolved: number; 
+  totalCorrect: number; 
+  overallAccuracy: number;
+  levelStats: TierStats;
+}> {
   try {
     const userRef = doc(db, 'users', userName);
     let [userSnap, uidSnap] = await Promise.all([
@@ -828,34 +927,66 @@ export async function getUserMasteryStats(userName: string): Promise<{ formMaste
     const totalSolved = Math.max(dataA.totalSolved || 0, dataB.totalSolved || 0);
     const totalCorrect = Math.max(dataA.totalCorrect || 0, dataB.totalCorrect || 0);
 
+    const levelStats: TierStats = {
+      lvl1Correct: Math.max(dataA.stats_lvl_1_correct || 0, dataB.stats_lvl_1_correct || 0),
+      lvl2Correct: Math.max(dataA.stats_lvl_2_correct || 0, dataB.stats_lvl_2_correct || 0),
+      lvl3Correct: Math.max(dataA.stats_lvl_3_correct || 0, dataB.stats_lvl_3_correct || 0),
+      lvl4Correct: Math.max(dataA.stats_lvl_4_correct || 0, dataB.stats_lvl_4_correct || 0),
+    };
+
     const formMasteries: FormMastery[] = [];
     for (let f = 1; f <= 5; f++) {
       const total = Math.max(dataA[`stats_form_${f}_total`] || 0, dataB[`stats_form_${f}_total`] || 0);
       const correct = Math.max(dataA[`stats_form_${f}_correct`] || 0, dataB[`stats_form_${f}_correct`] || 0);
       const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
 
-      // 🎯 누적 정답 수 기반 마스터리 점수 산정 (문제를 풀수록 절대 깎이지 않고 꾸준히 우상향!)
-      // masteryScore = (누적 정답 수 * 10) + (정답률 * 5)
+      const correctLvl1 = Math.max(dataA[`stats_form_${f}_lvl_1_correct`] || 0, dataB[`stats_form_${f}_lvl_1_correct`] || 0);
+      const correctLvl2 = Math.max(dataA[`stats_form_${f}_lvl_2_correct`] || 0, dataB[`stats_form_${f}_lvl_2_correct`] || 0);
+      const correctLvl3 = Math.max(dataA[`stats_form_${f}_lvl_3_correct`] || 0, dataB[`stats_form_${f}_lvl_3_correct`] || 0);
+      const correctLvl4 = Math.max(dataA[`stats_form_${f}_lvl_4_correct`] || 0, dataB[`stats_form_${f}_lvl_4_correct`] || 0);
+      const correctLvl2Plus = correctLvl2 + correctLvl3 + correctLvl4;
+      const correctLvl3Plus = correctLvl3 + correctLvl4;
+
+      // 🎯 누적 정답 수 기반 마스터리 점수 산정
       const masteryScore = (correct * 10) + Math.round(accuracy * 5);
 
-      // 🏆 3개월 기준 마스터리 등급 (C -> B -> A -> S)
-      // C등급: 0 ~ 24문제 정답 (입문)
-      // B등급: 25 ~ 74문제 정답 (숙련)
-      // A등급: 75 ~ 149문제 정답 (전문가)
-      // S등급: 150문제 이상 정답 (3개월 꾸준한 학습 시 도달하는 절대 마스터 👑)
+      // 🏆 난이도별 상한선(Gating) 적용 등급 산정:
+      // 1단계만 풀면: C ~ B등급까지만 승급 가능
+      // 2단계 문제 포함 시: A등급까지 승급 가능 (2단계 이상 15정답 필요)
+      // 3~4단계 문제 정복 시: S등급(마스터) 승급 가능 (3단계 15정답 + 4단계 10정답 필요)
       let grade: 'S' | 'A' | 'B' | 'C' = 'C';
       let nextGradeTarget = 25;
       let progressPercent = Math.min(100, Math.round((correct / 25) * 100));
+      let capNotice: string | undefined = undefined;
 
-      if (correct >= 150 || (correct >= 100 && accuracy >= 85)) {
-        grade = 'S';
-        nextGradeTarget = 150;
-        progressPercent = 100;
-      } else if (correct >= 75 || (correct >= 50 && accuracy >= 80)) {
-        grade = 'A';
-        nextGradeTarget = 150;
-        progressPercent = Math.min(100, Math.round(((correct - 75) / 75) * 100));
-      } else if (correct >= 25 || (correct >= 15 && accuracy >= 70)) {
+      if (correct >= 150) {
+        if (correctLvl4 >= 10 && correctLvl3Plus >= 25) {
+          grade = 'S';
+          nextGradeTarget = 150;
+          progressPercent = 100;
+        } else if (correctLvl2Plus >= 15) {
+          grade = 'A';
+          nextGradeTarget = 150;
+          progressPercent = Math.min(99, Math.round(((correct - 75) / 75) * 100));
+          capNotice = `S등급 승급을 위해 4단계 문제 ${Math.max(0, 10 - correctLvl4)}개 정답이 더 필요합니다.`;
+        } else {
+          grade = 'B';
+          nextGradeTarget = 75;
+          progressPercent = 100;
+          capNotice = `A/S등급 승급을 위해 2단계 이상 문제를 풀어주세요.`;
+        }
+      } else if (correct >= 75) {
+        if (correctLvl2Plus >= 15) {
+          grade = 'A';
+          nextGradeTarget = 150;
+          progressPercent = Math.min(100, Math.round(((correct - 75) / 75) * 100));
+        } else {
+          grade = 'B';
+          nextGradeTarget = 75;
+          progressPercent = 100;
+          capNotice = `A등급 승급을 위해 2단계 이상 문제 ${Math.max(0, 15 - correctLvl2Plus)}개 정답이 필요합니다.`;
+        }
+      } else if (correct >= 25) {
         grade = 'B';
         nextGradeTarget = 75;
         progressPercent = Math.min(100, Math.round(((correct - 25) / 50) * 100));
@@ -869,19 +1000,25 @@ export async function getUserMasteryStats(userName: string): Promise<{ formMaste
         grade,
         masteryScore,
         nextGradeTarget,
-        progressPercent
+        progressPercent,
+        correctLvl1,
+        correctLvl2,
+        correctLvl3,
+        correctLvl4,
+        capNotice
       });
     }
 
     const overallAccuracy = totalSolved > 0 ? Math.round((totalCorrect / totalSolved) * 100) : 0;
-    return { formMasteries, totalSolved, totalCorrect, overallAccuracy };
+    return { formMasteries, totalSolved, totalCorrect, overallAccuracy, levelStats };
   } catch (e) {
     console.error("getUserMasteryStats Error:", e);
     return {
       formMasteries: [1, 2, 3, 4, 5].map(f => ({ form: f, total: 0, correct: 0, accuracy: 0, grade: 'C' })),
       totalSolved: 0,
       totalCorrect: 0,
-      overallAccuracy: 0
+      overallAccuracy: 0,
+      levelStats: { lvl1Correct: 0, lvl2Correct: 0, lvl3Correct: 0, lvl4Correct: 0 }
     };
   }
 }
