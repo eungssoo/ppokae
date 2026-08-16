@@ -1,6 +1,6 @@
 {
   "name": "뽀개 (PPOKAE) - AI 영문법 & 랭킹전",
-  "short_name": "뽀개 PPOKAE",
+  "short_name": "뽀개",
   "description": "문법부터 단어, 회화 표현까지 AI 1타 강사와 함께 뽀개는 실전 영어 앱",
   "start_url": "/",
   "id": "/",
@@ -30,5 +30,6 @@
     }
   ],
   "categories": ["education", "games", "productivity"],
-  "lang": "ko-KR"
+  "lang": "ko-KR",
+  "prefer_related_applications": false
 }
