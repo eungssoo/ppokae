@@ -181,6 +181,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
     const result = onCheckAnswer(userInput.trim());
     setIsCorrect(result.isCorrect);
     setIsSubmitted(true);
+    setViewingFeedback(userInput.trim());
 
     if (result.isCorrect) {
       sound.playCorrect();
@@ -279,7 +280,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
     );
   };
 
-  const QUICK_QUESTIONS = [
+  const QUICK_QUESTIONS = language === 'en' ? [
+    "Explain the difference between correct & incorrect choices 🎯",
+    "What is the key grammatical formula here? 🧩",
+    "What is the common exam trap point? ⚠️",
+    "What is the native nuance & context? 💡"
+  ] : [
     "정답과 오답의 차이를 쉽게 설명해줘 🎯",
     "이 문장의 핵심 영문법 공식은 뭐야? 🧩",
     "시험에서 자주 낚이는 함정 포인트는? ⚠️",
@@ -303,7 +309,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             }}
             className="text-slate-400 font-bold hover:bg-slate-800 hover:text-white px-3.5 py-1.5 rounded-xl transition-all text-xs sm:text-sm"
           >
-            종료하기
+            {t('exit')}
           </button>
 
           <div className="flex items-center gap-2.5">
@@ -318,7 +324,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             >
               <AlertTriangle className="w-4 h-4 text-rose-400" />
               <span className="text-[11px] font-bold hidden sm:inline text-rose-300">
-                오류 제보
+                {t('reportQuestion')}
               </span>
             </button>
 
@@ -338,7 +344,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
               >
                 <Star className={`w-4 h-4 ${isBookmarked ? 'fill-amber-400 text-amber-400' : ''}`} />
                 <span className="text-[11px] font-bold hidden sm:inline">
-                  {isBookmarked ? '보관됨' : '즐겨찾기'}
+                  {isBookmarked ? t('bookmarked') : t('bookmark')}
                 </span>
               </button>
             )}
@@ -394,12 +400,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
             <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
               <span className="inline-block bg-slate-800 text-indigo-300 font-bold text-xs px-3 py-1 rounded-full border border-slate-700">
-                {currentQuestion.form}형식 문장
+                {currentQuestion.form}{language === 'en' ? '-Form Sentence' : '형식 문장'}
               </span>
               {quizMode === 'daily' ? (
                 <span className={`inline-flex items-center gap-1.5 font-black text-xs px-3 py-1 rounded-full border ${scoreInfo.badgeBg} ${scoreInfo.badgeText} ${scoreInfo.badgeBorder} shadow-sm`}>
                   <span>🎯 {scoreInfo.levelLabel}</span>
-                  <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px] text-white font-black">+{scoreInfo.points}점</span>
+                  <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px] text-white font-black">+{scoreInfo.points}{language === 'en' ? ' PTS' : '점'}</span>
                 </span>
               ) : (
                 <span className={`inline-flex items-center gap-1 font-bold text-xs px-3 py-1 rounded-full border ${levelGating.badgeBg} ${levelGating.badgeText} ${levelGating.badgeBorder}`}>
@@ -410,13 +416,13 @@ export const QuizView: React.FC<QuizViewProps> = ({
               {/* 🪙 코인 보상 배지 */}
               <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-black px-3 py-1 rounded-full flex items-center gap-1">
                 <span>🪙</span>
-                <span>정답 시 +{levelGating.coinsReward} 코인</span>
+                <span>{language === 'en' ? `+${levelGating.coinsReward} Coins on Correct` : `정답 시 +${levelGating.coinsReward} 코인`}</span>
               </span>
 
               {/* 📈 랭크 승급 한도 배지 */}
               <span className="bg-slate-800/90 text-slate-300 border border-slate-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1" title={levelGating.tierCapNotice}>
                 <span>📈</span>
-                <span>승급 한도: {levelGating.tierCap}</span>
+                <span>{language === 'en' ? `Tier Cap: ${levelGating.tierCap}` : `승급 한도: ${levelGating.tierCap}`}</span>
               </span>
             </div>
           </div>
@@ -463,7 +469,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 disabled={!userInput}
                 className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white p-4 sm:p-5 rounded-2xl font-black text-lg sm:text-xl disabled:opacity-40 disabled:grayscale transition-all shadow-[0_8px_25px_rgba(99,102,241,0.3)] active:scale-[0.98] flex justify-center items-center gap-2.5"
               >
-                <span>정답 확인하기</span>
+                <span>{t('submitAnswer')}</span>
                 <span className="hidden sm:inline-block px-2 py-0.5 text-xs font-mono font-bold bg-white/20 border border-white/30 rounded">
                   Enter
                 </span>
@@ -488,7 +494,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 )}
                 <div>
                   <h3 className="font-black text-xl sm:text-2xl flex items-center flex-wrap gap-2">
-                    {isCorrect ? 'Perfect! 정답입니다 🎯' : 'Incorrect! 오답입니다 🚨'}
+                    {isCorrect ? t('correct') : t('incorrect')}
                     {quizMode === 'daily' && isCorrect && (
                       <span className="bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full text-xs">
                         +{scoreInfo.points} SCORE
@@ -497,7 +503,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   </h3>
                   {!isCorrect && (
                     <p className="font-medium text-slate-300 text-sm mt-1">
-                      올바른 정답:{' '}
+                      {t('correctAnswerIs')}{' '}
                       <strong className="bg-slate-800 text-emerald-400 px-2.5 py-0.5 rounded border border-slate-700 font-black">
                         {currentQuestion.answer}
                       </strong>
@@ -547,19 +553,19 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 </div>
               </div>
 
-              {/* Translation / English Meaning */}
-              <div className="p-4 sm:p-5 bg-slate-800/80 rounded-2xl border border-slate-700/80">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="inline-block bg-slate-700 text-slate-300 px-2.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider">
-                    {explanationLang === 'en' ? '🇺🇸 English Paraphrase & Meaning' : '🇰🇷 Korean Translation'}
-                  </span>
+              {/* 🇰🇷 한국어 번역 (한국어 모드일 때만 표시) */}
+              {explanationLang === 'ko' && (
+                <div className="p-4 sm:p-5 bg-slate-800/80 rounded-2xl border border-slate-700/80">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="inline-block bg-slate-700 text-slate-300 px-2.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider">
+                      🇰🇷 한국어 번역
+                    </span>
+                  </div>
+                  <p className="text-slate-200 font-medium text-base sm:text-lg leading-relaxed">
+                    {currentQuestion.translation}
+                  </p>
                 </div>
-                <p className="text-slate-200 font-medium text-base sm:text-lg leading-relaxed">
-                  {explanationLang === 'en'
-                    ? (enExplanation?.translation_en || currentQuestion.translation)
-                    : currentQuestion.translation}
-                </p>
-              </div>
+              )}
 
               {/* Option Analysis Buttons */}
               <div>
@@ -641,13 +647,13 @@ export const QuizView: React.FC<QuizViewProps> = ({
                     </div>
                     <div>
                       <h4 className="font-black text-sm sm:text-base text-white flex items-center gap-1.5">
-                        <span>1타 강사 AI 튜터 1:1 질문</span>
+                        <span>{t('aiTutorTitle')}</span>
                         <span className="bg-indigo-500/30 text-indigo-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-400/30">
                           PRO
                         </span>
                       </h4>
                       <p className="text-slate-400 text-xs font-medium">
-                        해설을 봐도 헷갈린다면 AI 튜터에게 무엇이든 물어보세요!
+                        {t('aiTutorDesc')}
                       </p>
                     </div>
                   </div>
@@ -687,7 +693,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 >
                   <input
                     type="text"
-                    placeholder="예: 왜 여기서는 to부정사 대신 동명사가 들어가야 하나요?"
+                    placeholder={language === 'en' ? 'e.g., Why do we use gerund instead of infinitive here?' : '예: 왜 여기서는 to부정사 대신 동명사가 들어가야 하나요?'}
                     value={aiQuestion}
                     onChange={(e) => setAiQuestion(e.target.value)}
                     disabled={isAiLoading}
@@ -702,7 +708,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
-                        <span>질문</span>
+                        <span>{language === 'en' ? 'Ask' : '질문'}</span>
                         <Send className="w-3.5 h-3.5" />
                       </>
                     )}
@@ -714,13 +720,13 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   <div className="mt-4 p-4 sm:p-5 bg-slate-900/90 border border-indigo-500/40 rounded-2xl shadow-inner">
                     <div className="flex items-center gap-2 mb-2 text-xs font-black text-indigo-300">
                       <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
-                      <span>1타 강사 AI 튜터의 맞춤 해설:</span>
+                      <span>{language === 'en' ? 'Master AI Tutor Explanation:' : '1타 강사 AI 튜터의 맞춤 해설:'}</span>
                     </div>
 
                     {isAiLoading ? (
                       <div className="flex items-center gap-2 text-slate-400 text-xs py-3">
                         <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                        <span>문법 원리를 명쾌하게 분석하여 답변을 작성하고 있습니다...</span>
+                        <span>{language === 'en' ? 'AI Tutor is analyzing grammar rules and preparing a response...' : '문법 원리를 명쾌하게 분석하여 답변을 작성하고 있습니다...'}</span>
                       </div>
                     ) : (
                       <div className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line font-medium">
@@ -739,9 +745,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 <span>
                   {questionIndex === totalQuestions
                     ? quizMode === 'daily'
-                      ? '결과 확인 및 랭킹 등록 🏆'
-                      : '퀴즈 완료 및 결과 보기 🎉'
-                    : '다음 문제 (Next) ➡️'}
+                      ? (language === 'en' ? 'Register Ranking & Finish 🏆' : '결과 확인 및 랭킹 등록 🏆')
+                      : (language === 'en' ? 'Finish & View Results 🎉' : '퀴즈 완료 및 결과 보기 🎉')
+                    : (language === 'en' ? 'Next Question ➔' : '다음 문제 (Next) ➡️')}
                 </span>
                 <span className="hidden sm:inline-block px-2 py-0.5 text-xs font-mono font-bold bg-slate-300 text-slate-800 rounded">
                   Enter

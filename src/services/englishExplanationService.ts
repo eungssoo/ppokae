@@ -2,7 +2,6 @@ import { Question } from '../types';
 import { callGeminiProxy } from './geminiService';
 
 export interface EnglishExplanation {
-  translation_en: string;
   chunk_pattern: string;
   nuance: string;
   option_feedbacks: Record<string, string>;
@@ -42,12 +41,42 @@ function saveToLocalStorage(key: string, data: EnglishExplanation): void {
   } catch {}
 }
 
+// 🛡️ Intelligent Rule-Based Fallback to ensure 100% instant English output
+function generateFallbackEnglishExplanation(question: Question): EnglishExplanation {
+  const formNames: Record<number, string> = {
+    1: 'Form 1 (Subject + Intransitive Verb)',
+    2: 'Form 2 (Subject + Linking Verb + Subject Complement)',
+    3: 'Form 3 (Subject + Transitive Verb + Direct Object)',
+    4: 'Form 4 (Subject + Transitive Verb + Indirect Object + Direct Object)',
+    5: 'Form 5 (Subject + Transitive Verb + Object + Object Complement)'
+  };
+
+  const feedbacks: Record<string, string> = {};
+  if (Array.isArray(question.options)) {
+    question.options.forEach((opt: any) => {
+      const text = typeof opt === 'object' ? opt.text : opt;
+      const isCorrect = typeof opt === 'object' ? opt.is_correct : text === question.answer;
+      if (isCorrect) {
+        feedbacks[text] = `Correct choice! "${text}" perfectly satisfies the grammatical requirement of ${formNames[question.form] || 'the sentence structure'}.`;
+      } else {
+        feedbacks[text] = `Incorrect choice. "${text}" does not grammatically fit the required position or tense in this sentence.`;
+      }
+    });
+  }
+
+  return {
+    chunk_pattern: formNames[question.form] || 'Standard English Sentence Pattern',
+    nuance: `This sentence focuses on mastering the structure of ${formNames[question.form] || 'key English grammar'} in natural context.`,
+    option_feedbacks: feedbacks
+  };
+}
+
 /**
  * ⚡ Get or asynchronously fetch English explanation on-demand with 0ms cache.
  */
 export async function getOrFetchEnglishExplanation(
   question: Question
-): Promise<EnglishExplanation | null> {
+): Promise<EnglishExplanation> {
   const key = getQuestionKey(question);
 
   // 1. Check in-memory cache (0ms)
@@ -66,7 +95,6 @@ export async function getOrFetchEnglishExplanation(
   if ((question as any).explanation_en) {
     const enExp = (question as any).explanation_en;
     const result: EnglishExplanation = {
-      translation_en: (question as any).translation_en || question.sentence,
       chunk_pattern: enExp.chunk_pattern || '',
       nuance: enExp.nuance || '',
       option_feedbacks: enExp.option_feedbacks || {}
@@ -76,22 +104,21 @@ export async function getOrFetchEnglishExplanation(
     return result;
   }
 
-  // 4. On-Demand Fetch via ultra-lightweight Gemini Flash Lite (0.5s)
+  // 4. On-Demand Fetch via ultra-lightweight Gemini Flash models
   const models = [
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash-8b',
     'gemini-2.0-flash',
-    'gemini-1.5-flash'
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b',
+    'gemini-2.0-flash-lite-preview-02-05'
   ];
 
-  const systemPrompt = `You are a world-class English grammar master and ESL curriculum writer.
-Convert the given Korean grammar quiz explanation into clear, concise, professional English for ESL learners.
+  const systemPrompt = `You are a world-class English grammar master and ESL test preparer.
+Convert the given Korean grammar quiz explanation into clear, professional, natural English for ESL learners.
 
 [RULES]:
-1. "translation_en": Provide a plain, natural English paraphrase/meaning breakdown of the target sentence.
-2. "chunk_pattern": State the core grammatical pattern in English (e.g. "Subject + Transitive Verb + Object + Object Complement (to-infinitive)").
-3. "nuance": Explain the native nuance, usage context, and why this grammar point is critical.
-4. "option_feedbacks": Provide a clear 1-sentence English explanation for why each option is correct or incorrect.`;
+1. "chunk_pattern": State the exact grammatical formula and chunk structure in English (e.g. "Subject + Verb + Object + Object Complement (to-infinitive)").
+2. "nuance": Explain the native grammatical nuance, formal/informal context, and why this grammar point is essential.
+3. "option_feedbacks": Provide a clear 1-sentence English explanation for why each specific option is grammatically correct or incorrect.`;
 
   const userPrompt = `
 [QUESTION]:
@@ -114,7 +141,6 @@ Generate a clean JSON object matching the required schema.`;
       responseSchema: {
         type: "OBJECT",
         properties: {
-          translation_en: { type: "STRING" },
           chunk_pattern: { type: "STRING" },
           nuance: { type: "STRING" },
           option_feedbacks: {
@@ -129,7 +155,7 @@ Generate a clean JSON object matching the required schema.`;
             }
           }
         },
-        required: ["translation_en", "chunk_pattern", "nuance", "option_feedbacks"]
+        required: ["chunk_pattern", "nuance", "option_feedbacks"]
       },
       temperature: 0.2
     }
@@ -152,7 +178,6 @@ Generate a clean JSON object matching the required schema.`;
         }
 
         const formatted: EnglishExplanation = {
-          translation_en: parsed.translation_en || question.sentence,
           chunk_pattern: parsed.chunk_pattern || question.explanation?.chunk_pattern || '',
           nuance: parsed.nuance || question.explanation?.nuance || '',
           option_feedbacks: feedbacksMap
@@ -168,7 +193,11 @@ Generate a clean JSON object matching the required schema.`;
     }
   }
 
-  return null;
+  // Fallback if network/API limits reached
+  const fallback = generateFallbackEnglishExplanation(question);
+  memoryCache.set(key, fallback);
+  saveToLocalStorage(key, fallback);
+  return fallback;
 }
 
 /**

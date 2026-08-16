@@ -77,7 +77,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
             <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-pink-500/20 border border-amber-500/40">
               <span className="text-xs sm:text-sm">⚡</span>
               <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-pink-300 font-serif">
-                뽀개
+                {language === 'en' ? 'Ppokae' : '뽀개'}
               </span>
             </div>
 
@@ -92,7 +92,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 title="마스터 관리자 사령탑 열기"
               >
                 <Crown className="w-3 h-3 fill-slate-950" />
-                <span>관리자</span>
+                <span>{language === 'en' ? 'Admin' : '관리자'}</span>
               </button>
             )}
 
@@ -103,7 +103,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 onNavigate('profile_view');
               }}
               className="flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 px-2.5 sm:px-3 py-1 rounded-full shadow-sm transition-all active:scale-95 text-left"
-              title="내 프로필 관리"
+              title={t('myProfile')}
             >
               <span className="text-sm sm:text-base">{user.avatar || '🤖'}</span>
               <span className="text-xs font-bold text-white tracking-tight">{user.name}</span>
@@ -134,7 +134,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               title={language === 'ko' ? 'Switch to English' : '한국어로 전환'}
             >
               <Globe className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{language === 'ko' ? 'EN 🇺🇸' : '한 🇰🇷'}</span>
+              <span>{language === 'ko' ? '🇺🇸 EN' : '🇰🇷 한'}</span>
             </button>
 
             {/* 💌 문의하기 / 피드백 Quick Button */}
@@ -145,7 +145,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                   onOpenInquiryModal();
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700/90 hover:border-indigo-400 text-slate-300 hover:text-white font-bold text-xs shadow-sm active:scale-95 transition-all"
-                title="개발자에게 문의 및 피드백 보내기"
+                title="문의 및 피드백"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
                 <span>{t('inquiryBtn')}</span>
@@ -160,7 +160,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                   onOpenGachaModal();
                 }}
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 hover:from-purple-600 hover:to-pink-600 text-white font-black text-xs shadow-md shadow-purple-500/30 border border-purple-300/40 active:scale-95 transition-all"
-                title="아바타 가챠 소환소"
+                title="아바타 소환소"
               >
                 <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
                 <span>{t('avatarGachaBtn')}</span>
@@ -174,7 +174,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 onLogout();
               }}
               className="flex items-center justify-center p-2 text-slate-400 hover:text-rose-400 bg-slate-800/50 hover:bg-rose-500/10 border border-slate-700 hover:border-rose-500/30 rounded-xl transition-all"
-              title="로그아웃"
+              title={t('logout')}
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>
@@ -193,7 +193,11 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           
           <div className="inline-flex items-center gap-1.5 bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white mb-2.5 border border-white/20">
             <Clock className="w-3.5 h-3.5 text-yellow-200" />
-            <span>현재 {currentCycle.cycleName} 진행 중</span>
+            <span>
+              {language === 'en'
+                ? `Round ${currentCycle.cycleName.replace(/[^0-9]/g, '') || '1'} in progress`
+                : `현재 ${currentCycle.cycleName} 진행 중`}
+            </span>
             <span className="bg-rose-500 text-white px-2 py-0.2 rounded-full text-[10px] font-black">
               {currentCycle.remainingTimeFormatted}
             </span>
@@ -203,14 +207,14 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
             <div className="flex items-center gap-2">
               <Trophy className="w-6 h-6 text-yellow-200 animate-bounce" />
               <h2 className="text-xl sm:text-2xl font-black text-white drop-shadow tracking-tight">
-                실시간 랭킹전 (10문제 타임어택)
+                {t('rankingHeroTitle')}
               </h2>
             </div>
             <span className="text-2xl filter drop-shadow">🔥</span>
           </div>
           
           <p className="relative z-10 text-orange-100 font-medium text-xs sm:text-sm leading-relaxed">
-            모두에게 똑같은 공식 10문제! 빠른 완주로 1위 탈환 & <strong>보상 코인</strong> 획득! ⚡
+            {t('rankingHeroDesc')}
           </p>
         </button>
 
@@ -229,20 +233,24 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black uppercase text-purple-300">나의 실시간 성장 리포트</span>
+                  <span className="text-[11px] font-black uppercase text-purple-300">
+                    {t('myGrowthReport')}
+                  </span>
                   <span className={`bg-gradient-to-r ${tierInfo.badgeColor} text-white font-black text-[10px] px-2 py-0.2 rounded-full`}>
                     {tierInfo.tier}
                   </span>
                 </div>
                 <div className="text-sm font-black text-white">
-                  누적 {currentXp.toLocaleString()} XP • 정답률 {user.totalSolved ? Math.round(((user.totalCorrect || 0) / user.totalSolved) * 100) : 100}%
+                  {language === 'en' 
+                    ? `Total ${currentXp.toLocaleString()} XP • Accuracy ${user.totalSolved ? Math.round(((user.totalCorrect || 0) / user.totalSolved) * 100) : 100}%`
+                    : `누적 ${currentXp.toLocaleString()} XP • 정답률 ${user.totalSolved ? Math.round(((user.totalCorrect || 0) / user.totalSolved) * 100) : 100}%`}
                 </div>
               </div>
             </div>
 
             <div className="text-xs font-black text-indigo-300 group-hover:text-white flex items-center gap-1 bg-indigo-500/20 group-hover:bg-indigo-500/40 px-3 py-1.5 rounded-xl border border-indigo-500/40 transition-all">
               <BarChart3 className="w-3.5 h-3.5" />
-              <span>성장 분석 대시보드 ➔</span>
+              <span>{t('growthDashboardBtn')}</span>
             </div>
           </div>
 
@@ -255,7 +263,11 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           </div>
           <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1 font-mono">
             <span>{tierInfo.tier}</span>
-            <span>{tierInfo.maxXp === Infinity ? '최고 티어 도달 👑' : `${Math.max(0, tierInfo.maxXp - currentXp).toLocaleString()} XP 남음 (${tierInfo.progress}%)`}</span>
+            <span>
+              {tierInfo.maxXp === Infinity 
+                ? t('maxTierReached')
+                : `${Math.max(0, tierInfo.maxXp - currentXp).toLocaleString()} ${t('xpRemaining')} (${tierInfo.progress}%)`}
+            </span>
           </div>
         </div>
 
@@ -275,19 +287,16 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-white">뽀개 정식 앱 1초 무료 설치</span>
-                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                      주소창 없는 전체화면
-                    </span>
+                    <span className="text-xs font-black text-white">{t('pwaInstallTitle')}</span>
                   </div>
                   <p className="text-[11px] text-slate-300">
-                    삼성 인터넷/크롬 주소창 우측의 [앱 설치] 또는 1초 간편 설치로 앱을 소장하세요!
+                    {t('pwaInstallDesc')}
                   </p>
                 </div>
               </div>
               <span className="px-3 py-1.5 rounded-xl bg-indigo-600 group-hover:bg-indigo-500 text-white font-black text-xs shrink-0 shadow-md flex items-center gap-1">
                 <Smartphone className="w-3.5 h-3.5" />
-                <span>앱 설치하기</span>
+                <span>{t('installNow')}</span>
               </span>
             </button>
           </div>
@@ -297,12 +306,12 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
         <div className="mb-5">
           <div className="flex items-center gap-1.5 text-slate-300 text-xs font-black uppercase tracking-wider mb-2.5 px-1">
             <Zap className="w-3.5 h-3.5 text-emerald-400" />
-            <span>실전 문제 풀이 (Study & Practice)</span>
+            <span>{language === 'en' ? 'Core Study & Practice' : '실전 문제 풀이 (Study & Practice)'}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             
-            {/* A. 일반 퀴즈 풀기 */}
+            {/* A. 1일 문법 챌린지 */}
             <button
               onClick={() => {
                 sound.playClick();
@@ -313,14 +322,14 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-2xl">✍️</span>
                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
-                  정답 시 +5 코인
+                  {language === 'en' ? 'On Correct +5 Coins' : '정답 시 +5 코인'}
                 </span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-white mb-0.5 group-hover:text-emerald-300 transition-colors">
-                일반 퀴즈 풀기
+                {t('dailyChallengeTitle')}
               </h3>
               <p className="text-emerald-200/70 text-xs font-medium leading-relaxed">
-                Level 1~4 난이도 선택 10문제 풀기
+                {t('dailyChallengeDesc')}
               </p>
             </button>
 
@@ -335,14 +344,14 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-2xl">🌟</span>
                 <span className="bg-purple-500/20 text-purple-200 border border-purple-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
-                  미드 • 비즈니스 • 꿀패턴
+                  {language === 'en' ? 'Drama • Office • Native' : '미드 • 비즈니스 • 꿀패턴'}
                 </span>
               </div>
               <h3 className="text-base sm:text-lg font-black text-white mb-0.5 group-hover:text-purple-300 transition-colors">
-                원어민 표현 마스터
+                {t('expressionLabHeroTitle')}
               </h3>
               <p className="text-purple-200/70 text-xs font-medium leading-relaxed">
-                실전 A/B 롤플레이 & 플래시카드 & 표현 퀴즈
+                {t('expressionLabHeroDesc')}
               </p>
             </button>
 
@@ -358,12 +367,14 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
                     <Target className="w-4 h-4 text-rose-400" />
-                    <h3 className="text-sm sm:text-base font-extrabold text-white">내 약점 집중 퀴즈</h3>
+                    <h3 className="text-sm sm:text-base font-extrabold text-white">
+                      {t('weaknessHeroTitle')}
+                    </h3>
                   </div>
                   <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-rose-400 group-hover:translate-x-1 transition-all" />
                 </div>
                 <p className="text-slate-400 text-xs font-medium leading-relaxed">
-                  오답 기반 맞춤 조제된 약점 문제를 풉니다.
+                  {t('weaknessHeroDesc')}
                 </p>
               </div>
             </button>
@@ -380,14 +391,16 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
                     <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                    <h3 className="text-sm sm:text-base font-extrabold text-amber-200">즐겨찾기 보관함</h3>
+                    <h3 className="text-sm sm:text-base font-extrabold text-amber-200">
+                      {t('bookmarkHeroTitle')}
+                    </h3>
                   </div>
                   <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded">
-                    {bookmarkCount}개
+                    {bookmarkCount}{language === 'en' ? ' saved' : '개'}
                   </span>
                 </div>
                 <p className="text-slate-400 text-xs font-medium leading-relaxed">
-                  별표 표시한 중요 문항 무한 반복 복습
+                  {t('bookmarkHeroDesc')}
                 </p>
               </div>
             </button>
@@ -399,7 +412,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
         <div>
           <div className="flex items-center gap-1.5 text-slate-300 text-xs font-black uppercase tracking-wider mb-2.5 px-1">
             <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
-            <span>학습 분석 & 문제 관리 (Analytics & Tools)</span>
+            <span>{language === 'en' ? 'Analytics & Tools' : '학습 분석 & 문제 관리 (Analytics & Tools)'}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-2.5">
@@ -417,10 +430,12 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <span className="text-base animate-bounce">🎰</span>
                   <h4 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-amber-300">
-                    아바타 소환소
+                    {t('avatarGachaBtn')}
                   </h4>
                 </div>
-                <p className="text-purple-200/70 text-[10px]">0.05% 태초의 신 & 전설</p>
+                <p className="text-purple-200/70 text-[10px]">
+                  {language === 'en' ? '0.05% Transcendent God' : '0.05% 태초의 신 & 전설'}
+                </p>
               </div>
               <Sparkles className="w-4 h-4 text-yellow-300 group-hover:rotate-12 transition-transform" />
             </button>
@@ -436,9 +451,13 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <Crown className="w-4 h-4 text-amber-400" />
-                  <h4 className="text-xs font-extrabold text-amber-200">명예의 전당</h4>
+                  <h4 className="text-xs font-extrabold text-amber-200">
+                    {language === 'en' ? 'Hall of Fame' : '명예의 전당'}
+                  </h4>
                 </div>
-                <p className="text-slate-400 text-[10px]">1/2/3차전 랭킹 순위</p>
+                <p className="text-slate-400 text-[10px]">
+                  {language === 'en' ? 'Live Rankings Leaderboard' : '1/2/3차전 랭킹 순위'}
+                </p>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
             </button>
@@ -454,9 +473,13 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <Factory className="w-4 h-4 text-indigo-400" />
-                  <h4 className="text-xs font-extrabold text-white">AI 문제 공장</h4>
+                  <h4 className="text-xs font-extrabold text-white">
+                    {language === 'en' ? 'AI Question Factory' : 'AI 문제 공장'}
+                  </h4>
                 </div>
-                <p className="text-slate-400 text-[10px]">40문제 출제 (🪙 50)</p>
+                <p className="text-slate-400 text-[10px]">
+                  {language === 'en' ? 'Create 40 Qs (🪙 50)' : '40문제 출제 (🪙 50)'}
+                </p>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
             </button>
@@ -473,7 +496,9 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               className="p-2.5 bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 rounded-xl transition-all text-center"
             >
               <BookOpen className="w-3.5 h-3.5 text-slate-400 mx-auto mb-0.5" />
-              <span className="text-[11px] font-bold text-slate-300 block">전체 문제집</span>
+              <span className="text-[11px] font-bold text-slate-300 block">
+                {language === 'en' ? 'Public Bank' : '전체 문제집'}
+              </span>
             </button>
 
             <button
@@ -484,7 +509,9 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               className="p-2.5 bg-slate-900/60 hover:bg-rose-500/10 border border-slate-800 rounded-xl transition-all text-center"
             >
               <AlertTriangle className="w-3.5 h-3.5 text-rose-400 mx-auto mb-0.5" />
-              <span className="text-[11px] font-bold text-rose-300 block">약점 진단</span>
+              <span className="text-[11px] font-bold text-rose-300 block">
+                {language === 'en' ? 'Weakness' : '약점 진단'}
+              </span>
             </button>
 
             <button
@@ -495,7 +522,9 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               className="p-2.5 bg-slate-900/60 hover:bg-amber-500/10 border border-slate-800 rounded-xl transition-all text-center"
             >
               <ClipboardList className="w-3.5 h-3.5 text-amber-400 mx-auto mb-0.5" />
-              <span className="text-[11px] font-bold text-amber-300 block">오답 노트</span>
+              <span className="text-[11px] font-bold text-amber-300 block">
+                {t('incorrectHeroTitle')}
+              </span>
             </button>
           </div>
 
@@ -513,13 +542,15 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                   <span className="text-xl">📋</span>
                   <div>
                     <h4 className="text-xs font-extrabold text-rose-200 group-hover:text-rose-100 flex items-center gap-1.5">
-                      <span>AI 문제 검수 & 제보 보상함</span>
+                      <span>{language === 'en' ? 'AI Review & Report Rewards' : 'AI 문제 검수 & 제보 보상함'}</span>
                       <span className="bg-rose-500/20 text-rose-300 text-[9px] font-black px-1.5 py-0.2 rounded-full border border-rose-500/30">
-                        00시 심사 (🪙 50)
+                        {language === 'en' ? 'Audit at 00:00 (🪙 50)' : '00시 심사 (🪙 50)'}
                       </span>
                     </h4>
                     <p className="text-[10px] text-slate-400">
-                      내가 제보한 문제의 AI 검수 결과 확인 및 보상 코인 받기
+                      {language === 'en' 
+                        ? 'Check your error reports and claim coin rewards'
+                        : '내가 제보한 문제의 AI 검수 결과 확인 및 보상 코인 받기'}
                     </p>
                   </div>
                 </div>

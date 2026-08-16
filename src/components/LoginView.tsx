@@ -12,13 +12,6 @@ interface LoginViewProps {
   isLoading: boolean;
 }
 
-const STARTER_AVATARS = [
-  { id: 'lion', name: '라이언', icon: '🦁', desc: '용기있는 학습자' },
-  { id: 'cat', name: '냥이', icon: '🐱', desc: '호기심 많은 분석가' },
-  { id: 'fire', name: '파이어', icon: '🔥', desc: '열정적인 도전자' },
-  { id: 'robot', name: '로봇', icon: '🤖', desc: '철저한 문법 마스터' },
-];
-
 export const LoginView: React.FC<LoginViewProps> = ({
   onLogin,
   onGoogleLogin,
@@ -31,6 +24,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
   const [selectedStarterId, setSelectedStarterId] = useState('lion');
+
+  const STARTER_AVATARS = [
+    { id: 'lion', name: language === 'en' ? 'Leo' : '라이언', icon: '🦁', desc: language === 'en' ? 'Brave Learner' : '용기있는 학습자' },
+    { id: 'cat', name: language === 'en' ? 'Kitty' : '냥이', icon: '🐱', desc: language === 'en' ? 'Curious Analyst' : '호기심 많은 분석가' },
+    { id: 'fire', name: language === 'en' ? 'Blaze' : '파이어', icon: '🔥', desc: language === 'en' ? 'Passionate Challenger' : '열정적인 도전자' },
+    { id: 'robot', name: language === 'en' ? 'Bot' : '로봇', icon: '🤖', desc: language === 'en' ? 'Grammar Master' : '철저한 문법 마스터' },
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +57,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
       </div>
 
       <div className="max-w-md w-full glass-card rounded-[2.5rem] p-6 sm:p-10 border border-slate-700/60 shadow-2xl relative overflow-hidden text-center transition-all duration-300">
-
         
         {/* Background Ambient Light */}
         <div className="absolute -top-24 -left-24 w-60 h-60 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -71,12 +70,24 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </div>
 
           <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-tight mb-2 font-serif">
-            뽀개 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-400 font-black">PPOKAE</span>
+            {language === 'en' ? 'Ppokae ' : '뽀개 '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-400 font-black">
+              PPOKAE
+            </span>
           </h1>
 
           <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed mb-4">
-            문법부터 단어, 회화 표현까지 전부 뽀개보자!<br />
-            가입 즉시 <strong>🪙 200 코인</strong> & 스타터 아바타 4종 무료 지급!
+            {language === 'en' ? (
+              <>
+                Conquer grammar, vocabulary, and native conversation!<br />
+                Instant <strong>🪙 200 Coins</strong> + 4 Free Starter Avatars on signup!
+              </>
+            ) : (
+              <>
+                문법부터 단어, 회화 표현까지 전부 뽀개보자!<br />
+                가입 즉시 <strong>🪙 200 코인</strong> & 스타터 아바타 4종 무료 지급!
+              </>
+            )}
           </p>
 
           {/* 📲 PWA 모바일 앱 무료 다운로드 / 설치 퀵 배너 */}
@@ -92,11 +103,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-base animate-bounce">📲</span>
                 <span className="text-slate-200 text-left text-[11px] sm:text-xs">
-                  스마트폰 정식 앱으로 더 쾌적하게! <strong className="text-amber-300 underline underline-offset-2">1초 설치 안내</strong>
+                  {language === 'en' ? (
+                    <>Install App for best experience! <strong className="text-amber-300 underline underline-offset-2">1s Guide</strong></>
+                  ) : (
+                    <>스마트폰 정식 앱으로 더 쾌적하게! <strong className="text-amber-300 underline underline-offset-2">1초 설치 안내</strong></>
+                  )}
                 </span>
               </div>
               <span className="text-pink-300 font-black text-[11px] group-hover:translate-x-1 transition-transform shrink-0">
-                설치 안내 ➔
+                {language === 'en' ? 'Install ➔' : '설치 안내 ➔'}
               </span>
             </button>
           )}
@@ -122,17 +137,19 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                     <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                   </svg>
-                  <span>구글 계정으로 로그인</span>
+                  <span>{t('googleLogin')}</span>
                 </div>
                 <span className="bg-amber-100 text-amber-900 border border-amber-300 font-black text-[11px] px-2 py-0.5 rounded-full shadow-sm">
-                  🪙 300C 지급
+                  {language === 'en' ? '🪙 +300C Bonus' : '🪙 300C 지급'}
                 </span>
               </button>
             )}
 
             <div className="flex items-center my-3">
               <div className="flex-1 border-t border-slate-700/60" />
-              <span className="px-3 text-[11px] text-slate-500 font-bold">또는</span>
+              <span className="px-3 text-[11px] text-slate-500 font-bold">
+                {language === 'en' ? 'OR' : '또는'}
+              </span>
               <div className="flex-1 border-t border-slate-700/60" />
             </div>
 
@@ -146,7 +163,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               className="w-full py-3.5 px-4 bg-slate-800/90 hover:bg-slate-750 text-slate-200 hover:text-white rounded-2xl font-black text-xs sm:text-sm transition-all border border-slate-700 active:scale-95 flex items-center justify-center gap-2"
             >
               <UserPlus className="w-4 h-4 text-purple-400" />
-              <span>무료 계정 생성 / PIN 로그인</span>
+              <span>{language === 'en' ? 'Free Account / PIN Login' : '무료 계정 생성 / PIN 로그인'}</span>
             </button>
           </div>
         ) : (
@@ -155,7 +172,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
               <span className="text-xs font-black text-purple-300 flex items-center gap-1.5">
                 <UserPlus className="w-4 h-4 text-pink-400" />
-                <span>계정 생성 / PIN 로그인</span>
+                <span>{language === 'en' ? 'Account Setup / PIN Login' : '계정 생성 / PIN 로그인'}</span>
               </span>
               <button
                 type="button"
@@ -166,7 +183,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 className="text-[11px] text-slate-400 hover:text-white font-bold flex items-center gap-1 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 transition-all"
               >
                 <ArrowLeft className="w-3 h-3" />
-                <span>뒤로</span>
+                <span>{t('back')}</span>
               </button>
             </div>
 
@@ -174,7 +191,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-[11px] font-bold text-slate-300">
-                    1. 닉네임 설정 (무료)
+                    {language === 'en' ? '1. Choose Nickname (Free)' : '1. 닉네임 설정 (무료)'}
                   </label>
                   <button
                     type="button"
@@ -185,7 +202,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     className="text-[10px] font-bold text-purple-300 hover:text-purple-200 bg-purple-500/20 hover:bg-purple-500/30 px-2 py-0.5 rounded-lg border border-purple-500/40 transition-all flex items-center gap-1 active:scale-95"
                   >
                     <Dice5 className="w-3 h-3" />
-                    <span>랜덤</span>
+                    <span>{language === 'en' ? 'Random' : '랜덤'}</span>
                   </button>
                 </div>
                 <div className="relative">
@@ -194,7 +211,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="원하는 닉네임 입력"
+                    placeholder={t('enterName')}
                     required
                     className="w-full pl-11 pr-4 py-3 bg-slate-800/90 border border-slate-700 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all"
                   />
@@ -203,7 +220,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
               <div>
                 <label className="text-[11px] font-bold text-slate-300 mb-1 block">
-                  2. 6자리 비밀 PIN 번호
+                  {language === 'en' ? '2. Secret 6-Digit PIN' : '2. 6자리 비밀 PIN 번호'}
                 </label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -211,7 +228,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     type="password"
                     value={pin}
                     onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                    placeholder="숫자 6자리 (예: 123456)"
+                    placeholder={language === 'en' ? '6-digit number (e.g. 123456)' : '숫자 6자리 (예: 123456)'}
                     required
                     maxLength={6}
                     className="w-full pl-11 pr-4 py-3 bg-slate-800/90 border border-slate-700 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 tracking-widest transition-all"
@@ -222,8 +239,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
               {/* 🦁 4종 스타터 아바타 선택 섹션 */}
               <div>
                 <label className="text-[11px] font-bold text-slate-300 mb-1.5 flex items-center justify-between">
-                  <span>3. 대표 스타터 아바타 선택 (무료)</span>
-                  <span className="text-[10px] text-purple-300">4종 중 택1</span>
+                  <span>{language === 'en' ? '3. Select Starter Avatar (Free)' : '3. 대표 스타터 아바타 선택 (무료)'}</span>
+                  <span className="text-[10px] text-purple-300">{language === 'en' ? 'Pick 1 of 4' : '4종 중 택1'}</span>
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {STARTER_AVATARS.map((avatar) => {
@@ -256,7 +273,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <div className="p-3 bg-purple-950/50 border border-purple-500/30 rounded-2xl text-left flex items-start gap-2 shadow-inner">
                 <Sparkles className="w-4 h-4 text-amber-300 flex-shrink-0 mt-0.5" />
                 <p className="text-[11px] text-slate-300 leading-relaxed">
-                  <strong className="text-pink-300">아바타 & 닉네임 변경</strong>: 닉네임과 아바타는 가입 후 언제든지 <strong>[🎰 아바타 소환소]</strong>에서 전설/신화 아바타를 소환하여 무료로 자유롭게 변경할 수 있습니다!
+                  <strong className="text-pink-300">{language === 'en' ? 'Avatar Customization' : '아바타 & 닉네임 변경'}</strong>: {language === 'en' ? 'You can summon mythical & legendary avatars and switch anytime for free!' : '닉네임과 아바타는 가입 후 언제든지 [🎰 아바타 소환소]에서 전설/신화 아바타를 소환하여 무료로 자유롭게 변경할 수 있습니다!'}
                 </p>
               </div>
 
@@ -265,7 +282,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 disabled={!name.trim() || pin.length < 6 || isLoading}
                 className="w-full py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 disabled:opacity-40 disabled:grayscale flex items-center justify-center gap-2"
               >
-                <span>시작하기 (신규 가입 시 🪙 200 코인 지급)</span>
+                <span>{language === 'en' ? 'Start Learning (+200 Coins Bonus)' : '시작하기 (신규 가입 시 🪙 200 코인 지급)'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -274,7 +291,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <div className="p-3 bg-indigo-950/70 border border-indigo-500/30 rounded-2xl text-left flex items-start gap-2.5 shadow-inner">
               <Link2 className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                <strong className="text-amber-300">데이터 백업 안내</strong>: 가입 후 <strong>[프로필 설정]</strong>에서 구글 계정을 연동하면 학습 기록과 코인을 안전하게 영구 백업할 수 있습니다.
+                <strong className="text-amber-300">{language === 'en' ? 'Cloud Sync Note' : '데이터 백업 안내'}</strong>: {language === 'en' ? 'Link your Google account anytime in Profile Settings for seamless cloud sync.' : '가입 후 [프로필 설정]에서 구글 계정을 연동하면 학습 기록과 코인을 안전하게 영구 백업할 수 있습니다.'}
               </p>
             </div>
           </div>
@@ -283,7 +300,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         {/* Footer Note */}
         <div className="mt-6 flex items-center justify-center gap-1.5 text-slate-500 text-[11px] font-medium relative z-10">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/80" />
-          <span>모든 학습 데이터는 클라우드에 실시간 안전하게 저장됩니다.</span>
+          <span>{t('guestNotice')}</span>
         </div>
 
       </div>
