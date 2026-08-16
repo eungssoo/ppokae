@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
-import { Sparkles, CheckCircle2, User, ArrowRight, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { Sparkles, CheckCircle2, User, ArrowRight } from 'lucide-react';
 import { UserProfile } from '../types';
-import { AVATAR_DATABASE } from '../services/avatarService';
 import { sound } from '../services/soundService';
+import { validateNicknameWithAI } from '../services/geminiService';
 
 interface InitialProfileSetupModalProps {
   isOpen: boolean;
-  user: UserProfile;
+  user: UserProfile | null;
   onSave: (newName: string, starterAvatarId: string) => Promise<void>;
   isLoading: boolean;
 }
 
 const STARTER_AVATARS = [
-  { id: 'lion', name: '라이언', icon: '🦁', desc: '용기있는 학습자', color: 'from-amber-400 to-orange-500' },
-  { id: 'cat', name: '냥이', icon: '🐱', desc: '호기심 많은 분석가', color: 'from-pink-400 to-rose-500' },
-  { id: 'fire', name: '파이어', icon: '🔥', desc: '열정적인 도전자', color: 'from-red-500 to-amber-500' },
-  { id: 'robot', name: '로봇', icon: '🤖', desc: '철저한 문법 마스터', color: 'from-cyan-400 to-blue-500' },
+  { id: 'lion', name: '라이언', icon: '🦁', desc: '용기있는 학습자' },
+  { id: 'cat', name: '냥이', icon: '🐱', desc: '호기심 많은 분석가' },
+  { id: 'fire', name: '파이어', icon: '🔥', desc: '열정적인 도전자' },
+  { id: 'robot', name: '로봇', icon: '🤖', desc: '철저한 문법 마스터' },
 ];
 
 export const InitialProfileSetupModal: React.FC<InitialProfileSetupModalProps> = ({
@@ -27,6 +27,7 @@ export const InitialProfileSetupModal: React.FC<InitialProfileSetupModalProps> =
   const [name, setName] = useState<string>(user?.name || '');
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>(user?.currentAvatarId || 'lion');
   const [error, setError] = useState<string>('');
+  const [isValidating, setIsValidating] = useState(false);
 
   React.useEffect(() => {
     if (user?.name) setName(user.name);
@@ -47,7 +48,17 @@ export const InitialProfileSetupModal: React.FC<InitialProfileSetupModalProps> =
       setError('닉네임은 2자 이상 12자 이하로 입력해 주세요.');
       return;
     }
+
     setError('');
+    setIsValidating(true);
+    const val = await validateNicknameWithAI(trimmed);
+    setIsValidating(false);
+
+    if (!val.isValid) {
+      setError(val.reason || '부적절한 단어가 포함된 닉네임은 사용할 수 없습니다.');
+      return;
+    }
+
     await onSave(trimmed, selectedAvatarId);
   };
 
@@ -154,10 +165,10 @@ export const InitialProfileSetupModal: React.FC<InitialProfileSetupModalProps> =
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isValidating}
             className="w-full py-4 bg-gradient-to-r from-indigo-500 via-purple-600 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white rounded-2xl font-black text-sm sm:text-base shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>{isLoading ? '저장하는 중...' : '설정 완료하고 뽀개 시작하기'}</span>
+            <span>{isValidating ? '🤖 AI 닉네임 검수 중...' : isLoading ? '저장하는 중...' : '설정 완료하고 뽀개 시작하기'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>

@@ -694,3 +694,77 @@ export async function generateRankingCycleQuestions(
     questions: fallbackWithCycleId 
   };
 }
+
+// ==========================================
+// 🛡️ 닉네임 유해성/부적절성 AI 자동 검수 엔진
+// ==========================================
+
+const PROFANITY_REGEX = /(시발|씨발|개새|병신|느금|애미|애비|섹스|보지|자지|운지|노무|보겸|앙기모|좆|존나|개씹|씹새|호로|바보병신|fuck|bitch|dick|pussy|nigger|faggot|cunt|bastard|asshole|whore|slut)/i;
+
+export async function validateNicknameWithAI(nickname: string): Promise<{ isValid: boolean; reason?: string }> {
+  const trimmed = nickname.trim();
+  if (!trimmed) {
+    return { isValid: false, reason: '닉네임을 입력해 주세요.' };
+  }
+  if (trimmed.length < 2 || trimmed.length > 12) {
+    return { isValid: false, reason: '닉네임은 2자 이상 12자 이하로 설정해 주세요.' };
+  }
+
+  // 1차: 특수문자 검사 (한글, 영문, 숫자, 밑줄, 공백 허용)
+  if (!/^[a-zA-Z0-9가-힣_\s]+$/.test(trimmed)) {
+    return { isValid: false, reason: '닉네임에는 한글, 영문, 숫자, 밑줄(_)만 사용 가능합니다.' };
+  }
+
+  // 1차: 정적 금칙어 정규식 즉시 차단
+  if (PROFANITY_REGEX.test(trimmed.replace(/\s+/g, ''))) {
+    return { isValid: false, reason: '욕설, 비속어 또는 부적절한 표현이 포함된 닉네임은 사용할 수 없습니다.' };
+  }
+
+  // 2차: Gemini AI 정밀 유해성 / 변형어 / 우회 검수
+  try {
+    const prompt = `당신은 청소년 및 대학생이 이용하는 교육용 영문법 앱의 닉네임 검수 AI입니다.
+다음 닉네임이 욕설, 비속어, 성적/음란성, 혐오/차별, 사회적 비하, 패드립, 타인 사칭, 불법 홍보 등에 해당하는지 엄격하게 심사하세요.
+닉네임: "${trimmed}"
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{
+  "isValid": true 또는 false,
+  "reason": "부적절한 경우 사용자에게 보여줄 정중하고 명확한 거절 사유 (적절한 경우 빈 문자열)"
+}`;
+
+    const payload = {
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.1
+      }
+    };
+
+    const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
+    for (const model of models) {
+      try {
+        const res = await callGeminiProxy(model, payload);
+        const text = res?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text) {
+          const parsed = JSON.parse(text);
+          if (parsed && typeof parsed.isValid === 'boolean') {
+            if (!parsed.isValid) {
+              return { 
+                isValid: false, 
+                reason: parsed.reason || '부적절하거나 유해한 표현이 포함된 닉네임입니다.' 
+              };
+            }
+            return { isValid: true };
+          }
+        }
+      } catch (e) {
+        // try next model
+      }
+    }
+  } catch (e) {
+    console.warn("AI Nickname validation fallback to static rule:", e);
+  }
+
+  // Fallback: AI 통신 오류 시 1차 검사 통과 상태로 허용
+  return { isValid: true };
+}

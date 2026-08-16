@@ -57,7 +57,7 @@ import {
   getTodayDateString,
   DEFAULT_SYSTEM_SETTINGS
 } from '../services/dbService';
-import { getPendingReports, approveReportAndReward, rejectReport, QuestionReport } from '../services/reportService';
+import { getPendingReports, approveReportAndReward, rejectReport, QuestionReport, getAllUserInquiries, deleteUserInquiry, UserInquiry } from '../services/reportService';
 import { AVATAR_DATABASE } from '../services/avatarService';
 import { getAllUserAnalytics, UserAnalyticsSummary } from '../services/analyticsService';
 import { sound } from '../services/soundService';
@@ -77,12 +77,15 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   onUserUpdate,
   onShowToast
 }) => {
-  const [activeTab, setActiveTab] = useState<'god_mode' | 'variables' | 'announcements' | 'reports' | 'users' | 'ghost_rankings' | 'analytics'>('god_mode');
+  const [activeTab, setActiveTab] = useState<'god_mode' | 'variables' | 'announcements' | 'inquiries' | 'reports' | 'users' | 'ghost_rankings' | 'analytics'>('god_mode');
   const [isLoading, setIsLoading] = useState(false);
 
   // Settings State
   const [settings, setSettings] = useState<SystemSettings>(DEFAULT_SYSTEM_SETTINGS);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  // Inquiries & Feedback State
+  const [inquiries, setInquiries] = useState<UserInquiry[]>([]);
 
   // Announcements State
   const [announcements, setAnnouncements] = useState<PushAnnouncement[]>([]);
@@ -138,16 +141,18 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   const loadInitialData = async () => {
     setIsLoading(true);
     try {
-      const [fetchedSettings, fetchedAnnouncements, fetchedReports, fetchedUsers] = await Promise.all([
+      const [fetchedSettings, fetchedAnnouncements, fetchedReports, fetchedUsers, fetchedInquiries] = await Promise.all([
         getSystemSettings(),
         getActiveAnnouncements(),
         getPendingReports(),
-        getAllUsersList()
+        getAllUsersList(),
+        getAllUserInquiries()
       ]);
       setSettings(fetchedSettings);
       setAnnouncements(fetchedAnnouncements);
       setReports(fetchedReports);
       setUserList(fetchedUsers);
+      setInquiries(fetchedInquiries);
     } catch (e) {
       console.error("Admin loadInitialData error:", e);
     } finally {
@@ -555,6 +560,18 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
           </button>
 
           <button
+            onClick={() => { sound.playClick(); setActiveTab('inquiries'); }}
+            className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'inquiries'
+                ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-lg shadow-purple-500/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4 text-purple-300" />
+            <span>💌 유저 문의 & 건의함 ({inquiries.length})</span>
+          </button>
+
+          <button
             onClick={() => { sound.playClick(); setActiveTab('reports'); }}
             className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all whitespace-nowrap ${
               activeTab === 'reports'
@@ -563,7 +580,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
-            <span>🚨 문의 & 문제 신고 ({reports.filter(r => r.status === 'pending').length})</span>
+            <span>🚨 문제 오류 신고 ({reports.filter(r => r.status === 'pending').length})</span>
           </button>
 
           <button
@@ -1100,7 +1117,92 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
           )}
 
           {/* ========================================================================= */}
-          {/* 🚨 TAB 4. 문의 & 문제 신고 관리 (Reports & Support Center) */}
+          {/* 💌 TAB 4. 유저 문의 & 건의함 (User Inquiries & Voices) */}
+          {/* ========================================================================= */}
+          {activeTab === 'inquiries' && (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-purple-400" />
+                    <span>유저의 목소리함 (문의 / 건의 / 피드백 총 {inquiries.length}건)</span>
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    유저들이 '문의하기'를 통해 보낸 기능 제안, 버그 제보, 질문, 응원 메시지를 실시간 확인합니다.
+                  </p>
+                </div>
+
+                <button
+                  onClick={loadInitialData}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all flex items-center gap-1.5 text-xs font-bold"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  <span>새로고침</span>
+                </button>
+              </div>
+
+              {inquiries.length === 0 ? (
+                <div className="p-12 text-center bg-slate-800/40 rounded-3xl border border-slate-800 text-slate-500 text-sm">
+                  아직 접수된 유저 문의가 없습니다. 뽀개가 순항 중입니다! ✨
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {inquiries.map(inq => {
+                    const categoryBadge = 
+                      inq.category === 'idea' ? { label: '💡 기능 제안', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' } :
+                      inq.category === 'bug' ? { label: '🐛 버그 제보', color: 'bg-rose-500/20 text-rose-300 border-rose-500/30' } :
+                      inq.category === 'question' ? { label: '❓ 질문/문의', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' } :
+                      { label: '❤️ 응원 피드백', color: 'bg-pink-500/20 text-pink-300 border-pink-500/30' };
+
+                    return (
+                      <div key={inq.id} className="p-5 rounded-3xl bg-slate-800/80 border border-slate-700 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className={`px-2.5 py-0.5 rounded-full border text-[11px] font-black ${categoryBadge.color}`}>
+                              {categoryBadge.label}
+                            </span>
+                            <span className="text-xs font-black text-white">
+                              작성자: <strong className="text-indigo-300">{inq.userName}</strong>
+                            </span>
+                            {inq.userEmail && (
+                              <span className="text-[11px] text-slate-400 bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-800">
+                                ✉️ {inq.userEmail}
+                              </span>
+                            )}
+                            <span className="text-[10px] text-slate-500 ml-auto">{inq.dateStr || '최근'}</span>
+                          </div>
+
+                          <button
+                            onClick={async () => {
+                              if (!inq.id) return;
+                              if (window.confirm("이 문의 내역을 삭제하시겠습니까?")) {
+                                const ok = await deleteUserInquiry(inq.id);
+                                if (ok) {
+                                  onShowToast("삭제 완료", "문의 내역이 삭제되었습니다.", "info");
+                                  loadInitialData();
+                                }
+                              }
+                            }}
+                            className="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-700/60 transition-colors"
+                            title="문의 삭제"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="p-3.5 bg-slate-900/80 rounded-2xl text-xs sm:text-sm text-slate-200 leading-relaxed border border-slate-800 whitespace-pre-wrap font-sans">
+                          {inq.message}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* 🚨 TAB 5. 문의 & 문제 신고 관리 (Reports & Support Center) */}
           {/* ========================================================================= */}
           {activeTab === 'reports' && (
             <div className="space-y-4 animate-in fade-in duration-200">

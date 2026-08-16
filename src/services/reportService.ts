@@ -407,3 +407,87 @@ export async function rejectReport(reportId: string, reason: string = '관리자
     return { success: false };
   }
 }
+
+// ==========================================
+// 💌 10. 유저 1:1 문의 / 피드백 / 제안 시스템
+// ==========================================
+
+export interface UserInquiry {
+  id?: string;
+  userName: string;
+  userEmail?: string;
+  category: 'idea' | 'bug' | 'question' | 'cheer' | 'other';
+  message: string;
+  status?: 'new' | 'read' | 'resolved';
+  createdAt?: any;
+  dateStr?: string;
+}
+
+export const INQUIRY_CATEGORIES = [
+  { id: 'idea', label: '💡 기능 제안 / 아이디어', desc: '새로운 기능이나 개선 바라는 점' },
+  { id: 'bug', label: '🐛 버그 / 오류 제보', desc: '화면 깨짐이나 오작동 현상' },
+  { id: 'question', label: '❓ 이용 문의 / 질문', desc: '게임 방법이나 계정 관련 질문' },
+  { id: 'cheer', label: '❤️ 응원 / 피드백', desc: '개발자에게 전하는 따뜻한 한마디' }
+] as const;
+
+export async function submitUserInquiry(
+  userName: string,
+  category: 'idea' | 'bug' | 'question' | 'cheer' | 'other',
+  message: string,
+  userEmail?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const colRef = collection(db, 'user_inquiries');
+    const newDoc = doc(colRef);
+
+    const inquiryData: UserInquiry = {
+      id: newDoc.id,
+      userName: userName || '익명 학습자',
+      userEmail: userEmail || '',
+      category,
+      message,
+      status: 'new',
+      createdAt: serverTimestamp(),
+      dateStr: today
+    };
+
+    await setDoc(newDoc, removeUndefinedDeep(inquiryData));
+    return { success: true };
+  } catch (e: any) {
+    console.error("submitUserInquiry error:", e);
+    return { success: false, error: e.message || "문의 접수에 실패했습니다." };
+  }
+}
+
+export async function getAllUserInquiries(): Promise<UserInquiry[]> {
+  try {
+    const colRef = collection(db, 'user_inquiries');
+    const snap = await getDocs(colRef);
+    const list: UserInquiry[] = [];
+    snap.forEach(d => {
+      const data = d.data() as UserInquiry;
+      list.push({ ...data, id: d.id });
+    });
+    list.sort((a, b) => {
+      const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : typeof a.createdAt === 'number' ? a.createdAt : 0;
+      const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : typeof b.createdAt === 'number' ? b.createdAt : 0;
+      return bTime - aTime;
+    });
+    return list;
+  } catch (e) {
+    console.error("getAllUserInquiries error:", e);
+    return [];
+  }
+}
+
+export async function deleteUserInquiry(inquiryId: string): Promise<boolean> {
+  try {
+    const { deleteDoc } = await import('firebase/firestore');
+    await deleteDoc(doc(db, 'user_inquiries', inquiryId));
+    return true;
+  } catch (e) {
+    console.error("deleteUserInquiry error:", e);
+    return false;
+  }
+}

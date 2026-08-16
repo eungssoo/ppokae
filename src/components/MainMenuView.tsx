@@ -20,7 +20,8 @@ import {
   Zap,
   BookMarked,
   Smartphone,
-  Bell
+  Bell,
+  MessageSquare
 } from 'lucide-react';
 import { UserProfile, ViewType, CycleInfo } from '../types';
 import { calculateTier, checkIsAdmin } from '../services/dbService';
@@ -36,6 +37,7 @@ interface MainMenuViewProps {
   onNavigate: (view: ViewType) => void;
   onStartDailyChallenge: () => void;
   onOpenGachaModal?: () => void;
+  onOpenInquiryModal?: () => void;
   onOpenInstallModal?: () => void;
   onOpenReportCenter?: () => void;
   onOpenAdminCenter?: () => void;
@@ -51,6 +53,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
   onNavigate,
   onStartDailyChallenge,
   onOpenGachaModal,
+  onOpenInquiryModal,
   onOpenInstallModal,
   onOpenReportCenter,
   onOpenAdminCenter,
@@ -118,18 +121,18 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
 
           <div className="flex items-center gap-1.5 ml-auto">
 
-            {/* 📲 홈 화면 바로가기 추가 Quick Button (홈 화면으로 들어온 사람에게는 숨김) */}
-            {onOpenInstallModal && !isStandalone && (
+            {/* 💌 문의하기 / 피드백 Quick Button */}
+            {onOpenInquiryModal && (
               <button
                 onClick={() => {
-                  sound.playStar();
-                  onOpenInstallModal();
+                  sound.playClick();
+                  onOpenInquiryModal();
                 }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 hover:from-indigo-500/30 hover:to-pink-500/30 border border-indigo-400/40 text-indigo-200 hover:text-white font-bold text-xs shadow-sm active:scale-95 transition-all"
-                title="홈 화면에 바로가기 추가"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700/90 hover:border-indigo-400 text-slate-300 hover:text-white font-bold text-xs shadow-sm active:scale-95 transition-all"
+                title="개발자에게 문의 및 피드백 보내기"
               >
-                <Smartphone className="w-3.5 h-3.5 text-pink-300" />
-                <span className="hidden sm:inline">홈 추가</span>
+                <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
+                <span>문의하기</span>
               </button>
             )}
 

@@ -67,7 +67,7 @@ import {
 } from './services/dbService';
 import { auth } from './config/firebase';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
-import { generateBulkQuestions, generateNativeExpressions } from './services/geminiService';
+import { generateBulkQuestions, generateNativeExpressions, validateNicknameWithAI } from './services/geminiService';
 import { trackUserAction } from './services/analyticsService';
 import { sound } from './services/soundService';
 
@@ -93,6 +93,7 @@ import { ReportCenterModal } from './components/ReportCenterModal';
 import { AdminCenterModal } from './components/AdminCenterModal';
 import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
 import { InitialProfileSetupModal } from './components/InitialProfileSetupModal';
+import { UserInquiryModal } from './components/UserInquiryModal';
 import { ToastProvider, useToast } from './components/ToastContainer';
 import { SystemSettings } from './types';
 
@@ -113,11 +114,12 @@ function AppContent() {
   const [isRevengeModalOpen, setIsRevengeModalOpen] = useState<boolean>(false);
   const [previousCycleScore, setPreviousCycleScore] = useState<number>(0);
 
-  // Gacha & Report & Admin & Initial Setup Modal State
+  // Gacha & Report & Admin & Initial Setup & Inquiry Modal State
   const [isGachaModalOpen, setIsGachaModalOpen] = useState<boolean>(false);
   const [isReportCenterOpen, setIsReportCenterOpen] = useState<boolean>(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
   const [isInitialSetupModalOpen, setIsInitialSetupModalOpen] = useState<boolean>(false);
+  const [isUserInquiryModalOpen, setIsUserInquiryModalOpen] = useState<boolean>(false);
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(DEFAULT_SYSTEM_SETTINGS);
 
   // PWA Home Screen Prompt State
@@ -283,9 +285,20 @@ function AppContent() {
   // 1. PIN Login / Account Creation Handler
   const handleLogin = async (name: string, pin: string, starterAvatarId?: string) => {
     sound.playClick();
+    const trimmed = name.trim();
+
+    // 🛡️ 닉네임 유해성/부적절성 AI 검수
     setIsLoading(true);
+    setLoadingText('🤖 AI 닉네임 검수 중...');
+    const val = await validateNicknameWithAI(trimmed);
+    if (!val.isValid) {
+      setIsLoading(false);
+      toast.error('닉네임 검수 안내', val.reason || '부적절한 단어가 포함된 닉네임은 사용할 수 없습니다.');
+      return;
+    }
+
     setLoadingText('로그인 확인 중...');
-    const result = await authenticateUser(name, pin, starterAvatarId);
+    const result = await authenticateUser(trimmed, pin, starterAvatarId);
     setIsLoading(false);
 
     if (result.success && result.profile) {
@@ -431,14 +444,26 @@ function AppContent() {
   };
 
   // ✏️ 닉네임 변경 요청 핸들러 (코인 30 소모)
-  const handleRequestChangeNickname = (newName: string) => {
+  const handleRequestChangeNickname = async (newName: string) => {
     if (!user) return;
+    const trimmed = newName.trim();
+
+    // 🛡️ 닉네임 변경 시 AI 유해성/부적절성 검수
+    setIsLoading(true);
+    setLoadingText('🤖 AI 닉네임 검수 중...');
+    const val = await validateNicknameWithAI(trimmed);
+    setIsLoading(false);
+
+    if (!val.isValid) {
+      toast.error('닉네임 변경 불가', val.reason || '부적절한 단어가 포함된 닉네임은 사용할 수 없습니다.');
+      return;
+    }
 
     setActionModalConfig({
       isOpen: true,
       type: 'custom',
       title: '닉네임 변경 확인',
-      subtitle: `닉네임을 [${user.name}]에서 [${newName}] (으)로 변경하시겠습니까?`,
+      subtitle: `닉네임을 [${user.name}]에서 [${trimmed}] (으)로 변경하시겠습니까?`,
       cost: 30,
       icon: '✏️',
       confirmButtonText: '닉네임 변경 (🪙 30 소모)',
@@ -450,7 +475,7 @@ function AppContent() {
         setActionModalConfig(null);
         setIsLoading(true);
         setLoadingText('닉네임 변경 및 데이터 이전 중...');
-        const res = await changeUserNickname(user.name, newName, 30);
+        const res = await changeUserNickname(user.name, trimmed, 30);
         setIsLoading(false);
 
         if (res.success && res.newName) {
@@ -1274,6 +1299,7 @@ function AppContent() {
           }}
           onStartDailyChallenge={() => handleStartDailyChallenge(false)}
           onOpenGachaModal={() => setIsGachaModalOpen(true)}
+          onOpenInquiryModal={() => setIsUserInquiryModalOpen(true)}
           onOpenInstallModal={() => setIsAddToHomeModalOpen(true)}
           onOpenReportCenter={() => setIsReportCenterOpen(true)}
           onOpenAdminCenter={() => setIsAdminModalOpen(true)}
@@ -1466,6 +1492,18 @@ function AppContent() {
           isLoading={isLoading}
         />
       )}
+
+      {/* 💌 개발자에게 문의하기 / 피드백 모달 */}
+      <UserInquiryModal
+        isOpen={isUserInquiryModalOpen}
+        onClose={() => setIsUserInquiryModalOpen(false)}
+        user={user}
+        onShowToast={(title, msg, type) => {
+          if (type === 'error') toast.error(title, msg);
+          else if (type === 'coin') toast.coin(title, msg);
+          else toast.info(title, msg);
+        }}
+      />
 
       {/* 📲 PWA 홈 화면 바로가기 추가 유도 모달 */}
       <AddToHomeScreenModal
