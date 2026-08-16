@@ -1,5 +1,5 @@
-// 🚀 PPOKAE PWA Service Worker (v5 - Auto-Purge Old Caches)
-const CACHE_NAME = 'ppokae-cache-v5';
+// 🚀 PPOKAE PWA Service Worker (v6 - Auto-Purge Old Caches & Valid PNG Icons)
+const CACHE_NAME = 'ppokae-cache-v6';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
