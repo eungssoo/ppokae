@@ -1161,6 +1161,45 @@ export async function hasUserCompletedCycle(
   }
 }
 
+// 🎟️ 랭킹전 도전 시작 시도 횟수 즉시 차감 및 기록 (중도 이탈 시 악용 방지)
+export async function recordCycleAttemptStart(
+  cycleId: string, 
+  userName: string, 
+  avatarId?: string
+): Promise<{ success: boolean; attemptNumber: number }> {
+  try {
+    const rankDocId = `${cycleId}_${userName}`;
+    const rankRef = doc(db, 'cycle_rankings', rankDocId);
+    const snap = await getDoc(rankRef);
+    const resolvedAvatarId = avatarId || 'lion';
+
+    let currentAttempts = 0;
+    let prevScore = 0;
+    if (snap.exists()) {
+      const data = snap.data();
+      currentAttempts = typeof data.attempts === 'number' ? data.attempts : 1;
+      prevScore = data.score || 0;
+    }
+
+    const nextAttempts = currentAttempts + 1;
+    await setDoc(rankRef, removeUndefinedDeep({
+      cycleId,
+      name: userName,
+      score: prevScore,
+      attempts: nextAttempts,
+      avatarId: resolvedAvatarId,
+      status: 'in_progress',
+      startedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }), { merge: true });
+
+    return { success: true, attemptNumber: nextAttempts };
+  } catch (e) {
+    console.error("recordCycleAttemptStart error:", e);
+    return { success: false, attemptNumber: 1 };
+  }
+}
+
 // 2. 공용 DB (Questions) 문제 저장
 export async function saveQuestionsToFirestore(questions: Question[], difficulty: string): Promise<boolean> {
   try {

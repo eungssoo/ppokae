@@ -38,6 +38,7 @@ import {
   addCoins,
   deductCoins,
   hasUserCompletedCycle,
+  recordCycleAttemptStart,
   getUserCoins,
   getExpressionsByCategory,
   getExpressionCounts,
@@ -786,7 +787,33 @@ function AppContent() {
     }
   };
 
-  // 6. 🔥 3사이클 랭킹전 시작
+  // 6. 🔥 3사이클 랭킹전 시작 파이프라인
+  const launchRankingQuizSession = async (cycle: CycleInfo) => {
+    if (!user) return;
+    setIsLoading(true);
+    setLoadingText(`${cycle.cycleName} 공식 10문제를 준비하는 중...`);
+    setSelectedDifficulty(cycle.cycleName);
+    setQuizMode('daily');
+
+    // 🔒 도전 시작 즉시 시도 횟수 등록 (중도 이탈 시 기권 처리 및 무제한 재시작 방지)
+    await recordCycleAttemptStart(cycle.cycleId, user.name, user.currentAvatarId || user.avatar || 'lion');
+
+    const result = await getOrCreateCycleQuestions(cycle);
+    setIsLoading(false);
+
+    if (result.success && result.data && result.data.length > 0) {
+      setQuestionQueue(result.data.slice(1));
+      setCurrentQ(result.data[0]);
+      setQuestionCount(1);
+      setScore(0);
+      setCorrectCount(0);
+      setView('solve');
+    } else {
+      toast.error('랭킹전 준비 실패', result.error || '문제가 부족합니다.');
+      setView('menu');
+    }
+  };
+
   const handleStartDailyChallenge = async (isRevenge: boolean = false) => {
     if (!user) return;
     const cycle = getCurrentCycleInfo();
@@ -815,30 +842,36 @@ function AppContent() {
         setIsRevengeModalOpen(true);
         return;
       }
+
+      // 🏆 1회차 무료 도전 전 규칙 및 주의사항 사전 안내 모달
+      setActionModalConfig({
+        isOpen: true,
+        type: 'custom',
+        title: `${cycle.cycleName} 랭킹전 도전`,
+        subtitle: '오늘의 영광스러운 명예의 전당 1위 자리에 도전하세요!',
+        cost: 0,
+        icon: '🏆',
+        confirmButtonText: '🔥 1회차 무료 도전 시작',
+        notices: [
+          '• 회차당 최대 2회까지 도전할 수 있습니다. (1회차: 무료 / 2회차: 🪙 50 코인)',
+          '• 🚨 문제 풀이 도중 나가거나 브라우저를 닫으면 도전 기회가 즉시 소멸(기권 처리)됩니다.',
+          '• 10문제 총점 및 풀이 소요 시간으로 실시간 순위가 결정됩니다.',
+          '• 회차 마감 시 🥇 1위 🪙 200, 🥈 2위 🪙 120, 🥉 3위 🪙 80, 4~10위 🪙 40, 참가 🪙 15 코인이 지급됩니다.'
+        ],
+        onConfirm: async () => {
+          setActionModalConfig(null);
+          await launchRankingQuizSession(cycle);
+        },
+        onClose: () => setActionModalConfig(null)
+      });
+      return;
     }
 
-    setIsLoading(true);
-    setLoadingText(`${cycle.cycleName} 공식 10문제를 준비하는 중...`);
-    setSelectedDifficulty(cycle.cycleName);
-    setQuizMode('daily');
-
-    const result = await getOrCreateCycleQuestions(cycle);
-    setIsLoading(false);
-
-    if (result.success && result.data && result.data.length > 0) {
-      setQuestionQueue(result.data.slice(1));
-      setCurrentQ(result.data[0]);
-      setQuestionCount(1);
-      setScore(0);
-      setCorrectCount(0);
-      setView('solve');
-    } else {
-      toast.error('랭킹전 준비 실패', result.error || '문제가 부족합니다.');
-      setView('menu');
-    }
+    // 리벤지(2회차) 시작
+    await launchRankingQuizSession(cycle);
   };
 
-  // 🎟️ 리벤지 재도전 확인 핸들러
+  // 🎟️ 리벤지 재도전 확인 핸들러 (50코인 결제 후 2회차 시작)
   const handleConfirmRevenge = async () => {
     if (!user) return;
     setIsRevengeModalOpen(false);

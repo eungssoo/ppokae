@@ -53,6 +53,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const [isCorrect, setIsCorrect] = useState<boolean>(false);
   const [viewingFeedback, setViewingFeedback] = useState<string>('');
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
+  const [isExitWarningOpen, setIsExitWarningOpen] = useState<boolean>(false);
 
   // AI Tutor Chat State
   const [isAiTutorOpen, setIsAiTutorOpen] = useState<boolean>(false);
@@ -231,7 +232,11 @@ export const QuizView: React.FC<QuizViewProps> = ({
           <button
             onClick={() => {
               sound.playClick();
-              onExit();
+              if (quizMode === 'daily') {
+                setIsExitWarningOpen(true);
+              } else {
+                onExit();
+              }
             }}
             className="text-slate-400 font-bold hover:bg-slate-800 hover:text-white px-3.5 py-1.5 rounded-xl transition-all text-xs sm:text-sm"
           >
@@ -622,6 +627,68 @@ export const QuizView: React.FC<QuizViewProps> = ({
             alert('문제 오류 제보가 성공적으로 접수되었습니다! 📋 매일 밤 00시 AI 출제위원의 깐깐한 심사를 거쳐 채택 시 🪙 50 코인이 지급됩니다.');
           }}
         />
+      )}
+
+      {/* ⚠️ 랭킹전 중도 퇴장 경고 모달 */}
+      {isExitWarningOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md animate-fade-in">
+          <div className="max-w-md w-full glass-card rounded-[2.5rem] p-6 sm:p-8 border-2 border-rose-500/60 shadow-[0_0_50px_rgba(244,63,94,0.3)] relative text-left">
+            <div className="flex items-center gap-3.5 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-2xl">
+                🚨
+              </div>
+              <div>
+                <span className="text-[11px] font-black text-rose-400 uppercase tracking-wider">
+                  Ranking Challenge Warning
+                </span>
+                <h3 className="text-xl font-black text-white">
+                  랭킹전 중도 퇴장 경고
+                </h3>
+              </div>
+            </div>
+
+            <p className="text-slate-300 text-sm leading-relaxed mb-4 font-medium">
+              지금 나가시면 이번 회차의 <strong className="text-rose-400 font-black">도전 기회가 소멸(기권 처리)</strong>됩니다!
+            </p>
+
+            <div className="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 space-y-2 mb-6 text-xs text-slate-400">
+              <p className="flex items-start gap-1.5">
+                <span className="text-amber-400 font-bold">•</span>
+                <span>회차당 최대 <strong>2회</strong>만 도전 가능합니다. (1회차: 무료 / 2회차: 🪙 50 코인)</span>
+              </p>
+              <p className="flex items-start gap-1.5">
+                <span className="text-rose-400 font-bold">•</span>
+                <span>지금 포기하시면 다시 도전할 때 <strong className="text-amber-300">🪙 50 코인</strong>이 필요하며, 이미 2회 응시한 경우 더 이상 도전할 수 없습니다.</span>
+              </p>
+              <p className="flex items-start gap-1.5">
+                <span className="text-indigo-400 font-bold">•</span>
+                <span>현재까지 푼 점수가 이번 도전의 최종 점수로 기록됩니다.</span>
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  setIsExitWarningOpen(false);
+                }}
+                className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-black text-sm shadow-md active:scale-95 transition-all"
+              >
+                계속 풀기 (권장)
+              </button>
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  setIsExitWarningOpen(false);
+                  onExit();
+                }}
+                className="w-full py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-500/40 font-bold text-sm transition-all"
+              >
+                기권하고 나가기
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
