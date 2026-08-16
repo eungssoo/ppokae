@@ -48,6 +48,17 @@ export function sanitizeForm(form: any): number {
   return 3;
 }
 
+// 🎲 4지선다 보기 랜덤 셔플 헬퍼 (정답 1번 편중 100% 원천 차단)
+export function shuffleOptions<T = any>(options: T[]): T[] {
+  if (!Array.isArray(options) || options.length <= 1) return options || [];
+  const arr = [...options];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 // 🔒 보안 프록시 호출 헬퍼 (API Key 브라우저 노출 100% 차단)
 export async function callGeminiProxy(model: string, payload: any): Promise<any> {
   const response = await fetch('/api/gemini/generate', {
@@ -147,7 +158,8 @@ ${matchedRule}\n`;
           },
           required: ["form", "sentence", "options", "answer", "translation", "explanation"]
         }
-      }
+      },
+      temperature: 0.3
     }
   };
 
@@ -165,7 +177,8 @@ ${matchedRule}\n`;
       
       const sanitizedQuestions: Question[] = parsed.map(q => ({
         ...q,
-        form: sanitizeForm(q.form)
+        form: sanitizeForm(q.form),
+        options: shuffleOptions(q.options)
       }));
 
       return { success: true, questions: sanitizedQuestions };
@@ -605,7 +618,7 @@ export async function generateRankingCycleQuestions(
             id: `ranking_${cycleId}_q${i + 1}`,
             form: sanitizeForm(q.form),
             sentence: q.sentence,
-            options: q.options,
+            options: shuffleOptions(q.options),
             answer: q.answer,
             translation: q.translation,
             explanation: q.explanation,
@@ -624,7 +637,8 @@ export async function generateRankingCycleQuestions(
   console.log("Using MASTER_RANKING_FALLBACK_PACK for ranking cycle...");
   const fallbackWithCycleId = MASTER_RANKING_FALLBACK_PACK.map((q, i) => ({
     ...q,
-    id: `ranking_${cycleId}_q${i + 1}`
+    id: `ranking_${cycleId}_q${i + 1}`,
+    options: shuffleOptions(q.options)
   }));
 
   return { 

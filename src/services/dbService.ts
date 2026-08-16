@@ -30,7 +30,7 @@ import {
   SystemSettings,
   PushAnnouncement
 } from '../types';
-import { sanitizeForm, generateRankingCycleQuestions } from './geminiService';
+import { sanitizeForm, generateRankingCycleQuestions, shuffleOptions } from './geminiService';
 import { STARTER_AVATAR_IDS, performGachaDraw, AVATAR_DATABASE } from './avatarService';
 
 export function getTodayDateString(): string {
@@ -914,14 +914,14 @@ export function cleanQuestionForStorage(q: any): any {
     form: sanitizeForm(q?.form),
     sentence: q?.sentence || '',
     options: Array.isArray(q?.options)
-      ? q.options.map((opt: any) => {
+      ? shuffleOptions(q.options.map((opt: any) => {
           if (typeof opt === 'string') return opt;
           return {
             text: opt?.text || '',
             is_correct: !!opt?.is_correct,
             feedback: opt?.feedback || ''
           };
-        })
+        }))
       : [],
     answer: q?.answer || '',
     translation: q?.translation || '',

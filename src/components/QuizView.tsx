@@ -59,8 +59,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const [aiQuestion, setAiQuestion] = useState<string>('');
   const [aiAnswer, setAiAnswer] = useState<string>('');
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
+  const [displayedOptions, setDisplayedOptions] = useState<Option[]>([]);
 
-  // Reset state when currentQuestion changes
+  // Reset state and randomly shuffle options when currentQuestion changes
   useEffect(() => {
     setUserInput('');
     setIsSubmitted(false);
@@ -70,6 +71,14 @@ export const QuizView: React.FC<QuizViewProps> = ({
     setAiQuestion('');
     setAiAnswer('');
     setIsAiLoading(false);
+
+    // 🎲 보기 4종 무작위 셔플 (정답이 1번에 고정되는 현상 100% 원천 차단)
+    if (currentQuestion && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
+      const shuffled = [...currentQuestion.options].sort(() => Math.random() - 0.5);
+      setDisplayedOptions(shuffled);
+    } else {
+      setDisplayedOptions([]);
+    }
   }, [currentQuestion]);
 
   // Option text helper
@@ -98,55 +107,48 @@ export const QuizView: React.FC<QuizViewProps> = ({
     const englishVoices = voices.filter(v => v.lang.toLowerCase().includes('en'));
     if (englishVoices.length > 0) {
       const bestVoice = 
-        englishVoices.find(v => v.name.includes('Google') && v.lang.includes('AU')) ||
-        englishVoices.find(v => v.name.includes('Google') && v.lang.includes('US')) ||
-        englishVoices.find(v => v.lang.includes('AU')) ||
-        englishVoices.find(v => v.lang.includes('US')) ||
+        englishVoices.find(v => v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Samantha')) ||
         englishVoices[0];
       utterance.voice = bestVoice;
-      utterance.lang = bestVoice.lang;
-    } else {
-      utterance.lang = 'en-US';
     }
 
     window.speechSynthesis.speak(utterance);
   }, [currentQuestion, isSubmitted]);
 
-  // Check Answer Handler
+  // Handle Check Answer
   const handleCheck = useCallback(() => {
-    if (!userInput.trim() || !currentQuestion || isSubmitted) return;
+    if (!userInput.trim() || isSubmitted) return;
+
     const result = onCheckAnswer(userInput.trim());
     setIsCorrect(result.isCorrect);
     setIsSubmitted(true);
-    setViewingFeedback(userInput.trim());
 
     if (result.isCorrect) {
       sound.playCorrect();
       confetti({
-        particleCount: 40,
+        particleCount: 50,
         spread: 60,
-        origin: { y: 0.7 }
+        origin: { y: 0.8 },
+        colors: ['#10b981', '#6366f1', '#f59e0b', '#ec4899']
       });
     } else {
       sound.playIncorrect();
     }
-  }, [userInput, currentQuestion, isSubmitted, onCheckAnswer]);
+  }, [userInput, isSubmitted, onCheckAnswer]);
 
-  // Next Question Handler
+  // Handle Next Question
   const handleNext = useCallback(() => {
     sound.playClick();
     onNextQuestion();
   }, [onNextQuestion]);
 
-  // AI Tutor Ask Handler
-  const handleAskTutor = async (questionText?: string) => {
-    sound.playClick();
-    const qToAsk = (questionText || aiQuestion).trim();
-    if (!qToAsk || !currentQuestion || isAiLoading) return;
+  // AI Tutor submit
+  const handleAskTutor = async (customQ?: string) => {
+    const qToAsk = customQ || aiQuestion;
+    if (!qToAsk.trim() || isAiLoading) return;
 
-    setAiQuestion(qToAsk);
+    sound.playClick();
     setIsAiLoading(true);
-    setAiAnswer('');
     setIsAiTutorOpen(true);
 
     try {
@@ -180,12 +182,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
           handleNext();
         }
       } else if (['1', '2', '3', '4'].includes(key)) {
-        if (!isSubmitted && currentQuestion && currentQuestion.options) {
+        if (!isSubmitted && displayedOptions.length > 0) {
           const idx = parseInt(key) - 1;
-          if (idx < currentQuestion.options.length) {
+          if (idx < displayedOptions.length) {
             e.preventDefault();
             sound.playClick();
-            const optText = getOptText(currentQuestion.options[idx]);
+            const optText = getOptText(displayedOptions[idx]);
             setUserInput(optText);
           }
         }
@@ -194,9 +196,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSubmitted, userInput, currentQuestion, isAiTutorOpen, playAudio, handleCheck, handleNext]);
+  }, [isSubmitted, userInput, displayedOptions, isAiTutorOpen, playAudio, handleCheck, handleNext]);
 
-  const selectedOptObj = currentQuestion?.options?.find(o => getOptText(o) === viewingFeedback);
+  const selectedOptObj = displayedOptions.find(o => getOptText(o) === viewingFeedback) || currentQuestion?.options?.find(o => getOptText(o) === viewingFeedback);
   const feedbackText = typeof selectedOptObj === 'object' ? selectedOptObj.feedback : null;
 
   const renderBoldText = (text?: string) => {
@@ -334,7 +336,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             <div>
               {/* Option Buttons */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mb-6">
-                {currentQuestion.options.map((opt, idx) => {
+                {displayedOptions.map((opt, idx) => {
                   const optText = getOptText(opt);
                   const isSelected = userInput === optText;
                   return (
@@ -431,7 +433,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   <span>Option Analysis (보기별 상세 해설)</span>
                 </h4>
                 <div className="flex flex-wrap gap-2 mb-3">
-                  {currentQuestion.options.map((opt, idx) => {
+                  {displayedOptions.map((opt, idx) => {
                     const optText = getOptText(opt);
                     const isOptCorrect = typeof opt === 'object' ? opt.is_correct : optText === currentQuestion.answer;
                     const isTabActive = viewingFeedback === optText;
