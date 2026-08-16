@@ -41,6 +41,7 @@ import {
   DEFAULT_SYSTEM_SETTINGS
 } from '../services/dbService';
 import { getPendingReports, approveReportAndReward, rejectReport, QuestionReport } from '../services/reportService';
+import { AVATAR_DATABASE } from '../services/avatarService';
 import { sound } from '../services/soundService';
 
 interface AdminCenterModalProps {
@@ -85,6 +86,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   // Ghost Rankings State
   const [ghostCycleIndex, setGhostCycleIndex] = useState<1 | 2 | 3>(1);
   const [ghostName, setGhostName] = useState<string>('토익만점가자');
+  const [ghostAvatarId, setGhostAvatarId] = useState<string>('gemini_god');
   const [ghostCorrectCount, setGhostCorrectCount] = useState<number>(9);
   const [ghostMinutesAgo, setGhostMinutesAgo] = useState<number>(25);
   const [ghostLeaderboard, setGhostLeaderboard] = useState<RankingItem[]>([]);
@@ -129,8 +131,10 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
 
   const handleRandomizeGhostName = () => {
     sound.playClick();
-    const random = RANDOM_GHOST_NAMES[Math.floor(Math.random() * RANDOM_GHOST_NAMES.length)];
-    setGhostName(random);
+    const randomName = RANDOM_GHOST_NAMES[Math.floor(Math.random() * RANDOM_GHOST_NAMES.length)];
+    setGhostName(randomName);
+    const randomAvatar = AVATAR_DATABASE[Math.floor(Math.random() * AVATAR_DATABASE.length)];
+    setGhostAvatarId(randomAvatar.id);
   };
 
   const handleInjectGhostPlayer = async (e: React.FormEvent) => {
@@ -145,7 +149,8 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
         cycleId,
         name: ghostName.trim(),
         correctCount: ghostCorrectCount,
-        minutesAgo: ghostMinutesAgo
+        minutesAgo: ghostMinutesAgo,
+        avatarId: ghostAvatarId
       });
 
       if (res.success) {
@@ -1091,7 +1096,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                         className="text-[11px] text-amber-300 hover:text-amber-200 font-bold flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/30 transition-all"
                       >
                         <Shuffle className="w-3 h-3" />
-                        <span>🎲 자연스러운 닉네임 생성</span>
+                        <span>🎲 닉네임 & 아바타 랜덤 뽑기</span>
                       </button>
                     </div>
                     <input
@@ -1102,6 +1107,70 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                       required
                       className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
                     />
+                  </div>
+
+                  {/* 🎭 고스트 대표 아바타 프로필 설정 */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-300">장착할 대표 아바타 프로필</label>
+                      <span className="text-[11px] text-amber-300 font-bold">
+                        {AVATAR_DATABASE.find(a => a.id === ghostAvatarId)?.name}
+                      </span>
+                    </div>
+
+                    {/* 선택된 아바타 프리뷰 카드 */}
+                    {(() => {
+                      const cur = AVATAR_DATABASE.find(a => a.id === ghostAvatarId) || AVATAR_DATABASE[0];
+                      return (
+                        <div className={`p-2.5 rounded-2xl bg-gradient-to-r ${cur.bgGradient || 'from-slate-800 to-slate-900 border-slate-700'} border flex items-center justify-between shadow-md`}>
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-2xl">{cur.icon}</span>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-xs font-black ${cur.color || 'text-white'}`}>{cur.name}</span>
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full bg-slate-950/80 text-amber-300 border border-amber-400/40">
+                                  {cur.grade === 'transcendent' ? '초월' : cur.grade === 'mythic' ? '신화' : cur.grade === 'legendary' ? '전설' : cur.grade === 'epic' ? '에픽' : '스타터'}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-slate-300/80 italic line-clamp-1">"{cur.quote}"</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* 아바타 선택 셀렉트 박스 */}
+                    <select
+                      value={ghostAvatarId}
+                      onChange={e => setGhostAvatarId(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-amber-400"
+                    >
+                      <optgroup label="🌟 초월 (0.05% 천상계 아바타)">
+                        {AVATAR_DATABASE.filter(a => a.grade === 'transcendent').map(a => (
+                          <option key={a.id} value={a.id}>{a.icon} {a.name} [초월]</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="🌌 신화 (1.0% 신화 아바타)">
+                        {AVATAR_DATABASE.filter(a => a.grade === 'mythic').map(a => (
+                          <option key={a.id} value={a.id}>{a.icon} {a.name} [신화]</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="🏆 전설 (5.0% 레전드 아바타)">
+                        {AVATAR_DATABASE.filter(a => a.grade === 'legendary').map(a => (
+                          <option key={a.id} value={a.id}>{a.icon} {a.name} [전설]</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="🔮 에픽 (20.0% 에픽 아바타)">
+                        {AVATAR_DATABASE.filter(a => a.grade === 'epic').map(a => (
+                          <option key={a.id} value={a.id}>{a.icon} {a.name} [에픽]</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="🦁 스타터 기본 아바타">
+                        {AVATAR_DATABASE.filter(a => a.grade === 'starter').map(a => (
+                          <option key={a.id} value={a.id}>{a.icon} {a.name} [스타터]</option>
+                        ))}
+                      </optgroup>
+                    </select>
                   </div>
 
                   {/* 맞힌 문제 수 & 점수 */}

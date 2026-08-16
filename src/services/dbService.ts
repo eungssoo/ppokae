@@ -2223,12 +2223,13 @@ export const RANDOM_GHOST_NAMES = [
   'Sunny_Day', 'Alex_Grammar', '토익990', '원어민처럼'
 ];
 
-// 🎭 15-10. 랭킹전 가짜 플레이어 (더미 랭커) 자연스러운 데이터 주입
+// 🎭 15-10. 랭킹전 가짜 플레이어 (더미 랭커) 자연스러운 데이터 및 프로필 아바타 주입
 export async function adminInjectGhostRanking(payload: {
   cycleId: string;
   name: string;
   correctCount: number; // 0 ~ 10
   minutesAgo?: number; // 5 ~ 180분 전
+  avatarId?: string; // 아바타 ID (gemini_god, chronos, phoenix, lion 등)
 }): Promise<{ success: boolean; error?: string }> {
   try {
     const trimmedName = payload.name.trim();
@@ -2241,15 +2242,41 @@ export async function adminInjectGhostRanking(payload: {
     const minutes = payload.minutesAgo ?? (Math.floor(Math.random() * 80) + 10);
     const fakeCompletedAt = new Date(Date.now() - minutes * 60 * 1000);
 
+    const targetAvatar = AVATAR_DATABASE.find(a => a.id === payload.avatarId) || AVATAR_DATABASE.find(a => a.id === 'lion');
+    const avatarIcon = targetAvatar?.icon || '🦁';
+    const avatarName = targetAvatar?.name || '라이언';
+    const avatarGrade = targetAvatar?.grade || 'starter';
+    const avatarBgGradient = targetAvatar?.bgGradient || '';
+
     const docData = removeUndefinedDeep({
       cycleId: payload.cycleId,
       name: trimmedName,
       score,
       completedAt: fakeCompletedAt,
+      avatarIcon,
+      avatarName,
+      avatarGrade,
+      avatarBgGradient,
+      currentAvatarId: targetAvatar?.id || 'lion',
       updatedAt: serverTimestamp()
     });
 
     await setDoc(rankRef, docData);
+
+    // 🌟 고스트 유저의 users 프로필도 함께 생성/동기화하여 랭킹 보드 실시간 조회 시 완벽 반영
+    try {
+      const userRef = doc(db, 'users', trimmedName);
+      await setDoc(userRef, {
+        name: trimmedName,
+        avatar: avatarIcon,
+        currentAvatarId: targetAvatar?.id || 'lion',
+        xp: score * 10 + 50,
+        tier: calculateTier(score * 10 + 50).tier,
+        isGhost: true,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch {}
+
     return { success: true };
   } catch (e: any) {
     console.error("adminInjectGhostRanking Error:", e);
