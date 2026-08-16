@@ -417,7 +417,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             }}
                             className="w-full py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-xl text-[11px] font-black shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1"
                           >
-                            <span>장착 {isStarter ? '(무료)' : '(🪙 10)'}</span>
+                            <span>장착하기</span>
                           </button>
                         )
                       ) : (

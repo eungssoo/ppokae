@@ -408,38 +408,10 @@ function AppContent() {
     return res;
   };
 
-  // 👕 아바타 장착 핸들러 (스타터 무료 / 가챠 🪙 10)
+  // 👕 아바타 장착 핸들러 (보유 중인 모든 아바타는 100% 무료로 즉시 장착)
   const handleEquipAvatar = async (avatar: AvatarItem) => {
     if (!user) return;
-    const isStarter = STARTER_AVATAR_IDS.includes(avatar.id);
-    const cost = isStarter ? 0 : 10;
-
-    if (cost > 0) {
-      setActionModalConfig({
-        isOpen: true,
-        type: 'custom',
-        title: `[${avatar.name}] 아바타 장착`,
-        subtitle: `[${avatar.icon} ${avatar.name}] 아바타를 대표 프로필로 장착하시겠습니까?`,
-        cost: 10,
-        icon: avatar.icon,
-        confirmButtonText: '장착하기 (🪙 10 소모)',
-        notices: [
-          '장착 시 🪙 10 코인이 소모됩니다.',
-          '메인 메뉴 및 랭킹 리더보드에 새 아바타가 즉시 노출됩니다.'
-        ],
-        onConfirm: async () => {
-          setActionModalConfig(null);
-          executeEquipAvatar(avatar, 10);
-        },
-        onClose: () => setActionModalConfig(null),
-        onEarnCoins: () => {
-          setActionModalConfig(null);
-          setView('solve_select');
-        }
-      });
-    } else {
-      executeEquipAvatar(avatar, 0);
-    }
+    executeEquipAvatar(avatar, 0);
   };
 
   const executeEquipAvatar = async (avatar: AvatarItem, cost: number) => {

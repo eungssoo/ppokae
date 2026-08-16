@@ -45,6 +45,10 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
   const [equippedId, setEquippedId] = useState<string | undefined>(currentAvatarId);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    setEquippedId(currentAvatarId);
+  }, [currentAvatarId]);
+
   if (!isOpen) return null;
 
   const handleStartDraw = async (count: 1 | 10) => {

@@ -661,26 +661,23 @@ export async function drawGachaAvatar(
   }
 }
 
-// 👕 1-2-3. 보유 아바타 장착 / 갈아끼우기 (🪙 10 코인 소모, 스타터/관리자 무료)
+// 👕 1-2-3. 보유 아바타 장착 / 갈아끼우기 (해금된 아바타 100% 무료 장착)
 export async function equipUserAvatar(
   userName: string, 
   avatar: AvatarItem, 
-  cost: number = 10
+  cost: number = 0
 ): Promise<{ success: boolean; newCoins?: number; error?: string }> {
   try {
-    const isStarter = STARTER_AVATAR_IDS.includes(avatar.id);
     const userRef = doc(db, 'users', userName);
     const snap = await getDoc(userRef);
     const data = snap.exists() ? snap.data() : {};
-    const isAdmin = data.isAdmin || checkIsAdmin(data as UserProfile) || userName === 'admin';
-    const finalCost = (isStarter || isAdmin) ? 0 : cost;
 
-    if (finalCost > 0) {
+    if (cost > 0) {
       const currentCoins = data.coins ?? 200;
-      if (currentCoins < finalCost) {
-        return { success: false, error: `코인이 부족합니다! (필요: ${finalCost} 코인 / 보유: ${currentCoins} 코인)` };
+      if (currentCoins < cost) {
+        return { success: false, error: `코인이 부족합니다! (필요: ${cost} 코인 / 보유: ${currentCoins} 코인)` };
       }
-      await deductCoins(userName, finalCost);
+      await deductCoins(userName, cost);
     }
 
     await setDoc(userRef, {
