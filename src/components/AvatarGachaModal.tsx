@@ -3,6 +3,7 @@ import { Sparkles, X, Coins, Gift, RefreshCw, Star, CheckCircle, ArrowRight, Fla
 import { AvatarItem, AvatarGrade } from '../types';
 import { GRADE_CONFIG } from '../services/avatarService';
 import { sound } from '../services/soundService';
+import { useLanguage } from '../services/i18n';
 
 interface AvatarGachaModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
   onClose,
   onGoCollection,
 }) => {
+  const { language, t } = useLanguage();
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [drawResults, setDrawResults] = useState<Array<{ avatar: AvatarItem; isDuplicate: boolean; refundAmount: number }> | null>(null);
   const [totalRefund, setTotalRefund] = useState<number>(0);
@@ -64,7 +66,7 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
       const res = await onDraw(count);
       setIsDrawing(false);
       if (res.success && res.results) {
-        // 🔥 등급이 높은 순(초월 -> 신화 -> 전설 -> 영웅 -> 희귀 -> 일반)으로 자동 정렬
+        // 🔥 등급이 높은 순으로 자동 정렬
         const sorted = [...res.results].sort((a, b) => {
           const orderA = GRADE_ORDER[a.avatar.grade] || 99;
           const orderB = GRADE_ORDER[b.avatar.grade] || 99;
@@ -76,7 +78,7 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
         sound.playCoin();
       } else {
         sound.playIncorrect();
-        setErrorMsg(res.error || "코인이 부족하거나 가챠를 진행할 수 없습니다.");
+        setErrorMsg(res.error || (language === 'en' ? 'Not enough coins or draw failed.' : '코인이 부족하거나 가챠를 진행할 수 없습니다.'));
       }
     }, 1000);
   };
@@ -122,16 +124,16 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
 
           <h2 className="text-2xl sm:text-4xl font-black tracking-tight flex items-center justify-center gap-2">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-300 to-purple-400">
-              전설 & 초월 아바타 소환
+              {language === 'en' ? 'Legendary & Mythic Avatar Summon' : '전설 & 초월 아바타 소환'}
             </span>
             <span className="inline-block text-2xl sm:text-3xl">🎰</span>
           </h2>
 
           <div className="flex items-center justify-center gap-2 mt-2">
-            <span className="text-xs font-bold text-slate-400">내 보유 코인:</span>
+            <span className="text-xs font-bold text-slate-400">{language === 'en' ? 'My Coins:' : '내 보유 코인:'}</span>
             <span className="text-sm sm:text-base font-black text-amber-300 flex items-center gap-1.5 bg-amber-500/10 px-3.5 py-1 rounded-full border border-amber-500/30 shadow-inner">
               <Coins className="w-4 h-4 text-yellow-400" />
-              <span>{userCoins} 코인</span>
+              <span>{userCoins} {language === 'en' ? 'Coins' : '코인'}</span>
             </span>
           </div>
         </div>
@@ -144,7 +146,9 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
               <span>{errorMsg}</span>
             </div>
             <p className="text-xs text-slate-400">
-              일반 퀴즈나 실시간 랭킹전에 참여하시면 🪙 코인을 보상으로 획득할 수 있습니다!
+              {language === 'en'
+                ? 'Solve quizzes or join the live ranking battles to earn coins!'
+                : '일반 퀴즈나 실시간 랭킹전에 참여하시면 🪙 코인을 보상으로 획득할 수 있습니다!'}
             </p>
           </div>
         )}
@@ -156,10 +160,10 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
               🎁
             </div>
             <h3 className="text-2xl font-black text-white mb-2">
-              신비로운 50종 아바타를 소환하는 중...
+              {language === 'en' ? 'Summoning from 50 Mystical Avatars...' : '신비로운 50종 아바타를 소환하는 중...'}
             </h3>
             <p className="text-amber-300 text-sm font-medium">
-              🌟 <strong>0.05% 초월(Transcendent)</strong> 등급의 기적이 강림할까요? ✨
+              🌟 {language === 'en' ? 'Will the 0.05% Transcendent Miracle appear? ✨' : '0.05% 초월(Transcendent) 등급의 기적이 강림할까요? ✨'}
             </p>
           </div>
         )}
@@ -171,23 +175,23 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
               <div className="p-3 bg-gradient-to-r from-amber-500/30 via-pink-500/30 to-cyan-500/30 border border-amber-300 rounded-2xl animate-bounce shadow-lg">
                 <span className="text-xs sm:text-sm font-black text-yellow-200 flex items-center justify-center gap-2">
                   <Flame className="w-5 h-5 text-amber-300" />
-                  <span>축하합니다! 0.05% 초월(Transcendent) 등급 아바타를 획득하셨습니다! 🎉</span>
+                  <span>{language === 'en' ? '🎉 Congratulations! You summoned a 0.05% Transcendent Avatar!' : '축하합니다! 0.05% 초월(Transcendent) 등급 아바타를 획득하셨습니다! 🎉'}</span>
                 </span>
               </div>
             )}
 
             <div className="flex flex-col sm:flex-row justify-between items-center px-1 gap-2">
               <span className="text-xs sm:text-sm font-bold text-slate-300">
-                🎉 소환 결과 ({drawResults.length}개 획득) — <strong className="text-amber-300">높은 등급순 정렬 완료</strong> & <strong className="text-purple-300">원클릭 즉시 장착 가능</strong>
+                {language === 'en' ? `🎉 Summon Results (${drawResults.length} pulled)` : `🎉 소환 결과 (${drawResults.length}개 획득)`}
               </span>
               {totalRefund > 0 && (
                 <span className="text-xs sm:text-sm font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-full">
-                  중복 환급: 🪙 +{totalRefund} 코인
+                  {language === 'en' ? `Duplicate Refund: 🪙 +${totalRefund} Coins` : `중복 환급: 🪙 +${totalRefund} 코인`}
                 </span>
               )}
             </div>
 
-            {/* Results Grid (Spacious & High Visibility) */}
+            {/* Results Grid */}
             <div className={`grid gap-3 sm:gap-3.5 max-h-[460px] overflow-y-auto p-2 custom-scrollbar ${
               drawResults.length === 1 ? 'grid-cols-1 max-w-xs mx-auto' : 'grid-cols-2 sm:grid-cols-5'
             }`}>
@@ -218,10 +222,10 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
                         {gInfo.name.split(' ')[0]}
                       </span>
 
-                      {/* 🎯 Drop Rate Percentage Display */}
+                      {/* Drop Rate */}
                       <div className="flex items-center justify-center gap-1 text-[10px] font-black text-amber-200 bg-black/40 px-2 py-0.5 rounded-md border border-white/10 my-1">
                         <Percent className="w-2.5 h-2.5 text-yellow-300" />
-                        <span>확률 {gInfo.dropRate}</span>
+                        <span>{language === 'en' ? 'Rate' : '확률'} {gInfo.dropRate}</span>
                       </div>
 
                       {/* Name */}
@@ -235,12 +239,12 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
                       </p>
                     </div>
 
-                    {/* ✨ 즉시 장착 버튼 */}
+                    {/* ✨ Equip Button */}
                     <div className="w-full mt-3 pt-2 border-t border-white/10">
                       {isCurrentlyEquipped ? (
                         <span className="w-full py-1.5 bg-emerald-500 text-slate-950 rounded-xl text-[11px] font-black flex items-center justify-center gap-1 shadow-sm">
                           <Check className="w-3.5 h-3.5" />
-                          <span>장착 완료</span>
+                          <span>{language === 'en' ? 'Equipped' : '장착 완료'}</span>
                         </span>
                       ) : (
                         <button
@@ -248,7 +252,7 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
                           className="w-full py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl text-[11px] font-black shadow-md transition-all active:scale-95 flex items-center justify-center gap-1"
                         >
                           <Sparkles className="w-3 h-3 text-yellow-200" />
-                          <span>즉시 장착</span>
+                          <span>{language === 'en' ? 'Equip' : '즉시 장착'}</span>
                         </button>
                       )}
                     </div>
@@ -264,7 +268,7 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
                 className="flex-1 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs sm:text-sm rounded-2xl border border-slate-700 transition-all flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
-                <span>다시 소환</span>
+                <span>{language === 'en' ? 'Summon Again' : '다시 소환'}</span>
               </button>
 
               <button
@@ -274,7 +278,7 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
                 }}
                 className="flex-[1.5] py-3.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-black text-xs sm:text-sm rounded-2xl transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95"
               >
-                <span>내 도감 컬렉션 보기</span>
+                <span>{language === 'en' ? 'View Avatar Catalog' : '내 도감 컬렉션 보기'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -295,29 +299,38 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
                 <span>🧙‍♂️</span>
               </div>
               <p className="text-slate-200 text-xs sm:text-base font-medium leading-relaxed">
-                총 <strong>50종의 방대한 캐릭터 도감</strong>이 준비되어 있습니다!<br />
-                소환 즉시 <strong>높은 등급순으로 자동 정렬</strong>되며, <strong>결과 화면에서 바로 장착</strong>할 수 있습니다.
+                {language === 'en' ? (
+                  <>
+                    A total of <strong>50 Epic Avatars</strong> await your discovery!<br />
+                    Summoned avatars are <strong>automatically sorted by rarity</strong> and can be equipped right away.
+                  </>
+                ) : (
+                  <>
+                    총 <strong>50종의 방대한 캐릭터 도감</strong>이 준비되어 있습니다!<br />
+                    소환 즉시 <strong>높은 등급순으로 자동 정렬</strong>되며, <strong>결과 화면에서 바로 장착</strong>할 수 있습니다.
+                  </>
+                )}
               </p>
 
               {/* Exact Probabilities Chips */}
               <div className="flex flex-wrap items-center justify-center gap-2 mt-4 text-[11px] sm:text-xs font-bold">
                 <span className="bg-gradient-to-r from-amber-400/30 to-pink-500/30 text-amber-200 border border-amber-300 px-3 py-1 rounded-full shadow-sm animate-pulse">
-                  🌟 초월 0.05%
+                  🌟 {language === 'en' ? 'Transcendent 0.05%' : '초월 0.05%'}
                 </span>
                 <span className="bg-pink-500/20 text-pink-300 border border-pink-500/30 px-3 py-1 rounded-full">
-                  신화 1.00%
+                  {language === 'en' ? 'Mythic 1.00%' : '신화 1.00%'}
                 </span>
                 <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1 rounded-full">
-                  전설 5.00%
+                  {language === 'en' ? 'Legendary 5.00%' : '전설 5.00%'}
                 </span>
                 <span className="bg-purple-500/20 text-purple-300 border border-purple-500/30 px-3 py-1 rounded-full">
-                  영웅 15.00%
+                  {language === 'en' ? 'Epic 15.00%' : '영웅 15.00%'}
                 </span>
                 <span className="bg-teal-500/20 text-teal-300 border border-teal-500/30 px-3 py-1 rounded-full">
-                  희귀 30.00%
+                  {language === 'en' ? 'Rare 30.00%' : '희귀 30.00%'}
                 </span>
                 <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1 rounded-full">
-                  일반 48.95%
+                  {language === 'en' ? 'Common 48.95%' : '일반 48.95%'}
                 </span>
               </div>
             </div>
@@ -332,15 +345,15 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
               >
                 <div className="flex items-center gap-2.5">
                   <Gift className="w-6 h-6 text-yellow-300" />
-                  <span>1회 소환</span>
+                  <span>{language === 'en' ? '1 Summon' : '1회 소환'}</span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1.5 rounded-2xl text-xs font-black text-amber-300 border border-white/10">
                   <Coins className="w-4 h-4 text-yellow-400" />
-                  <span>30 코인</span>
+                  <span>30 {language === 'en' ? 'Coins' : '코인'}</span>
                 </div>
               </button>
 
-              {/* 10 Draws (10% Discount) */}
+              {/* 10 Draws */}
               <button
                 onClick={() => handleStartDraw(10)}
                 disabled={userCoins < 270}
@@ -349,13 +362,13 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
                 <div className="flex items-center gap-2.5">
                   <Sparkles className="w-6 h-6 text-yellow-200 animate-spin" />
                   <div className="text-left">
-                    <span>10연속 소환</span>
-                    <span className="text-[10px] text-pink-200 block font-semibold">10% 할인 & 등급순 자동 정렬</span>
+                    <span>{language === 'en' ? '10 Summons' : '10연속 소환'}</span>
+                    <span className="text-[10px] text-pink-200 block font-semibold">{language === 'en' ? '10% Discount & Auto Sort' : '10% 할인 & 등급순 자동 정렬'}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 bg-black/30 px-3 py-1.5 rounded-2xl text-xs font-black text-yellow-300 border border-white/10">
                   <Coins className="w-4 h-4 text-yellow-400" />
-                  <span>270 코인</span>
+                  <span>270 {language === 'en' ? 'Coins' : '코인'}</span>
                 </div>
               </button>
             </div>

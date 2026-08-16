@@ -3,6 +3,7 @@ import { Crown, ArrowLeft, Clock, Sparkles, Gift, Trophy, Medal } from 'lucide-r
 import { RankingItem, UserProfile, CycleInfo } from '../types';
 import { calculateCycleReward, isCycleRewardClaimed, claimCycleRankingReward, getTodayDateString } from '../services/dbService';
 import { sound } from '../services/soundService';
+import { useLanguage } from '../services/i18n';
 
 interface RankingBoardViewProps {
   user: UserProfile;
@@ -27,7 +28,13 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
   onOpenGachaModal,
   onClaimReward,
 }) => {
-  const CYCLES: { index: 1 | 2 | 3; label: string; time: string }[] = [
+  const { language, t } = useLanguage();
+
+  const CYCLES: { index: 1 | 2 | 3; label: string; time: string }[] = language === 'en' ? [
+    { index: 1, label: 'Round 1', time: '00:00 ~ 10:00' },
+    { index: 2, label: 'Round 2', time: '10:00 ~ 18:00' },
+    { index: 3, label: 'Round 3', time: '18:00 ~ 24:00' },
+  ] : [
     { index: 1, label: '1차전', time: '00:00 ~ 10:00' },
     { index: 2, label: '2차전', time: '10:00 ~ 18:00' },
     { index: 3, label: '3차전', time: '18:00 ~ 24:00' },
@@ -64,23 +71,25 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
         {/* Back Button */}
         <button
           onClick={onBack}
-          className="mb-5 text-slate-400 hover:text-white font-bold transition-all flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700/80 px-4 py-2 rounded-xl shadow-sm border border-slate-700 text-sm"
+          className="mb-5 text-slate-400 hover:text-white font-bold transition-all flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700/80 px-4 py-2 rounded-xl shadow-sm border border-slate-700 text-sm active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>메인으로</span>
+          <span>{t('home')}</span>
         </button>
 
         {/* Title */}
         <div className="text-center mb-5">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-2 bg-amber-500/10 text-amber-300 border border-amber-500/30">
             <Crown className="w-3.5 h-3.5 text-amber-400" />
-            <span>오늘의 실시간 명예의 전당</span>
+            <span>{language === 'en' ? "Today's Live Hall of Fame" : '오늘의 실시간 명예의 전당'}</span>
           </div>
           <h2 className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-orange-400 to-rose-400 tracking-tight pb-1 font-serif">
             Hall of Fame 👑
           </h2>
           <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">
-            ⚡ 점수가 같을 경우 <strong>먼저 마친 사람</strong>이 더 높은 순위에 오릅니다!
+            {language === 'en'
+              ? '⚡ In case of tie scores, the player who finishes earlier ranks higher!'
+              : '⚡ 점수가 같을 경우 먼저 마친 사람이 더 높은 순위에 오릅니다!'}
           </p>
         </div>
 
@@ -92,12 +101,12 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="px-2 py-0.5 rounded-full bg-amber-400/30 text-amber-200 border border-amber-400 text-[10px] font-black uppercase">
-                    {selectedCycleIndex}차전 종료 차등 보상
+                    {language === 'en' ? `Round ${selectedCycleIndex} Reward` : `${selectedCycleIndex}차전 종료 차등 보상`}
                   </span>
-                  <span className="text-xs sm:text-sm font-black text-white">{userRank}위 달성!</span>
+                  <span className="text-xs sm:text-sm font-black text-white">{language === 'en' ? `Ranked #${userRank}!` : `${userRank}위 달성!`}</span>
                 </div>
                 <p className="text-xs text-amber-200 mt-0.5">
-                  보상: <strong>🪙 +{cycleReward.coins} 코인</strong> & <strong>🏆 +{cycleReward.xp} XP</strong>
+                  {language === 'en' ? `Reward: 🪙 +${cycleReward.coins} Coins & 🏆 +${cycleReward.xp} XP` : `보상: 🪙 +${cycleReward.coins} 코인 & 🏆 +${cycleReward.xp} XP`}
                 </p>
               </div>
             </div>
@@ -106,14 +115,14 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
               className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-xs sm:text-sm shadow-md active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
             >
               <Sparkles className="w-4 h-4 fill-slate-950" />
-              <span>보상 받기</span>
+              <span>{language === 'en' ? 'Claim' : '보상 받기'}</span>
             </button>
           </div>
         )}
 
         {isCycleEnded && isClaimed && userRank && (
           <div className="mb-5 p-3 rounded-2xl bg-slate-800/80 border border-slate-700 text-center text-xs font-bold text-slate-400">
-            ✓ {selectedCycleIndex}차전 순위 보상(🪙 +{cycleReward?.coins} 코인) 수령을 완료했습니다.
+            ✓ {language === 'en' ? `Round ${selectedCycleIndex} reward (+${cycleReward?.coins} Coins) claimed.` : `${selectedCycleIndex}차전 순위 보상(🪙 +${cycleReward?.coins} 코인) 수령을 완료했습니다.`}
           </div>
         )}
 
@@ -131,19 +140,19 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
               <div className="text-left">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-amber-300">
-                    나만의 대표 아바타 뽐내기
+                    {language === 'en' ? 'Show off your unique Avatar' : '나만의 대표 아바타 뽐내기'}
                   </span>
                   <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30">
-                    0.05% 초월
+                    {language === 'en' ? '0.05% Transcendent' : '0.05% 초월'}
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-300">
-                  가챠에서 뽑은 아바타로 랭킹 보드 프로필을 즉시 꾸며보세요!
+                  {language === 'en' ? 'Summon rare avatars and customize your leaderboard profile!' : '가챠에서 뽑은 아바타로 랭킹 보드 프로필을 즉시 꾸며보세요!'}
                 </p>
               </div>
             </div>
             <span className="text-amber-300 font-black text-xs flex items-center gap-1 group-hover:translate-x-1 transition-transform shrink-0">
-              <span>소환소 ➔</span>
+              <span>{language === 'en' ? 'Summon Shop ➔' : '소환소 ➔'}</span>
             </span>
           </button>
         )}
@@ -173,7 +182,7 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
                   {isCurrent ? (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   ) : isEnded ? (
-                    <span className="text-[9px] text-amber-300 font-bold">종료</span>
+                    <span className="text-[9px] text-amber-300 font-bold">{language === 'en' ? 'Ended' : '종료'}</span>
                   ) : null}
                 </div>
                 <div className="text-[10px] opacity-80 mt-0.5">{c.time}</div>
@@ -187,33 +196,33 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
           <div className="flex items-center justify-between mb-2.5">
             <div className="flex items-center gap-1.5 text-xs font-black text-amber-300 uppercase tracking-wider">
               <Trophy className="w-4 h-4 text-amber-400" />
-              <span>{selectedCycleIndex}차전 종료 시 지급 순위 보상</span>
+              <span>{language === 'en' ? `Round ${selectedCycleIndex} Rewards` : `${selectedCycleIndex}차전 종료 시 지급 순위 보상`}</span>
             </div>
-            <span className="text-[10px] text-slate-400 font-medium">회차 마감 시 자동 정산</span>
+            <span className="text-[10px] text-slate-400 font-medium">{language === 'en' ? 'Auto Claim on Round End' : '회차 마감 시 자동 정산'}</span>
           </div>
           <div className="grid grid-cols-5 gap-1 sm:gap-1.5 text-center text-[10px] sm:text-[11px]">
             <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
-              <div className="font-black text-amber-300 truncate">🥇 1위</div>
+              <div className="font-black text-amber-300 truncate">{language === 'en' ? '🥇 1st' : '🥇 1위'}</div>
               <div className="text-white font-black text-xs mt-0.5">🪙 200</div>
               <div className="text-[8px] sm:text-[9px] text-amber-200/80 font-bold truncate">+150 XP</div>
             </div>
             <div className="bg-slate-700/30 border border-slate-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
-              <div className="font-black text-slate-200 truncate">🥈 2위</div>
+              <div className="font-black text-slate-200 truncate">{language === 'en' ? '🥈 2nd' : '🥈 2위'}</div>
               <div className="text-white font-black text-xs mt-0.5">🪙 120</div>
               <div className="text-[8px] sm:text-[9px] text-slate-300/80 font-bold truncate">+100 XP</div>
             </div>
             <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
-              <div className="font-black text-orange-300 truncate">🥉 3위</div>
+              <div className="font-black text-orange-300 truncate">{language === 'en' ? '🥉 3rd' : '🥉 3위'}</div>
               <div className="text-white font-black text-xs mt-0.5">🪙 80</div>
               <div className="text-[8px] sm:text-[9px] text-orange-200/80 font-bold truncate">+60 XP</div>
             </div>
             <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
-              <div className="font-black text-purple-300 truncate">4~10위</div>
+              <div className="font-black text-purple-300 truncate">{language === 'en' ? '4th~10th' : '4~10위'}</div>
               <div className="text-white font-black text-xs mt-0.5">🪙 40</div>
               <div className="text-[8px] sm:text-[9px] text-purple-200/80 font-bold truncate">+30 XP</div>
             </div>
             <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
-              <div className="font-black text-slate-400 truncate">참가</div>
+              <div className="font-black text-slate-400 truncate">{language === 'en' ? 'Entry' : '참가'}</div>
               <div className="text-white font-black text-xs mt-0.5">🪙 15</div>
               <div className="text-[8px] sm:text-[9px] text-slate-400 font-bold truncate">+10 XP</div>
             </div>
@@ -225,17 +234,17 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
           <div className="bg-slate-800/40 rounded-3xl border-2 border-dashed border-slate-700 p-8 sm:p-10 text-center text-slate-400">
             <span className="text-4xl mb-2 block">👀</span>
             <p className="font-extrabold text-base sm:text-lg text-white">
-              {CYCLES.find(c => c.index === selectedCycleIndex)?.label} 참여자가 아직 없습니다!
+              {language === 'en' ? 'No participants in this round yet!' : `${CYCLES.find(c => c.index === selectedCycleIndex)?.label} 참여자가 아직 없습니다!`}
             </p>
             <p className="mt-1 text-xs text-slate-400 font-medium">
-              지금 바로 도전해서 영광의 1위 자리를 선점하세요!
+              {language === 'en' ? 'Challenge now and claim 1st place!' : '지금 바로 도전해서 영광의 1위 자리를 선점하세요!'}
             </p>
             {selectedCycleIndex === currentCycle.cycleIndex && (
               <button
                 onClick={onStartChallenge}
                 className="mt-5 px-6 py-3 bg-gradient-to-r from-amber-500 to-rose-500 text-white font-black text-xs sm:text-sm rounded-xl hover:shadow-[0_8px_20px_rgba(249,115,22,0.35)] transition-all active:scale-[0.98]"
               >
-                🔥 지금 바로 랭킹전 도전하기
+                {language === 'en' ? '🔥 Start Ranking Battle Now' : '🔥 지금 바로 랭킹전 도전하기'}
               </button>
             )}
           </div>
@@ -280,7 +289,7 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
                       <span>{rank.avatarIcon || '🦁'}</span>
                       {rank.avatarGrade && rank.avatarGrade !== 'starter' && rank.avatarGrade !== 'common' && (
                         <span className="absolute -bottom-1 -right-1 text-[8px] font-black px-1 rounded-full bg-slate-950 border border-amber-400 text-amber-300 uppercase leading-tight shadow-sm">
-                          {rank.avatarGrade === 'transcendent' ? '초월' : rank.avatarGrade === 'mythic' ? '신화' : rank.avatarGrade === 'legendary' ? '전설' : '에픽'}
+                          {rank.avatarGrade === 'transcendent' ? (language === 'en' ? 'Transcendent' : '초월') : rank.avatarGrade === 'mythic' ? (language === 'en' ? 'Mythic' : '신화') : rank.avatarGrade === 'legendary' ? (language === 'en' ? 'Legend' : '전설') : (language === 'en' ? 'Epic' : '에픽')}
                         </span>
                       )}
                     </div>
@@ -297,7 +306,7 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                        <span className="text-slate-300 font-medium truncate max-w-[100px] sm:max-w-none">{rank.avatarName || '아바타'}</span>
+                        <span className="text-slate-300 font-medium truncate max-w-[100px] sm:max-w-none">{rank.avatarName || (language === 'en' ? 'Avatar' : '아바타')}</span>
                         <span>•</span>
                         <div className="flex items-center gap-1 shrink-0">
                           <Clock className="w-3 h-3 text-slate-500" />
@@ -310,7 +319,7 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
                   <div className="text-right shrink-0 ml-2">
                     <span className="text-lg sm:text-2xl font-black text-white tracking-tight">
                       {rank.score}
-                      <span className="text-xs font-bold text-slate-400 ml-1">점</span>
+                      <span className="text-xs font-bold text-slate-400 ml-1">{language === 'en' ? 'PTS' : '점'}</span>
                     </span>
                   </div>
                 </div>

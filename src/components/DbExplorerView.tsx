@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, BookOpen, ChevronDown, Sparkles } from 'lucide-react';
 import { Question } from '../types';
+import { useLanguage } from '../services/i18n';
 
 interface DbExplorerViewProps {
   dbData: Record<string, Question[]>;
@@ -11,6 +12,7 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
   dbData,
   onBack,
 }) => {
+  const { language, t } = useLanguage();
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   const toggleSection = (diff: string) => {
@@ -24,7 +26,11 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
     'Level 1 (입문/초급)',
     'Level 2 (실력 중급)',
     'Level 3 (고득점 도약)',
-    'Level 4 (실전 마스터)'
+    'Level 4 (실전 마스터)',
+    'Level 1 (Beginner)',
+    'Level 2 (Intermediate)',
+    'Level 3 (Advanced)',
+    'Level 4 (Mastery)'
   ];
 
   const diffKeys = Object.keys(dbData).sort((a, b) => {
@@ -42,15 +48,15 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
         <header className="flex justify-between items-center glass-card p-4 sm:p-5 rounded-[2rem] border border-slate-700/80 mb-6 sticky top-4 z-20 shadow-lg">
           <button
             onClick={onBack}
-            className="text-slate-400 font-bold hover:bg-slate-800 hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm"
+            className="text-slate-400 font-bold hover:bg-slate-800 hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>메인으로</span>
+            <span>{t('home')}</span>
           </button>
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-indigo-400" />
             <h1 className="text-lg sm:text-xl font-black text-white tracking-tight">
-              공용 문제집 탐색
+              {language === 'en' ? 'Public Question Library' : '공용 문제집 탐색'}
             </h1>
           </div>
         </header>
@@ -59,9 +65,11 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
         {diffKeys.length === 0 ? (
           <div className="glass-card rounded-[2.5rem] p-12 text-center border border-slate-700/60 shadow-xl">
             <span className="text-5xl mb-3 block">텅!</span>
-            <h3 className="font-extrabold text-xl text-white">저장된 문제가 없습니다.</h3>
+            <h3 className="font-extrabold text-xl text-white">
+              {language === 'en' ? 'No saved questions found.' : '저장된 문제가 없습니다.'}
+            </h3>
             <p className="text-slate-400 text-sm mt-2 font-medium">
-              [문제 공장]에서 새로운 난이도의 문제를 생성해 보세요!
+              {language === 'en' ? 'Generate new questions from the Question Factory!' : '[문제 공장]에서 새로운 난이도의 문제를 생성해 보세요!'}
             </p>
           </div>
         ) : (
@@ -83,7 +91,7 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                     <div className="flex items-center gap-3">
                       <span className="text-base sm:text-lg text-white font-black">{diff}</span>
                       <span className="bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full text-xs font-bold border border-indigo-500/30">
-                        {questions.length}문제
+                        {questions.length} {language === 'en' ? 'Questions' : '문제'}
                       </span>
                     </div>
 
@@ -135,13 +143,15 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                             )}
                           </div>
 
-                          <p className="text-slate-300 font-medium text-sm mb-3 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80">
-                            {q.translation}
-                          </p>
+                          {language === 'ko' && (
+                            <p className="text-slate-300 font-medium text-sm mb-3 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/80">
+                              {q.translation}
+                            </p>
+                          )}
 
                           <div className="flex gap-2">
                             <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/30">
-                              {q.form}형식
+                              {language === 'en' ? `Form ${q.form}` : `${q.form}형식`}
                             </span>
                           </div>
                         </div>

@@ -785,7 +785,7 @@ function AppContent() {
       }
     }
 
-    const catName = EXPRESSION_CATEGORIES.find(c => c.id === category)?.title || category;
+    const catName = EXPRESSION_CATEGORIES.find((c: any) => c.id === category)?.title || category;
     const genCost = isAdminUser ? 0 : 50;
 
     setActionModalConfig({
@@ -1212,7 +1212,7 @@ function AppContent() {
     }
   };
 
-  const currentCategoryInfo = EXPRESSION_CATEGORIES.find(c => c.id === selectedExpCategory);
+  const currentCategoryInfo = EXPRESSION_CATEGORIES.find((c: any) => c.id === selectedExpCategory);
   const isCurrentQBookmarked = currentQ 
     ? bookmarks.some(b => (b.sentence || b.question?.sentence || '').trim() === (currentQ.sentence || '').trim()) 
     : false;

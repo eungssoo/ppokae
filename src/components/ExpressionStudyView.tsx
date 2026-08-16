@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { ArrowLeft, Volume2, Sparkles, MessageCircle, PenTool, Lightbulb, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { ExpressionItem, Question } from '../types';
 import { sound } from '../services/soundService';
+import { useLanguage } from '../services/i18n';
 
 interface ExpressionStudyViewProps {
   categoryTitle: string;
@@ -20,6 +21,7 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
   onBack,
   onStartQuiz,
 }) => {
+  const { language, t } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState<number>(0);
 
   const currentExp = expressions[currentIndex];
@@ -80,8 +82,8 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 text-white text-center">
         <div>
-          <p className="text-lg font-bold mb-4">학습할 표현이 없습니다.</p>
-          <button onClick={onBack} className="px-5 py-2.5 bg-slate-800 rounded-xl">돌아가기</button>
+          <p className="text-lg font-bold mb-4">{language === 'en' ? 'No expressions available.' : '학습할 표현이 없습니다.'}</p>
+          <button onClick={onBack} className="px-5 py-2.5 bg-slate-800 rounded-xl">{t('back')}</button>
         </div>
       </div>
     );
@@ -98,10 +100,10 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
               sound.playClick();
               onBack();
             }}
-            className="text-slate-400 hover:text-white font-bold transition-all flex items-center gap-1.5 bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 text-xs sm:text-sm"
+            className="text-slate-400 hover:text-white font-bold transition-all flex items-center gap-1.5 bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 text-xs sm:text-sm active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>카테고리 선택</span>
+            <span>{language === 'en' ? 'Categories' : '카테고리 선택'}</span>
           </button>
 
           <div className="flex items-center gap-2">
@@ -117,7 +119,7 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
                     ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                     : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-amber-300'
                 }`}
-                title="즐겨찾기"
+                title={language === 'en' ? 'Bookmark' : '즐겨찾기'}
               >
                 <Star className={`w-4 h-4 ${isBookmarked ? 'fill-amber-400 text-amber-400' : ''}`} />
               </button>
@@ -135,7 +137,7 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
               className="text-xs font-black text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 px-3.5 py-1.5 rounded-xl shadow-md flex items-center gap-1 transition-all active:scale-95"
             >
               <PenTool className="w-3.5 h-3.5" />
-              <span>실전 퀴즈 풀기</span>
+              <span>{language === 'en' ? 'Start Quiz' : '실전 퀴즈 풀기'}</span>
             </button>
           </div>
         </div>
@@ -154,10 +156,10 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
           <button
             onClick={() => playAudio(currentExp.expression)}
             className="absolute top-4 right-4 flex items-center gap-1.5 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-400/40 px-3 py-1.5 rounded-full transition-all active:scale-95 text-purple-300 hover:text-white"
-            title="원어민 발음 듣기"
+            title={language === 'en' ? 'Listen to Audio' : '원어민 발음 듣기'}
           >
             <Volume2 className="w-4 h-4" />
-            <span className="text-[10px] font-bold">발음</span>
+            <span className="text-[10px] font-bold">{language === 'en' ? 'Audio' : '발음'}</span>
           </button>
 
           <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight mb-2 mt-2 font-serif">
@@ -178,7 +180,7 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
           <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 mb-5 shadow-inner">
             <div className="flex items-center gap-2 mb-3 text-xs font-black text-indigo-300 uppercase tracking-wider">
               <MessageCircle className="w-4 h-4 text-indigo-400" />
-              <span>Real-Life Dialogue (실전 대화 예문)</span>
+              <span>Real-Life Dialogue {language === 'en' ? '' : '(실전 대화 예문)'}</span>
             </div>
 
             <div className="space-y-3">
@@ -207,14 +209,16 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
                       <button
                         onClick={() => playAudio(d.en)}
                         className="text-slate-400 hover:text-indigo-300 ml-2 p-1 transition-colors"
-                        title="대화 문장 듣기"
+                        title={language === 'en' ? 'Listen to sentence' : '대화 문장 듣기'}
                       >
                         <Volume2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <p className="text-slate-400 text-[11px] font-medium mt-1">
-                      {d.ko}
-                    </p>
+                    {language === 'ko' && (
+                      <p className="text-slate-400 text-[11px] font-medium mt-1">
+                        {d.ko}
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}
@@ -227,7 +231,7 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
           <div className="bg-slate-800/40 rounded-2xl p-3.5 border border-slate-700/60 mb-5 flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1 text-[11px] font-black text-amber-300">
               <Lightbulb className="w-3.5 h-3.5 text-yellow-400" />
-              <span>유사 표현:</span>
+              <span>{language === 'en' ? 'Similar Expressions:' : '유사 표현:'}</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {currentExp.similarExpressions.map((sim, idx) => (
@@ -250,7 +254,7 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
             className="flex-1 py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm border border-slate-700 transition-all flex items-center justify-center gap-1 active:scale-95"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span>이전 표현</span>
+            <span>{language === 'en' ? 'Previous' : '이전 표현'}</span>
           </button>
 
           <button
@@ -258,7 +262,7 @@ export const ExpressionStudyView: React.FC<ExpressionStudyViewProps> = ({
             disabled={currentIndex === expressions.length - 1}
             className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 disabled:opacity-30 disabled:cursor-not-allowed text-white font-black text-xs sm:text-sm transition-all shadow-md flex items-center justify-center gap-1 active:scale-95"
           >
-            <span>다음 표현</span>
+            <span>{language === 'en' ? 'Next' : '다음 표현'}</span>
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>

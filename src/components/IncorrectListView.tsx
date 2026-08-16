@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowLeft, ClipboardList, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { WeaknessRecord } from '../types';
+import { useLanguage } from '../services/i18n';
 
 interface IncorrectListViewProps {
   incorrectList: WeaknessRecord[];
@@ -11,6 +12,8 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
   incorrectList,
   onBack,
 }) => {
+  const { language, t } = useLanguage();
+
   return (
     <div className="min-h-screen bg-animated-gradient flex justify-center p-4 sm:p-6 md:p-8">
       <div className="max-w-3xl w-full">
@@ -19,15 +22,15 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
         <header className="flex justify-between items-center glass-card p-4 sm:p-5 rounded-[2rem] border border-slate-700/80 mb-6 sticky top-4 z-20 shadow-lg">
           <button
             onClick={onBack}
-            className="text-slate-400 font-bold hover:bg-slate-800 hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm"
+            className="text-slate-400 font-bold hover:bg-slate-800 hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>메인으로</span>
+            <span>{t('home')}</span>
           </button>
           <div className="flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-amber-400" />
             <h1 className="text-lg sm:text-xl font-black text-white tracking-tight">
-              내 오답 노트
+              {language === 'en' ? 'Incorrect Review Notes' : '내 오답 노트'}
             </h1>
           </div>
         </header>
@@ -36,9 +39,13 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
         {incorrectList.length === 0 ? (
           <div className="glass-card rounded-[2.5rem] p-12 text-center border border-slate-700/60 shadow-xl">
             <span className="text-5xl mb-3 block">🎉</span>
-            <h3 className="font-extrabold text-xl text-white">오답 기록이 없습니다!</h3>
+            <h3 className="font-extrabold text-xl text-white">
+              {language === 'en' ? 'No incorrect questions recorded!' : '오답 기록이 없습니다!'}
+            </h3>
             <p className="text-slate-400 text-sm mt-2 font-medium">
-              틀린 문제들이 여기에 자동으로 모여 복습할 수 있게 정리됩니다.
+              {language === 'en'
+                ? 'Incorrect questions will be collected here automatically for smart review.'
+                : '틀린 문제들이 여기에 자동으로 모여 복습할 수 있게 정리됩니다.'}
             </p>
           </div>
         ) : (
@@ -74,7 +81,7 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
                     })()}
                   </p>
                   <span className="text-[11px] font-bold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-md border border-slate-700 whitespace-nowrap">
-                    {q.date || '기록'}
+                    {q.date || (language === 'en' ? 'Record' : '기록')}
                   </span>
                 </div>
 
@@ -83,7 +90,7 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
                   <div className="bg-rose-500/10 border border-rose-500/30 p-4 rounded-xl relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
                     <span className="block text-[10px] font-black text-rose-400 uppercase tracking-wider mb-1">
-                      내가 고른 오답
+                      {language === 'en' ? 'My Selected Choice' : '내가 고른 오답'}
                     </span>
                     <span className="text-slate-400 line-through font-bold text-base">
                       {q.wrongAnswer}
@@ -93,7 +100,7 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
                   <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
                     <span className="block text-[10px] font-black text-emerald-400 uppercase tracking-wider mb-1">
-                      올바른 정답
+                      {language === 'en' ? 'Correct Answer' : '올바른 정답'}
                     </span>
                     <span className="font-black text-emerald-300 text-lg">
                       {q.correctAnswer}
@@ -107,7 +114,7 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
                     {q.difficulty}
                   </span>
                   <span className="bg-indigo-500/20 text-indigo-300 text-xs font-bold px-3 py-1 rounded-lg border border-indigo-500/30">
-                    {q.form}형식
+                    {language === 'en' ? `Form ${q.form}` : `${q.form}형식`}
                   </span>
                 </div>
               </div>

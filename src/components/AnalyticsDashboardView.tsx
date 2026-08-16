@@ -3,6 +3,7 @@ import { ArrowLeft, Trophy, Sparkles, Target, Zap, CheckCircle2, TrendingUp, Awa
 import { UserProfile, FormMastery } from '../types';
 import { calculateTier } from '../services/dbService';
 import { sound } from '../services/soundService';
+import { useLanguage } from '../services/i18n';
 
 interface AnalyticsDashboardViewProps {
   user: UserProfile;
@@ -25,10 +26,17 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   onBack,
   onGoSolveWeakness,
 }) => {
+  const { language, t } = useLanguage();
   const currentXp = user.xp || 0;
   const tierInfo = calculateTier(currentXp, masteryStats.levelStats);
 
-  const FORM_NAMES: Record<number, { name: string; structure: string; desc: string }> = {
+  const FORM_NAMES: Record<number, { name: string; structure: string; desc: string }> = language === 'en' ? {
+    1: { name: 'Form 1', structure: 'S + V', desc: 'Subject + Intransitive Verb (Adverbials)' },
+    2: { name: 'Form 2', structure: 'S + V + C', desc: 'Subject + Linking Verb + Subject Complement' },
+    3: { name: 'Form 3', structure: 'S + V + O', desc: 'Subject + Transitive Verb + Direct Object' },
+    4: { name: 'Form 4', structure: 'S + V + IO + DO', desc: 'Subject + Dative Verb + Indirect + Direct Object' },
+    5: { name: 'Form 5', structure: 'S + V + O + OC', desc: 'Subject + Transitive Verb + Object + Object Complement' }
+  } : {
     1: { name: '1형식', structure: 'S + V', desc: '주어 + 완전자동사 (부사구 수식)' },
     2: { name: '2형식', structure: 'S + V + C', desc: '주어 + 불완전자동사 + 주격보어' },
     3: { name: '3형식', structure: 'S + V + O', desc: '주어 + 완전타동사 + 목적어' },
@@ -37,7 +45,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
   };
 
   // Find weakest form
-  const weakestForm = [...masteryStats.formMasteries].sort((a, b) => a.accuracy - b.accuracy)[0];
+  const weakestForm = [...masteryStats.formMasteries].sort((a, b) => a.accuracy - b.accuracy)[0] || { form: 5, accuracy: 0 };
 
   return (
     <div className="min-h-screen bg-animated-gradient flex items-center justify-center p-3 sm:p-6 md:p-8">
@@ -50,16 +58,16 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
               sound.playClick();
               onBack();
             }}
-            className="text-slate-400 hover:text-white font-bold transition-all flex items-center gap-1.5 bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 text-xs sm:text-sm"
+            className="text-slate-400 hover:text-white font-bold transition-all flex items-center gap-1.5 bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-700 text-xs sm:text-sm active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>메인으로</span>
+            <span>{t('home')}</span>
           </button>
 
           <div className="flex items-center gap-2">
             <span className="text-xs font-black text-white bg-slate-800 px-3 py-1 rounded-full border border-slate-700 flex items-center gap-1">
               <span>{user.avatar || '🤖'}</span>
-              <span>{user.name}님의 성장 리포트</span>
+              <span>{user.name}{language === 'en' ? "'s Growth Report" : '님의 성장 리포트'}</span>
             </span>
           </div>
         </div>
@@ -71,10 +79,12 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             <span>Learning Growth & Mastery Analytics</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            성장 분석 대시보드 📊
+            {language === 'en' ? 'Growth Analytics Dashboard 📊' : '성장 분석 대시보드 📊'}
           </h2>
           <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">
-            내 누적 학습 데이터와 문장 형식별 마스터리를 한눈에 분석합니다.
+            {language === 'en'
+              ? 'Analyze your cumulative study stats and sentence form masteries at a glance.'
+              : '내 누적 학습 데이터와 문장 형식별 마스터리를 한눈에 분석합니다.'}
           </p>
         </div>
 
@@ -102,10 +112,10 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
 
             <div className="text-left sm:text-right">
               <span className="text-xs text-slate-400 font-medium block">
-                다음 등급까지
+                {language === 'en' ? 'To Next Tier' : '다음 등급까지'}
               </span>
               <span className="text-xs sm:text-sm font-black text-indigo-300">
-                {Math.max(0, tierInfo.maxXp - currentXp).toLocaleString()} XP 남음
+                {Math.max(0, tierInfo.maxXp - currentXp).toLocaleString()} XP {language === 'en' ? 'remaining' : '남음'}
               </span>
             </div>
           </div>
@@ -114,7 +124,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           <div>
             <div className="flex justify-between text-[11px] font-bold text-slate-400 mb-1.5">
               <span>{tierInfo.minXp} XP</span>
-              <span className="text-indigo-300 font-black">{tierInfo.progress}% 달성</span>
+              <span className="text-indigo-300 font-black">{tierInfo.progress}% {language === 'en' ? 'Achieved' : '달성'}</span>
               <span>{tierInfo.maxXp} XP</span>
             </div>
             <div className="w-full bg-slate-800/80 rounded-full h-3 overflow-hidden border border-slate-700/80">
@@ -136,60 +146,59 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           <div className="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/80 text-center">
             <Target className="w-5 h-5 text-indigo-400 mx-auto mb-1" />
-            <span className="text-[11px] text-slate-400 font-medium block">총 푼 문제</span>
-            <span className="text-lg sm:text-xl font-black text-white">{masteryStats.totalSolved}문제</span>
+            <span className="text-[11px] text-slate-400 font-medium block">{language === 'en' ? 'Total Solved' : '총 푼 문제'}</span>
+            <span className="text-lg sm:text-xl font-black text-white">{masteryStats.totalSolved} {language === 'en' ? 'Qs' : '문제'}</span>
           </div>
 
           <div className="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/80 text-center">
             <CheckCircle2 className="w-5 h-5 text-emerald-400 mx-auto mb-1" />
-            <span className="text-[11px] text-slate-400 font-medium block">전체 정답률</span>
+            <span className="text-[11px] text-slate-400 font-medium block">{language === 'en' ? 'Overall Accuracy' : '전체 정답률'}</span>
             <span className="text-lg sm:text-xl font-black text-emerald-300">{masteryStats.overallAccuracy}%</span>
           </div>
 
           <div className="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/80 text-center">
             <Star className="w-5 h-5 text-amber-400 mx-auto mb-1" />
-            <span className="text-[11px] text-slate-400 font-medium block">보관된 즐겨찾기</span>
-            <span className="text-lg sm:text-xl font-black text-amber-300">{bookmarkCount}개</span>
+            <span className="text-[11px] text-slate-400 font-medium block">{language === 'en' ? 'Bookmarks' : '보관된 즐겨찾기'}</span>
+            <span className="text-lg sm:text-xl font-black text-amber-300">{bookmarkCount} {language === 'en' ? 'Items' : '개'}</span>
           </div>
 
           <div className="bg-slate-800/60 p-4 rounded-2xl border border-slate-700/80 text-center">
             <Coins className="w-5 h-5 text-yellow-400 mx-auto mb-1" />
-            <span className="text-[11px] text-slate-400 font-medium block">보유 코인</span>
+            <span className="text-[11px] text-slate-400 font-medium block">{language === 'en' ? 'Coins' : '보유 코인'}</span>
             <span className="text-lg sm:text-xl font-black text-yellow-300">{user.coins ?? 200}</span>
           </div>
         </div>
 
-        {/* 🧩 3. 1~5형식 문법 마스터리 카드 리스트 (누적 정답 수 기반 마스터리 점수제) */}
+        {/* 🧩 3. 1~5형식 문법 마스터리 카드 리스트 */}
         <div className="mb-6">
           <div className="flex justify-between items-end mb-3">
             <div>
               <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-purple-400" />
-                <span>1~5형식 문형별 마스터리 분석</span>
+                <span>{language === 'en' ? 'Forms 1–5 Mastery Analysis' : '1~5형식 문형별 마스터리 분석'}</span>
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                문제를 풀 때마다 누적 정답 수와 숙련도 점수가 상승하여 S랭크(150정답)로 승급합니다.
+                {language === 'en'
+                  ? 'Mastery score increases with correct answers to advance to S-Rank (150 Correct).'
+                  : '문제를 풀 때마다 누적 정답 수와 숙련도 점수가 상승하여 S랭크(150정답)로 승급합니다.'}
               </p>
             </div>
-            <span className="text-[11px] font-bold text-indigo-300 bg-indigo-500/20 border border-indigo-500/30 px-2.5 py-1 rounded-lg">
-              3개월 마스터 챌린지
-            </span>
           </div>
 
           <div className="space-y-2.5">
             {masteryStats.formMasteries.map((fm) => {
               const info = FORM_NAMES[fm.form];
               let gradeBg = 'bg-slate-700 text-slate-300';
-              let gradeLabel = '입문';
+              let gradeLabel = language === 'en' ? 'Novice' : '입문';
               if (fm.grade === 'S') {
                 gradeBg = 'bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black shadow-[0_0_15px_rgba(245,158,11,0.5)] ring-1 ring-amber-300';
-                gradeLabel = '마스터 👑';
+                gradeLabel = language === 'en' ? 'Master 👑' : '마스터 👑';
               } else if (fm.grade === 'A') {
                 gradeBg = 'bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black shadow-md';
-                gradeLabel = '전문가';
+                gradeLabel = language === 'en' ? 'Expert' : '전문가';
               } else if (fm.grade === 'B') {
                 gradeBg = 'bg-gradient-to-r from-blue-400 to-indigo-500 text-white font-bold shadow-md';
-                gradeLabel = '숙련';
+                gradeLabel = language === 'en' ? 'Skilled' : '숙련';
               }
 
               const score = fm.masteryScore ?? ((fm.correct * 10) + Math.round(fm.accuracy * 5));
@@ -219,7 +228,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                           {info.structure}
                         </span>
                         <span className="text-[10px] font-black text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                          숙련도 {score.toLocaleString()}P
+                          {score.toLocaleString()} PTS
                         </span>
                       </div>
                       <p className="text-slate-400 text-xs mt-0.5">
@@ -231,7 +240,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                   <div className="w-full sm:w-52 flex-shrink-0">
                     <div className="flex justify-between text-xs font-bold mb-1">
                       <span className="text-slate-300 font-mono">
-                        누적 <strong className="text-white">{fm.correct}</strong>문제 정답
+                        {language === 'en' ? `${fm.correct} Correct` : `누적 ${fm.correct}문제 정답`}
                       </span>
                       <span className="text-emerald-400 font-black">
                         {fm.accuracy}%
@@ -249,14 +258,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     </div>
                     <div className="text-[10px] text-slate-400 font-medium mt-1 text-right">
                       {fm.grade === 'S' ? (
-                        <span className="text-amber-300 font-black">✨ 완전 정복 달성!</span>
-                      ) : fm.capNotice ? (
-                        <span className="text-amber-300 font-bold flex items-center justify-end gap-1">
-                          <span>🔒</span>
-                          <span>{fm.capNotice}</span>
-                        </span>
+                        <span className="text-amber-300 font-black">✨ {language === 'en' ? 'Full Mastery!' : '완전 정복 달성!'}</span>
                       ) : (
-                        <span>다음 승급까지 <strong>{remainingToTarget}문제</strong> 정답 필요</span>
+                        <span>{language === 'en' ? `${remainingToTarget} more needed for next rank` : `다음 승급까지 ${remainingToTarget}문제 정답 필요`}</span>
                       )}
                     </div>
                   </div>
@@ -270,12 +274,19 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
         <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-rose-500/10 border border-amber-500/30 rounded-3xl p-5 sm:p-6 mb-6">
           <div className="flex items-center gap-2 mb-2 text-amber-300 font-black text-sm">
             <Zap className="w-4 h-4 text-amber-400" />
-            <span>1타 강사의 맞춤 학습 조언</span>
+            <span>{language === 'en' ? 'Master AI Tutor Advice' : '1타 강사의 맞춤 학습 조언'}</span>
           </div>
           <p className="text-slate-200 text-xs sm:text-sm leading-relaxed font-medium">
-            현재 <strong>{user.name}님</strong>은{' '}
-            <strong className="text-amber-300">{weakestForm.form}형식 (정답률 {weakestForm.accuracy}%)</strong>에 대한 집중 보완이 가장 큰 성장을 이끌어낼 수 있는 핵심 구간입니다!
-            개인 맞춤 약점 퀴즈를 통해 취약 문형을 빠르게 공략해 보세요.
+            {language === 'en' ? (
+              <>
+                Currently, concentrating on <strong className="text-amber-300">Form {weakestForm.form} (Accuracy: {weakestForm.accuracy}%)</strong> will yield the highest growth boost for {user.name}!
+              </>
+            ) : (
+              <>
+                현재 <strong>{user.name}님</strong>은{' '}
+                <strong className="text-amber-300">{weakestForm.form}형식 (정답률 {weakestForm.accuracy}%)</strong>에 대한 집중 보완이 가장 큰 성장을 이끌어낼 수 있는 핵심 구간입니다!
+              </>
+            )}
           </p>
 
           <button
@@ -285,7 +296,7 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
             }}
             className="mt-4 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-black transition-all shadow-md active:scale-95 flex items-center gap-1.5"
           >
-            <span>내 약점 퀴즈 바로 풀러 가기</span>
+            <span>{language === 'en' ? 'Practice Weakness Questions' : '내 약점 퀴즈 바로 풀러 가기'}</span>
             <ArrowLeft className="w-3.5 h-3.5 rotate-180" />
           </button>
         </div>

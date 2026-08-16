@@ -3,6 +3,7 @@ import { MessageSquare, X, Send, Sparkles, CheckCircle2, Heart, HelpCircle, Bug,
 import { UserProfile } from '../types';
 import { submitUserInquiry, INQUIRY_CATEGORIES } from '../services/reportService';
 import { sound } from '../services/soundService';
+import { useLanguage } from '../services/i18n';
 import confetti from 'canvas-confetti';
 
 interface UserInquiryModalProps {
@@ -18,6 +19,7 @@ export const UserInquiryModal: React.FC<UserInquiryModalProps> = ({
   user,
   onShowToast
 }) => {
+  const { language, t } = useLanguage();
   const [category, setCategory] = useState<'idea' | 'bug' | 'question' | 'cheer'>('idea');
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState(user?.email || '');
@@ -35,7 +37,7 @@ export const UserInquiryModal: React.FC<UserInquiryModalProps> = ({
 
     try {
       const res = await submitUserInquiry(
-        user?.name || '익명 학습자',
+        user?.name || (language === 'en' ? 'Anonymous Learner' : '익명 학습자'),
         category,
         message.trim(),
         email.trim()
@@ -49,17 +51,28 @@ export const UserInquiryModal: React.FC<UserInquiryModalProps> = ({
           origin: { y: 0.6 }
         });
         setIsSuccess(true);
-        onShowToast("💌 문의 접수 완료", "소중한 의견이 개발자에게 안전하게 전달되었습니다. 감사합니다!");
+        onShowToast(
+          language === 'en' ? '💌 Inquiry Sent' : '💌 문의 접수 완료',
+          language === 'en' ? 'Thank you! Your feedback has been safely delivered to the developer.' : '소중한 의견이 개발자에게 안전하게 전달되었습니다. 감사합니다!'
+        );
         setTimeout(() => {
           setIsSuccess(false);
           setMessage('');
           onClose();
         }, 1800);
       } else {
-        onShowToast("접수 실패", res.error || "문의를 전달하지 못했습니다.", "error");
+        onShowToast(
+          language === 'en' ? 'Submission Failed' : '접수 실패',
+          res.error || (language === 'en' ? 'Failed to submit inquiry.' : '문의를 전달하지 못했습니다.'),
+          'error'
+        );
       }
     } catch (err: any) {
-      onShowToast("오류 발생", err.message || "알 수 없는 오류가 발생했습니다.", "error");
+      onShowToast(
+        language === 'en' ? 'Error' : '오류 발생',
+        err.message || 'An unknown error occurred.',
+        'error'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -74,6 +87,13 @@ export const UserInquiryModal: React.FC<UserInquiryModalProps> = ({
       default: return <MessageSquare className="w-4 h-4 text-indigo-400" />;
     }
   };
+
+  const CATEGORIES = language === 'en' ? [
+    { id: 'idea', label: 'Feature Suggestion', desc: 'Propose new features & grammar ideas' },
+    { id: 'bug', label: 'Bug Report', desc: 'Report errors or display issues' },
+    { id: 'question', label: 'Questions', desc: 'Questions on grammar or app usage' },
+    { id: 'cheer', label: 'Feedback & Cheer', desc: 'Leave encouraging words for the team' }
+  ] : INQUIRY_CATEGORIES;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in duration-200">
@@ -102,9 +122,13 @@ export const UserInquiryModal: React.FC<UserInquiryModalProps> = ({
                 💌
               </div>
             </div>
-            <h3 className="text-2xl font-black text-white">소중한 의견 감사합니다!</h3>
+            <h3 className="text-2xl font-black text-white">
+              {language === 'en' ? 'Thank You for Your Feedback!' : '소중한 의견 감사합니다!'}
+            </h3>
             <p className="text-sm text-slate-300 leading-relaxed max-w-xs mx-auto">
-              보내주신 피드백을 적극 검토하여 더욱 완벽하고 재미있는 뽀개를 만들어가겠습니다. ✨
+              {language === 'en'
+                ? 'Your feedback will be carefully reviewed to make Ppokae even better. ✨'
+                : '보내주신 피드백을 적극 검토하여 더욱 완벽하고 재미있는 뽀개를 만들어가겠습니다. ✨'}
             </p>
           </div>
         ) : (
@@ -115,23 +139,25 @@ export const UserInquiryModal: React.FC<UserInquiryModalProps> = ({
             <div className="text-center">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 mb-2">
                 <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-                <span>유저의 소리함</span>
+                <span>{language === 'en' ? 'User Feedback Box' : '유저의 소리함'}</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center justify-center gap-2">
-                <span>💌 개발자에게 문의하기</span>
+                <span>💌 {language === 'en' ? 'Contact Developer' : '개발자에게 문의하기'}</span>
               </h2>
               <p className="text-slate-300 text-xs sm:text-sm font-medium mt-1">
-                버그 제보, 기능 제안, 응원 메시지 등 무엇이든 편하게 남겨주세요!
+                {language === 'en'
+                  ? 'Feel free to share suggestions, bug reports, or cheering messages!'
+                  : '버그 제보, 기능 제안, 응원 메시지 등 무엇이든 편하게 남겨주세요!'}
               </p>
             </div>
 
             {/* Category Selection Buttons */}
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-2">
-                문의 유형 선택
+                {language === 'en' ? 'Select Inquiry Type' : '문의 유형 선택'}
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {INQUIRY_CATEGORIES.map((cat) => {
+                {CATEGORIES.map((cat) => {
                   const isSelected = category === cat.id;
                   return (
                     <button
@@ -161,30 +187,30 @@ export const UserInquiryModal: React.FC<UserInquiryModalProps> = ({
             {/* Message Textarea */}
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5 flex justify-between">
-                <span>내용 입력</span>
-                <span className="text-[11px] text-slate-400">{message.length}자</span>
+                <span>{language === 'en' ? 'Your Message' : '내용 입력'}</span>
+                <span className="text-[11px] text-slate-400">{message.length} chars</span>
               </label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="내용을 자유롭게 작성해 주세요. (예: 4형식 문제 해설에 직/간목 구분 팁이 더 있었으면 좋겠어요, 다크모드 색상이 예뻐요 등)"
+                placeholder={language === 'en' ? 'Write your feedback or questions here...' : '내용을 자유롭게 작성해 주세요.'}
                 rows={4}
                 required
                 className="w-full bg-slate-950/80 border border-slate-700 rounded-2xl p-3.5 text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all resize-none shadow-inner"
               />
             </div>
 
-            {/* Contact / Email (Optional) */}
+            {/* Contact / Email */}
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1 flex items-center justify-between">
-                <span>답변 받을 이메일 or 연락처 <span className="text-slate-500 font-normal">(선택)</span></span>
-                {user?.name && <span className="text-[10px] text-indigo-300">작성자: {user.name}</span>}
+                <span>{language === 'en' ? 'Email for reply ' : '답변 받을 이메일 or 연락처 '}<span className="text-slate-500 font-normal">({language === 'en' ? 'Optional' : '선택'})</span></span>
+                {user?.name && <span className="text-[10px] text-indigo-300">{language === 'en' ? 'User: ' : '작성자: '}{user.name}</span>}
               </label>
               <input
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="답변을 원하시면 이메일을 적어주세요 (선택)"
+                placeholder={language === 'en' ? 'Email address if you would like a reply' : '답변을 원하시면 이메일을 적어주세요 (선택)'}
                 className="w-full bg-slate-950/80 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 transition-all shadow-inner"
               />
             </div>
@@ -196,7 +222,7 @@ export const UserInquiryModal: React.FC<UserInquiryModalProps> = ({
               className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-black text-sm sm:text-base shadow-xl shadow-purple-500/25 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
-              <span>{isSubmitting ? '전송하는 중...' : '소중한 의견 보내기'}</span>
+              <span>{isSubmitting ? (language === 'en' ? 'Sending...' : '전송하는 중...') : (language === 'en' ? 'Send Feedback' : '소중한 의견 보내기')}</span>
             </button>
           </form>
         )}
