@@ -238,15 +238,20 @@ function AppContent() {
       loadTotalPublicQuestions();
       refreshUserData(user.name);
 
-      // 📢 Check active push announcements with Firestore read-status sync
-      getActiveAnnouncements().then(async (list) => {
+      // 📢 Check active push announcements with Firestore read-status sync (신규 계정 가입 이전 공지 팝업 차단)
+      getActiveAnnouncements(user.name).then(async (list) => {
         setAnnouncementsList(list);
         if (list.length > 0) {
           const statuses = await getUserAnnouncementStatusMap(user.name);
           setAnnouncementStatusMap(statuses);
 
-          // Find first unread/unseen announcement
-          const unread = list.find(a => !statuses[a.id]?.isRead && !localStorage.getItem(`seen_announce_${user.name}_${a.id}`));
+          // Find first unread/unseen announcement (가입 시점 이후의 공지만 팝업)
+          const userCreatedAt = user.createdAt || 0;
+          const unread = list.find(a => {
+            const isUnread = !statuses[a.id]?.isRead && !localStorage.getItem(`seen_announce_${user.name}_${a.id}`);
+            const isAfterRegistration = !userCreatedAt || a.createdAt >= (userCreatedAt - 60000);
+            return isUnread && isAfterRegistration;
+          });
           if (unread) {
             setAnnouncementPopup(unread);
           }
@@ -1156,6 +1161,13 @@ function AppContent() {
     ? bookmarks.some(b => (b.sentence || b.question?.sentence || '').trim() === (currentQ.sentence || '').trim()) 
     : false;
 
+  // 📲 Check if app is running in PWA standalone mode or installed
+  const isAppStandalone = typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches || 
+    (window.navigator as any).standalone === true || 
+    localStorage.getItem('pwa_installed') === 'true'
+  );
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 selection:bg-indigo-500 selection:text-white">
       {isLoading && <LoadingOverlay text={loadingText} progress={progress} />}
@@ -1282,6 +1294,7 @@ function AppContent() {
           currentCycle={currentCycle}
           bookmarkCount={bookmarks.length}
           unreadNotificationCount={announcementsList.filter(a => !announcementStatusMap[a.id]?.isRead && !localStorage.getItem(`seen_announce_${user.name}_${a.id}`)).length}
+          isStandalone={isAppStandalone}
           onNavigate={(targetView) => {
             if (targetView === 'ranking_board') handleViewRanking();
             else if (targetView === 'db_view') handleViewDB();

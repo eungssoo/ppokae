@@ -2084,13 +2084,14 @@ export async function grantAdminGodMode(userName: string): Promise<{ success: bo
   }
 }
 
-// 📢 15-5. 전체 사용자 대상 실시간 푸시 공지 발송
+// 📢 15-5. 전체 사용자 또는 개인 타겟 실시간 푸시 공지 발송
 export async function sendGlobalAnnouncement(announcement: {
   title: string;
   content: string;
   badgeType: 'event' | 'notice' | 'update' | 'maintenance';
   rewardCoins?: number;
   authorName: string;
+  targetUserName?: string;
 }): Promise<{ success: boolean; id?: string; error?: string }> {
   try {
     const col = collection(db, 'system_announcements');
@@ -2099,14 +2100,15 @@ export async function sendGlobalAnnouncement(announcement: {
 
     const payload = removeUndefinedDeep({
       id: newDoc.id,
-      title: announcement.title,
-      content: announcement.content,
-      badgeType: announcement.badgeType,
+      title: announcement.title.trim(),
+      content: announcement.content.trim(),
+      badgeType: announcement.badgeType || 'notice',
       rewardCoins: announcement.rewardCoins || 0,
       createdAt: now,
-      expiresAt: now + (7 * 24 * 60 * 60 * 1000), // 7일 후 만료
+      expiresAt: now + (14 * 24 * 60 * 60 * 1000), // 14일 후 만료
       isActive: true,
-      authorName: announcement.authorName,
+      authorName: announcement.authorName || '관리자',
+      targetUserName: announcement.targetUserName ? announcement.targetUserName.trim() : null,
       serverTime: serverTimestamp()
     });
 
@@ -2118,8 +2120,8 @@ export async function sendGlobalAnnouncement(announcement: {
   }
 }
 
-// 📢 15-6. 활성화된 전체 공지 목록 조회
-export async function getActiveAnnouncements(): Promise<PushAnnouncement[]> {
+// 📢 15-6. 활성화된 공지 목록 조회 (userName 전달 시 해당 유저의 개인 공지 + 전체 공지만 필터링)
+export async function getActiveAnnouncements(userName?: string): Promise<PushAnnouncement[]> {
   try {
     const col = collection(db, 'system_announcements');
     const q = query(col, where('isActive', '==', true));
@@ -2128,6 +2130,13 @@ export async function getActiveAnnouncements(): Promise<PushAnnouncement[]> {
     const list: PushAnnouncement[] = [];
     snap.forEach(d => {
       const data = d.data();
+      const targetUser = data.targetUserName;
+
+      // 특정 유저 필터링 (개인 공지인 경우 본인에게만 노출)
+      if (userName && targetUser && targetUser !== userName) {
+        return;
+      }
+
       list.push({
         id: d.id,
         title: data.title,
@@ -2137,7 +2146,8 @@ export async function getActiveAnnouncements(): Promise<PushAnnouncement[]> {
         createdAt: data.createdAt || Date.now(),
         expiresAt: data.expiresAt,
         isActive: data.isActive ?? true,
-        authorName: data.authorName || '관리자'
+        authorName: data.authorName || '관리자',
+        targetUserName: data.targetUserName || undefined
       });
     });
 
@@ -2146,6 +2156,18 @@ export async function getActiveAnnouncements(): Promise<PushAnnouncement[]> {
   } catch (e) {
     console.warn("getActiveAnnouncements Error:", e);
     return [];
+  }
+}
+
+// 🗑️ 15-6-1. 공지 비활성화 / 삭제
+export async function deleteAnnouncement(announcementId: string): Promise<boolean> {
+  try {
+    const docRef = doc(db, 'system_announcements', announcementId);
+    await updateDoc(docRef, { isActive: false });
+    return true;
+  } catch (e) {
+    console.error("deleteAnnouncement Error:", e);
+    return false;
   }
 }
 

@@ -35,6 +35,7 @@ import {
   grantAdminGodMode, 
   sendGlobalAnnouncement, 
   getActiveAnnouncements, 
+  deleteAnnouncement,
   getAllUsersList, 
   adminUpdateUserCoins,
   adminInjectGhostRanking,
@@ -76,6 +77,8 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   const [newAnnounceContent, setNewAnnounceContent] = useState('');
   const [newAnnounceBadge, setNewAnnounceBadge] = useState<'event' | 'notice' | 'update' | 'maintenance'>('notice');
   const [newAnnounceReward, setNewAnnounceReward] = useState<number>(50);
+  const [announceTargetType, setAnnounceTargetType] = useState<'all' | 'individual'>('all');
+  const [targetUserName, setTargetUserName] = useState<string>('');
 
   // Reports State
   const [reports, setReports] = useState<QuestionReport[]>([]);
@@ -230,10 +233,15 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
     }
   };
 
-  // 📢 3. 전체 공지 발송 핸들러
+  // 📢 3. 전체 또는 개인 공지 발송 핸들러
   const handleSendAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAnnounceTitle.trim() || !newAnnounceContent.trim()) return;
+    if (announceTargetType === 'individual' && !targetUserName.trim()) {
+      onShowToast('안내', '발송할 대상 유저를 선택해 주세요.', 'error');
+      return;
+    }
+
     sound.playReward();
     setIsLoading(true);
 
@@ -243,11 +251,15 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
         content: newAnnounceContent.trim(),
         badgeType: newAnnounceBadge,
         rewardCoins: newAnnounceReward > 0 ? newAnnounceReward : undefined,
-        authorName: user.name
+        authorName: user.name,
+        targetUserName: announceTargetType === 'individual' ? targetUserName.trim() : undefined
       });
 
       if (res.success) {
-        onShowToast('📢 전체 푸시 공지 발송 완료!', '모든 접속자 화면에 공지 팝업이 실시간 브로드캐스트됩니다.', 'coin');
+        const targetMsg = announceTargetType === 'individual' 
+          ? `[${targetUserName}] 님에게 개인 맞춤 푸시 발송 완료!` 
+          : '모든 접속자 화면에 공지 팝업이 실시간 브로드캐스트됩니다.';
+        onShowToast('📢 푸시 공지 발송 완료!', targetMsg, 'coin');
         setNewAnnounceTitle('');
         setNewAnnounceContent('');
         setNewAnnounceReward(50);
@@ -255,6 +267,24 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
         setAnnouncements(updated);
       } else {
         onShowToast('오류', res.error || '공지 발송 실패', 'error');
+      }
+    } catch (e: any) {
+      onShowToast('오류', e.message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 🗑️ 공지 삭제/비활성화 핸들러
+  const handleDeleteAnnouncement = async (announcementId: string) => {
+    sound.playClick();
+    setIsLoading(true);
+    try {
+      const ok = await deleteAnnouncement(announcementId);
+      if (ok) {
+        onShowToast('✓ 공지 비활성화 완료', '공지가 성공적으로 비활성화되었습니다.', 'info');
+        const updated = await getActiveAnnouncements();
+        setAnnouncements(updated);
       }
     } catch (e: any) {
       onShowToast('오류', e.message, 'error');
@@ -737,8 +767,57 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
               <form onSubmit={handleSendAnnouncement} className="p-5 rounded-3xl bg-slate-800/80 border border-slate-700 space-y-4">
                 <h3 className="text-sm font-black text-white flex items-center gap-2">
                   <Send className="w-4 h-4 text-pink-400" />
-                  <span>실시간 전역 푸시 공지 발송하기</span>
+                  <span>실시간 푸시 공지 & 개인 맞춤 알림 발송</span>
                 </h3>
+
+                {/* 🎯 발송 대상 선택 (전체 유저 vs 특정 개인 유저) */}
+                <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-700/80 space-y-2">
+                  <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                    <span>🎯 발송 대상자 선택</span>
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setAnnounceTargetType('all')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        announceTargetType === 'all'
+                          ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-md'
+                          : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      🌐 전체 접속 유저 (전체 방송)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAnnounceTargetType('individual')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        announceTargetType === 'individual'
+                          ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md'
+                          : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      👤 특정 개인 유저 지정 발송
+                    </button>
+                  </div>
+
+                  {announceTargetType === 'individual' && (
+                    <div className="pt-2 animate-in fade-in">
+                      <label className="text-[10px] text-slate-400 mb-1 block">발송 대상 유저 선택:</label>
+                      <select
+                        value={targetUserName}
+                        onChange={e => setTargetUserName(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-950 border border-indigo-500/50 rounded-xl text-xs font-bold text-indigo-200 focus:outline-none"
+                      >
+                        <option value="">-- 발송할 유저를 선택하세요 --</option>
+                        {userList.map(u => (
+                          <option key={u.name} value={u.name}>
+                            {u.name} ({u.coins ?? 200} 코인, {u.tier || 'Bronze'})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
@@ -774,7 +853,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                     rows={3}
                     value={newAnnounceContent}
                     onChange={e => setNewAnnounceContent(e.target.value)}
-                    placeholder="모든 접속자에게 팝업으로 표시될 상세 내용을 입력하세요."
+                    placeholder="알림 팝업 및 보관함에 표시될 상세 내용을 입력하세요."
                     required
                     className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white placeholder-slate-500 focus:outline-none"
                   />
@@ -796,11 +875,11 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
 
                   <button
                     type="submit"
-                    disabled={isLoading || !newAnnounceTitle.trim()}
+                    disabled={isLoading || !newAnnounceTitle.trim() || (announceTargetType === 'individual' && !targetUserName.trim())}
                     className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white font-black text-xs sm:text-sm shadow-lg shadow-pink-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                   >
                     <Send className="w-4 h-4" />
-                    <span>전체 유저에게 푸시 발송</span>
+                    <span>{announceTargetType === 'individual' ? `[${targetUserName || '유저 선택'}] 개인 푸시 발송` : '전체 유저에게 푸시 발송'}</span>
                   </button>
                 </div>
               </form>
@@ -820,10 +899,19 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                     {announcements.map(ann => (
                       <div key={ann.id} className="p-4 rounded-2xl bg-slate-800/70 border border-slate-700/80 flex items-start justify-between gap-4">
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="px-2 py-0.5 rounded-md bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[10px] font-black uppercase">
                               {ann.badgeType}
                             </span>
+                            {ann.targetUserName ? (
+                              <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-black">
+                                👤 {ann.targetUserName} 전용
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-black">
+                                🌐 전체 대상
+                              </span>
+                            )}
                             <h5 className="text-sm font-bold text-white">{ann.title}</h5>
                             {ann.rewardCoins && ann.rewardCoins > 0 ? (
                               <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold">
@@ -836,6 +924,14 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                             발송일시: {new Date(ann.createdAt).toLocaleString()} • 작성자: {ann.authorName}
                           </span>
                         </div>
+
+                        <button
+                          onClick={() => handleDeleteAnnouncement(ann.id)}
+                          className="p-2 rounded-xl bg-slate-800 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 border border-slate-700 transition-all shrink-0"
+                          title="공지 삭제 / 비활성화"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     ))}
                   </div>

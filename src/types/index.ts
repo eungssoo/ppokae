@@ -89,6 +89,7 @@ export interface UserProfile {
   photoURL?: string;
   lastGeneratedAt?: number;
   isAdmin?: boolean;
+  createdAt?: number;
 }
 
 export interface SystemSettings {
@@ -112,6 +113,7 @@ export interface PushAnnouncement {
   expiresAt?: number;
   isActive: boolean;
   authorName: string;
+  targetUserName?: string; // 개인 특정 유저 발송 시 닉네임
 }
 
 export interface WeaknessRecord {

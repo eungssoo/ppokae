@@ -32,6 +32,7 @@ interface MainMenuViewProps {
   currentCycle: CycleInfo;
   bookmarkCount?: number;
   unreadNotificationCount?: number;
+  isStandalone?: boolean;
   onNavigate: (view: ViewType) => void;
   onStartDailyChallenge: () => void;
   onOpenGachaModal?: () => void;
@@ -48,6 +49,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
   currentCycle,
   bookmarkCount = 0,
   unreadNotificationCount = 0,
+  isStandalone = false,
   onNavigate,
   onStartDailyChallenge,
   onOpenGachaModal,
@@ -137,8 +139,8 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               </button>
             )}
 
-            {/* 📲 홈 화면 바로가기 추가 Quick Button */}
-            {onOpenInstallModal && (
+            {/* 📲 홈 화면 바로가기 추가 Quick Button (홈 화면으로 들어온 사람에게는 숨김) */}
+            {onOpenInstallModal && !isStandalone && (
               <button
                 onClick={() => {
                   sound.playStar();
