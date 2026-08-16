@@ -60,6 +60,7 @@ export interface Question {
   explanation: QuestionExplanation;
   components?: QuestionComponent[];
   difficulty?: string;
+  level?: string;
   createdAt?: any;
 }
 
