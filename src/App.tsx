@@ -211,6 +211,7 @@ function AppContent() {
         email: prof?.email || prev?.email,
         photoURL: prof?.photoURL || prev?.photoURL,
         isAdmin: !!prof?.isAdmin,
+        hasCompletedInitialSetup: prof?.hasCompletedInitialSetup ?? prev?.hasCompletedInitialSetup ?? false,
         createdAt: prof?.createdAt || prev?.createdAt
       };
       localStorage.setItem('ai_grammar_user', JSON.stringify(updated));
@@ -241,6 +242,11 @@ function AppContent() {
       setView('menu');
       loadTotalPublicQuestions();
       refreshUserData(user.name);
+
+      // 구글 로그인 유저가 최초 설정을 아직 안 했다면 팝업 띄우기
+      if (user.email && !user.hasCompletedInitialSetup) {
+        setIsInitialSetupModalOpen(true);
+      }
     } else {
       setView('login');
     }

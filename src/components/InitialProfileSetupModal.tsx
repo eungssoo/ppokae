@@ -24,9 +24,14 @@ export const InitialProfileSetupModal: React.FC<InitialProfileSetupModalProps> =
   onSave,
   isLoading,
 }) => {
-  const [name, setName] = useState<string>(user.name || '');
-  const [selectedAvatarId, setSelectedAvatarId] = useState<string>(user.currentAvatarId || 'lion');
+  const [name, setName] = useState<string>(user?.name || '');
+  const [selectedAvatarId, setSelectedAvatarId] = useState<string>(user?.currentAvatarId || 'lion');
   const [error, setError] = useState<string>('');
+
+  React.useEffect(() => {
+    if (user?.name) setName(user.name);
+    if (user?.currentAvatarId) setSelectedAvatarId(user.currentAvatarId);
+  }, [user?.name, user?.currentAvatarId]);
 
   if (!isOpen) return null;
 

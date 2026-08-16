@@ -1249,6 +1249,7 @@ export async function getUserProfileData(userName: string): Promise<Partial<User
         email: data.email,
         photoURL: data.photoURL,
         isAdmin,
+        hasCompletedInitialSetup: !!data.hasCompletedInitialSetup,
         createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : typeof data.createdAt === 'number' ? data.createdAt : Date.now()
       };
     }
