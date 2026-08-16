@@ -63,7 +63,8 @@ import {
   addXp,
   getUserProfileData,
   calculateTier,
-  getQuestionFormStatsByLevel
+  getQuestionFormStatsByLevel,
+  getRankingQuestionPoints
 } from './services/dbService';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
 import { generateBulkQuestions, generateNativeExpressions } from './services/geminiService';
@@ -262,12 +263,12 @@ function AppContent() {
     }
   };
 
-  // 1. PIN Login Handler
-  const handleLogin = async (name: string, pin: string) => {
+  // 1. PIN Login / Account Creation Handler
+  const handleLogin = async (name: string, pin: string, starterAvatarId?: string) => {
     sound.playClick();
     setIsLoading(true);
     setLoadingText('로그인 확인 중...');
-    const result = await authenticateUser(name, pin);
+    const result = await authenticateUser(name, pin, starterAvatarId);
     setIsLoading(false);
 
     if (result.success && result.profile) {
@@ -1002,7 +1003,8 @@ function AppContent() {
     if (isCorrect) {
       setCorrectCount(prev => prev + 1);
       if (quizMode === 'daily') {
-        setScore(prev => prev + 10);
+        const qPoints = getRankingQuestionPoints(currentQ, questionCount).points;
+        setScore(prev => prev + qPoints);
       }
     } else {
       saveIncorrectQuestion(user.name, currentQ, userInput, selectedDifficulty);

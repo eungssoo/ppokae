@@ -3,10 +3,17 @@ import { Sparkles, ArrowRight, ShieldCheck, User, KeyRound, UserPlus, Link2, Arr
 import { sound } from '../services/soundService';
 
 interface LoginViewProps {
-  onLogin: (name: string, pin: string) => void;
+  onLogin: (name: string, pin: string, starterAvatarId?: string) => void;
   onGoogleLogin?: () => void;
   isLoading: boolean;
 }
+
+const STARTER_AVATARS = [
+  { id: 'lion', name: '라이언', icon: '🦁', desc: '용기있는 학습자' },
+  { id: 'cat', name: '냥이', icon: '🐱', desc: '호기심 많은 분석가' },
+  { id: 'fire', name: '파이어', icon: '🔥', desc: '열정적인 도전자' },
+  { id: 'robot', name: '로봇', icon: '🤖', desc: '철저한 문법 마스터' },
+];
 
 export const LoginView: React.FC<LoginViewProps> = ({
   onLogin,
@@ -16,12 +23,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [showPinRegister, setShowPinRegister] = useState(false);
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
+  const [selectedStarterId, setSelectedStarterId] = useState('lion');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sound.playClick();
     if (!name.trim() || !pin.trim()) return;
-    onLogin(name.trim(), pin.trim());
+    onLogin(name.trim(), pin.trim(), selectedStarterId);
   };
 
   return (
@@ -88,7 +96,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               className="w-full py-3.5 px-4 bg-slate-800/90 hover:bg-slate-750 text-slate-200 hover:text-white rounded-2xl font-black text-xs sm:text-sm transition-all border border-slate-700 active:scale-95 flex items-center justify-center gap-2"
             >
               <UserPlus className="w-4 h-4 text-purple-400" />
-              <span>계정 생성 / PIN 로그인</span>
+              <span>무료 계정 생성 / PIN 로그인</span>
             </button>
           </div>
         ) : (
@@ -112,30 +120,81 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-3 pt-1">
-              <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="이름 (닉네임)"
-                  required
-                  className="w-full pl-11 pr-4 py-3 bg-slate-800/90 border border-slate-700 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all"
-                />
+            <form onSubmit={handleSubmit} className="space-y-3.5 pt-1">
+              <div>
+                <label className="text-[11px] font-bold text-slate-300 mb-1 block">
+                  1. 닉네임 설정 (무료)
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="원하는 닉네임 입력"
+                    required
+                    className="w-full pl-11 pr-4 py-3 bg-slate-800/90 border border-slate-700 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all"
+                  />
+                </div>
               </div>
 
-              <div className="relative">
-                <KeyRound className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
-                <input
-                  type="password"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                  placeholder="6자리 숫자 PIN (예: 123456)"
-                  required
-                  maxLength={6}
-                  className="w-full pl-11 pr-4 py-3 bg-slate-800/90 border border-slate-700 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 tracking-widest transition-all"
-                />
+              <div>
+                <label className="text-[11px] font-bold text-slate-300 mb-1 block">
+                  2. 6자리 비밀 PIN 번호
+                </label>
+                <div className="relative">
+                  <KeyRound className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="password"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                    placeholder="숫자 6자리 (예: 123456)"
+                    required
+                    maxLength={6}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-800/90 border border-slate-700 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 tracking-widest transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* 🦁 4종 스타터 아바타 선택 섹션 */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span>3. 대표 스타터 아바타 선택 (무료)</span>
+                  <span className="text-[10px] text-purple-300">4종 중 택1</span>
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {STARTER_AVATARS.map((avatar) => {
+                    const isSelected = selectedStarterId === avatar.id;
+                    return (
+                      <button
+                        key={avatar.id}
+                        type="button"
+                        onClick={() => {
+                          sound.playClick();
+                          setSelectedStarterId(avatar.id);
+                        }}
+                        className={`p-2 rounded-2xl border transition-all text-center flex flex-col items-center gap-1 ${
+                          isSelected
+                            ? 'bg-gradient-to-b from-purple-600/30 to-pink-600/30 border-pink-400 shadow-md shadow-pink-500/20 scale-105'
+                            : 'bg-slate-800/70 border-slate-700/80 hover:border-slate-600 opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <span className="text-2xl">{avatar.icon}</span>
+                        <span className={`text-[10px] font-black ${isSelected ? 'text-white' : 'text-slate-400'}`}>
+                          {avatar.name}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 💡 가챠 아바타 변경 안내 */}
+              <div className="p-3 bg-purple-950/50 border border-purple-500/30 rounded-2xl text-left flex items-start gap-2 shadow-inner">
+                <Sparkles className="w-4 h-4 text-amber-300 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  <strong className="text-pink-300">아바타 & 닉네임 변경</strong>: 닉네임과 아바타는 가입 후 언제든지 <strong>[🎰 아바타 소환소]</strong>에서 전설/신화 아바타를 소환하여 무료로 자유롭게 변경할 수 있습니다!
+                </p>
               </div>
 
               <button
@@ -143,16 +202,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 disabled={!name.trim() || pin.length < 6 || isLoading}
                 className="w-full py-3.5 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white rounded-2xl font-black text-sm transition-all shadow-lg active:scale-95 disabled:opacity-40 disabled:grayscale flex items-center justify-center gap-2"
               >
-                <span>시작하기 (신규 가입 시 🪙 200 코인)</span>
+                <span>시작하기 (신규 가입 시 🪙 200 코인 지급)</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
 
             {/* 💡 PIN 가입자 전용 데이터 백업 안내 배너 */}
-            <div className="p-3.5 bg-indigo-950/70 border border-indigo-500/30 rounded-2xl text-left flex items-start gap-2.5 shadow-inner">
+            <div className="p-3 bg-indigo-950/70 border border-indigo-500/30 rounded-2xl text-left flex items-start gap-2.5 shadow-inner">
               <Link2 className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                <strong className="text-amber-300">데이터 백업 안내</strong>: 닉네임과 PIN으로 가입한 후에도, 언제든지 <strong>[설정]</strong> 창에서 구글 계정을 연동하여 소중한 학습 기록과 코인을 안전하게 지킬 수 있습니다!
+                <strong className="text-amber-300">데이터 백업 안내</strong>: 가입 후 <strong>[프로필 설정]</strong>에서 구글 계정을 연동하면 학습 기록과 코인을 안전하게 영구 백업할 수 있습니다.
               </p>
             </div>
           </div>

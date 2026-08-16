@@ -134,8 +134,12 @@ export function calculateTier(xp: number = 0): { tier: string; minXp: number; ma
   }
 }
 
-// 1. 사용자 인증 (기본 200 코인 & 기본 50칸 북마크 & 4대 스타터 아바타 기본 지급)
-export async function authenticateUser(name: string, pin: string): Promise<{ success: boolean; profile?: UserProfile; isNew?: boolean; error?: string }> {
+// 1. 사용자 인증 (기본 200 코인 & 기본 50칸 북마크 & 4대 스타터 아바타 기본 지급 및 선택 아바타 즉시 장착)
+export async function authenticateUser(
+  name: string, 
+  pin: string, 
+  starterAvatarId?: string
+): Promise<{ success: boolean; profile?: UserProfile; isNew?: boolean; error?: string }> {
   try {
     if (!auth.currentUser) {
       await signInAnonymously(auth);
@@ -198,13 +202,15 @@ export async function authenticateUser(name: string, pin: string): Promise<{ suc
       }
     } else {
       const isAdmin = checkIsAdmin({ name: trimmedName, pin: formattedPin });
+      const selectedStarter = AVATAR_DATABASE.find(a => a.id === starterAvatarId) || AVATAR_DATABASE.find(a => a.id === 'lion');
+
       const newProfile: UserProfile = {
         name: trimmedName,
         pin: formattedPin,
         coins: 200,
         bookmarkLimit: 50,
-        avatar: '🦁',
-        currentAvatarId: 'lion',
+        avatar: selectedStarter?.icon || '🦁',
+        currentAvatarId: selectedStarter?.id || 'lion',
         unlockedAvatars: STARTER_AVATAR_IDS,
         xp: 0,
         tier: 'Bronze',
@@ -2293,4 +2299,51 @@ export async function claimCycleRankingReward(
     console.error("claimCycleRankingReward error:", e);
     return { success: false };
   }
+}
+
+// 🎯 16. 랭킹전 문제별 난이도 및 차등 배점 정보 계산 (Level 1: 5점, Level 2: 10점, Level 3: 15점, Level 4: 20점)
+export function getRankingQuestionPoints(question: Question, questionIndex?: number): {
+  levelLabel: string;
+  points: number;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+} {
+  const diff = question.difficulty || question.level || '';
+  const idx = typeof questionIndex === 'number' ? questionIndex : 1;
+
+  if (diff.includes('Level 1') || diff.includes('입문') || diff.includes('초급') || idx <= 2) {
+    return {
+      levelLabel: 'Level 1 (입문)',
+      points: 5,
+      badgeBg: 'bg-emerald-500/20',
+      badgeText: 'text-emerald-300',
+      badgeBorder: 'border-emerald-500/40'
+    };
+  }
+  if (diff.includes('Level 2') || diff.includes('중급') || (idx >= 3 && idx <= 5)) {
+    return {
+      levelLabel: 'Level 2 (중급)',
+      points: 10,
+      badgeBg: 'bg-blue-500/20',
+      badgeText: 'text-blue-300',
+      badgeBorder: 'border-blue-500/40'
+    };
+  }
+  if (diff.includes('Level 3') || diff.includes('고득점') || (idx >= 6 && idx <= 8)) {
+    return {
+      levelLabel: 'Level 3 (고득점)',
+      points: 15,
+      badgeBg: 'bg-purple-500/20',
+      badgeText: 'text-purple-300',
+      badgeBorder: 'border-purple-500/40'
+    };
+  }
+  return {
+    levelLabel: 'Level 4 (실전 마스터)',
+    points: 20,
+    badgeBg: 'bg-rose-500/20',
+    badgeText: 'text-rose-300',
+    badgeBorder: 'border-rose-500/40'
+  };
 }

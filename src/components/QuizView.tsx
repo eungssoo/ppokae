@@ -19,6 +19,7 @@ import confetti from 'canvas-confetti';
 import { Question, Option, QuizMode } from '../types';
 import { askAiTutor } from '../services/geminiService';
 import { sound } from '../services/soundService';
+import { getRankingQuestionPoints } from '../services/dbService';
 import { QuestionReportModal } from './QuestionReportModal';
 
 interface QuizViewProps {
@@ -61,6 +62,8 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const [aiAnswer, setAiAnswer] = useState<string>('');
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
   const [displayedOptions, setDisplayedOptions] = useState<Option[]>([]);
+
+  const scoreInfo = getRankingQuestionPoints(currentQuestion, questionIndex);
 
   // Reset state and randomly shuffle options when currentQuestion changes
   useEffect(() => {
@@ -330,10 +333,22 @@ export const QuizView: React.FC<QuizViewProps> = ({
               ))}
             </p>
 
-            <div className="mt-4 flex justify-center">
-              <span className="inline-block bg-slate-800 text-indigo-300 font-bold text-xs px-2.5 py-1 rounded-md border border-slate-700">
+            <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+              <span className="inline-block bg-slate-800 text-indigo-300 font-bold text-xs px-3 py-1 rounded-full border border-slate-700">
                 {currentQuestion.form}형식 문장
               </span>
+              {quizMode === 'daily' ? (
+                <span className={`inline-flex items-center gap-1.5 font-black text-xs px-3 py-1 rounded-full border ${scoreInfo.badgeBg} ${scoreInfo.badgeText} ${scoreInfo.badgeBorder} shadow-sm`}>
+                  <span>🎯 {scoreInfo.levelLabel}</span>
+                  <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px] text-white font-black">+{scoreInfo.points}점</span>
+                </span>
+              ) : (
+                currentQuestion.difficulty && (
+                  <span className={`inline-block font-bold text-xs px-3 py-1 rounded-full border ${scoreInfo.badgeBg} ${scoreInfo.badgeText} ${scoreInfo.badgeBorder}`}>
+                    {scoreInfo.levelLabel}
+                  </span>
+                )
+              )}
             </div>
           </div>
 
