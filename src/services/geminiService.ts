@@ -2,41 +2,46 @@ import { Question, ExpressionItem } from '../types';
 
 const LEVEL_RULES: Record<string, string> = {
   'Level 1 (입문/초급)': `
-- 대상: 중학 2~3학년 기초 수준 (단문 7~10단어)
+- 대상: 실전 기초 어법 (수능/토익 기초 어법, 단문 9~14단어)
+- 🚫 [절대 금지]: 'Tom', 'Jane', 'reads books in the library', 'ate an apple' 같은 초등학생 교과서식 유치한 문장 절대 금지!
+- ✨ [문맥]: IT, 비즈니스, 학교/연구실, 현대 실용 일상 등 성인/수험생에게 어울리는 세련된 현대 문장
 - 문법 범위:
-  1) be동사 및 일반동사의 3인칭 단수 현재 수일치 (he/she/it + -s/-es)
-  2) 명백한 시간 단서가 포함된 과거/현재/미래 시제 (yesterday, last night, every day, tomorrow 등 필수 포함)
-  3) 기본 조동사 (can, must, should + 동사원형)
-  4) 기본 to부정사 및 동명사 목적어 (want to-V, enjoy -ing)
-  5) 1~3형식 기본 문형`,
+  1) 주어-동사 수일치 (단수/복수 명사구, 전치사구 수식어 삽입 구조)
+  2) 명백한 시점 단서가 포함된 과거/현재/미래 시제 (yesterday, last week, next month, every morning 등)
+  3) 핵심 조동사 및 본동사 원형 (must, should, can, will + V)
+  4) 기본 to부정사 및 동명사 목적어 (plan to-V, finish -ing, decide to-V)
+  5) 1~3형식 필수 기본 문형`,
 
   'Level 2 (실력 중급)': `
-- 대상: 고교 1~2학년 수준 (복문 10~15단어)
+- 대상: 고교 1~2학년 모의고사 & 토익 700+ 수준 (복문 12~18단어)
+- ✨ [문맥]: 기업 업무, 시사, 과학 기술, 인터뷰, 학술 연구 맥락의 자연스러운 문장
 - 문법 범위:
-  1) 관계대명사(who, which, that, whose, what) 및 관계부사(where, when, why)
-  2) 5형식 목적격 보어 (사역동사 make/have/let + 원형, 지각동사 see/hear + 원형/-ing, 일반동사 allow/encourage/ask + to-V)
-  3) 수동태 (be + p.p., 조동사 + be p.p.)
-  4) 현재완료 시제 (since + 과거시점, for + 기간)
-  5) 접속사 vs 전치사 구별 (although vs despite, because vs because of, while vs during)
-  6) 감정 분사형용사 (interesting vs interested, confusing vs confused)`,
+  1) 관계대명사(who, which, that, whose, what) 및 관계부사(where, when, why)의 적절한 쓰임
+  2) 5형식 목적격 보어 (사역동사 make/have/let + 원형, 지각동사 see/hear/watch + 원형/-ing, 요구/허가동사 allow/require/encourage/ask + to-V)
+  3) 수동태와 능동태 구별 (be + p.p., have been p.p., 능동 vs 수동 목적어 유무)
+  4) 현재완료 vs 단순과거 구별 (since + 과거시점, for + 기간)
+  5) 접속사 vs 전치사 구별 (although vs despite/in spite of, because vs because of, while vs during)
+  6) 감정 분사형용사 (surprising vs surprised, disappointing vs disappointed)`,
 
   'Level 3 (고득점 도약)': `
-- 대상: 고3 수능 / 모의고사 수준 (긴 복문 14~20단어)
+- 대상: 수능 1~2등급 & 토익 850+ 킬러 어법 (긴 복문 15~22단어)
+- ✨ [문맥]: 경제 경영, 인문 사회, 환경 과학, 법률 계약 등 심층 학술 및 비즈니스 지문
 - 문법 범위:
-  1) 분사구문 (능동 -ing, 수동 p.p., Having p.p., 접속사 생략/유지)
-  2) 가정법 (가정법 과거 If S had/were..., 가정법 과거완료 If S had p.p...., 혼합가정법, without/but for)
-  3) 도치 구문 (부정어 도치 Never/Hardly/Seldom + 조동사 + S + V, Only 부사구 도치)
-  4) 주장/제안/요구/명령 동사 (insist, suggest, demand, require, recommend + that + S + (should) 동사원형)
-  5) 복합관계대명사/부사 (whoever, whomever, whatever, wherever, however)`,
+  1) 분사구문 (능동 -ing, 수동 p.p., 완료분사구문 Having p.p., 접속사가 생략되지 않은 분사구문)
+  2) 가정법 (가정법 과거 If S were/Ved, 가정법 과거완료 If S had p.p., 혼합가정법, without / but for)
+  3) 도치 구문 (부정어 도치 Never / Rarely / Seldom / Hardly + 조동사 + S + V, Only 부사구 도치)
+  4) 주장/제안/요구/명령 동사 (insist, suggest, demand, recommend, request + that + S + (should) 동사원형)
+  5) 복합관계대명사/부사 (whoever, whichever, whatever, wherever, however)`,
 
   'Level 4 (실전 마스터)': `
-- 대상: 토익 850+ / 편입 / 공무원 영어 수준 (전문/학술/비즈니스 16~25단어)
+- 대상: 수능 1등급 만점 / 토익 950+ / 텝스 / 공무원 영어 수준 (전문/학술/계약 18~26단어)
+- ✨ [문맥]: 글로벌 경제 분석, 전문 학술 논문, 비즈니스 파트너십 계약, 첨단 과학 기사
 - 문법 범위:
-  1) 고급 접속사 및 전치사구 (provided that, as long as, in the event that, so that, given that)
-  2) 어휘와 품사 자리가 결합된 구조 분석 문제 (명사/형용사/부사/동사 파생어 자리 채우기)
-  3) 병렬 구조 (not only A but also B, either A or B, neither A nor B)
-  4) 특수 가정법 및 도치 (Had it not been for, Were it not for, Should you have any questions)
-  5) 동명사 및 부정사 관용 표현 (have difficulty -ing, look forward to -ing, be committed to -ing)`
+  1) 고급 조건 접속사 및 전치사구 (provided that, as long as, in the event that, given that, regardless of)
+  2) 문장 구조 분석 및 복합 파생어 어휘/품사 결정 (명사/형용사/부사/동사 파생어 변별)
+  3) 상관접속사 및 엄격한 병렬 구조 (not only A but also B, neither A nor B, either A or B)
+  4) 특수 가정법 및 if 생략 도치 (Had it not been for, Were it not for, Should you require any assistance)
+  5) 동명사 및 부정사 고급 관용 표현 (have difficulty -ing, look forward to -ing, be dedicated to -ing, with a view to -ing)`
 };
 
 // Helper: 문장 형식 1~5 정규화
@@ -91,13 +96,19 @@ async function generateSingleBatch(
     }
   }
 
-  const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사 및 출제위원장입니다.
+  const systemPrompt = `당신은 대한민국 최고의 수능/EBS/토익 1타 강사이자 국가대표 영문법 출제위원장입니다.
 제시된 난이도 규칙에 맞춰 객관식 4지선다 영문법 문제를 정확히 ${batchCount}개 생성하세요.
 
-[🚨 출제 원칙]
-1. [100% 한국어 상세 해설] feedback, chunk_pattern, nuance, translation 모두 자연스럽고 명쾌한 한국어로 작성.
-2. [1~5형식만 허용] form 필드는 1, 2, 3, 4, 5 정수만 허용.
-3. [단 1개의 유일 정답] 명백한 시간/문맥 단서를 부여하여 논란의 여지가 없는 1개 정답 및 3개 오답 출제.`;
+[🚨 엄격한 고품격 출제 헌장]
+1. 🚫 [유치한 초등 예문 절대 금지]
+   - 'Tom', 'Jane', 'reads books in the library', 'ate an apple', 'goes to school' 같은 초등학생 교과서식의 진부하고 유치한 문장은 엄격히 금지합니다.
+2. ✨ [실전 수능/토익급 세련된 문맥 필수]
+   - 실제 수능특강, 고교 모의고사, 토익 800+, 비즈니스, 테크, 문화, 학술 맥락의 자연스럽고 품격 있는 현대 영어 문장으로만 출제하세요.
+3. 🎯 [100% 한국어 족집게 해설]
+   - 정답뿐만 아니라 오답 3개에도 '왜 틀렸는지' 명쾌한 한국어 피드백(feedback)을 작성하세요.
+   - chunk_pattern, nuance, translation 모두 1타 강사 특유의 명쾌한 한국어로 작성하세요.
+4. [1~5형식만 허용] form 필드는 1, 2, 3, 4, 5 정수만 허용.
+5. [단 1개의 유일 정답] 명백한 시간/문맥 단서를 부여하여 복수 정답 논란이 없는 완벽한 문제를 출제하세요.`;
 
   let userPrompt = `난이도: ${difficultyLabel}\n[기준]\n${matchedRule}\n`;
   if (weaknessFocus) {
@@ -573,21 +584,27 @@ export async function generateRankingCycleQuestions(
 ): Promise<{ success: boolean; questions?: Question[]; error?: string }> {
   const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash'];
 
-  const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사이자 공인 랭킹전 출제위원장입니다.
+  const systemPrompt = `당신은 대한민국 최고의 수능/EBS/토익 1타 강사이자 공인 랭킹전 국가대표 출제위원장입니다.
 오늘의 실시간 명예의 전당 랭킹전(${cycleName})을 위해 객관식 4지선다 영문법 문제를 **정확히 10문제** JSON 배열로 생성하세요.
 
+[🚨 엄격한 고품격 출제 헌장]
+1. 🚫 [유치한 초등 예문 절대 금지]
+   - 'Tom', 'Jane', 'reads books in the library', 'ate an apple', 'goes to school' 같은 초등학생 교과서식 유치한 문장은 엄격히 금지합니다.
+2. ✨ [실전 수능/토익급 세련된 문맥 필수]
+   - 실제 수능특강, 고교 모의고사, 토익 800+, 비즈니스, 테크, 문화, 학술 맥락의 자연스럽고 품격 있는 현대 영어 문장으로만 출제하세요.
+
 [🚨 난이도별 엄격한 문항 배분 원칙 - 정확히 10문제]
-1. 1~2번 (2문제): Level 1 (기초 수일치, 명백한 시간 단서 시제, 조동사)
-2. 3~5번 (3문제): Level 2 (5형식 사역/지각, 관계대명사, 수동태)
-3. 6~8번 (3문제): Level 3 (분사구문, 부정어 도치, 당위성 insist that 동사원형)
-4. 9~10번 (2문제): Level 4 (특수 도치 Hardly had S p.p., 고급 조건 접속사 provided that)
+1. 1~2번 (2문제): Level 1 (실전 기초 수일치, 명백한 시간 단서 시제, 핵심 조동사)
+2. 3~5번 (3문제): Level 2 (5형식 사역/지각, 관계대명사/관계부사, 수동태)
+3. 6~8번 (3문제): Level 3 (분사구문, 부정어 도치, 당위성 insist that 동사원형, 가정법)
+4. 9~10번 (2문제): Level 4 (특수 도치 Hardly had S p.p., 고급 조건 접속사 provided that, 복합 품사 변별)
 
 [출제 규칙]
 - form 필드는 반드시 1, 2, 3, 4, 5 정수만 사용
-- 100% 한국어 상세 해설(options feedback, explanation chunk_pattern, nuance, translation)`;
+- 100% 한국어 족집게 해설(정답 및 오답 3개 모두에 feedback, chunk_pattern, nuance, translation)`;
 
   const userPrompt = `오늘의 랭킹전 회차: ${cycleId} (${cycleName})
-정확히 10개의 문제를 JSON 배열로 반환하세요.`;
+정확히 10개의 고품격 수능/토익 영문법 문제를 JSON 배열로 반환하세요.`;
 
   const payload = {
     contents: [{ parts: [{ text: userPrompt }] }],
