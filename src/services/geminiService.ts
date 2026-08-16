@@ -346,7 +346,7 @@ export async function askAiTutor(
     systemInstruction: { parts: [{ text: systemPrompt }] },
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 1000
+      maxOutputTokens: 4096
     }
   };
 
