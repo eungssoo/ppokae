@@ -3125,3 +3125,81 @@ export function getRankingQuestionPoints(question: Question, questionIndex?: num
     badgeBorder: 'border-rose-500/40'
   };
 }
+
+export interface LevelGatingInfo {
+  level: number;
+  levelLabel: string;
+  tierCap: string;
+  tierCapNotice: string;
+  coinsReward: number;
+  xpReward: number;
+  badgeBg: string;
+  badgeText: string;
+  badgeBorder: string;
+  targetDesc: string;
+}
+
+// 💡 17. 난이도별 승급 한도 & 보상 & 가이드 정보 조회
+export function getLevelGatingInfo(level: number | string): LevelGatingInfo {
+  let lvl = 1;
+  if (typeof level === 'number') lvl = level;
+  else if (typeof level === 'string') {
+    const match = level.match(/\d+/);
+    if (match) lvl = Number(match[0]);
+  }
+
+  if (lvl === 1) {
+    return {
+      level: 1,
+      levelLabel: 'Level 1 (입문/초급)',
+      tierCap: '🥈 실버 & B등급까지',
+      tierCapNotice: '1단계 문제는 실버 티어 & B등급 마스터리까지 올릴 수 있습니다.',
+      coinsReward: 1,
+      xpReward: 7,
+      badgeBg: 'bg-emerald-500/20',
+      badgeText: 'text-emerald-300',
+      badgeBorder: 'border-emerald-500/40',
+      targetDesc: '중2~중3 기초 문장 구조 및 기본 어휘'
+    };
+  }
+  if (lvl === 2) {
+    return {
+      level: 2,
+      levelLabel: 'Level 2 (실력 중급)',
+      tierCap: '🥇 골드 & A등급까지',
+      tierCapNotice: '2단계 문제를 풀면 골드 티어 & A등급 마스터리까지 올릴 수 있습니다.',
+      coinsReward: 3,
+      xpReward: 10,
+      badgeBg: 'bg-blue-500/20',
+      badgeText: 'text-blue-300',
+      badgeBorder: 'border-blue-500/40',
+      targetDesc: '고1~고2 표준 문장 구조 및 핵심 어휘'
+    };
+  }
+  if (lvl === 3) {
+    return {
+      level: 3,
+      levelLabel: 'Level 3 (고득점 도약)',
+      tierCap: '💎 다이아 & 플래티넘까지',
+      tierCapNotice: '3단계 문제를 풀면 플래티넘 및 다이아몬드 티어까지 올릴 수 있습니다.',
+      coinsReward: 5,
+      xpReward: 13,
+      badgeBg: 'bg-purple-500/20',
+      badgeText: 'text-purple-300',
+      badgeBorder: 'border-purple-500/40',
+      targetDesc: '고3~수능 심화 복합 문장 및 고급 어휘'
+    };
+  }
+  return {
+    level: 4,
+    levelLabel: 'Level 4 (실전 마스터)',
+    tierCap: '👑 마스터 & S등급 완전 정복!',
+    tierCapNotice: '4단계 실전 문제를 풀면 천상계 마스터 티어 & S등급 절대 마스터 획득!',
+    coinsReward: 7,
+    xpReward: 16,
+    badgeBg: 'bg-rose-500/20',
+    badgeText: 'text-rose-300',
+    badgeBorder: 'border-rose-500/40',
+    targetDesc: '토익/편입/공무원 실전 기출 수준의 고난도 문장'
+  };
+}

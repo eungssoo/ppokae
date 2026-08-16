@@ -19,7 +19,7 @@ import confetti from 'canvas-confetti';
 import { Question, Option, QuizMode } from '../types';
 import { askAiTutor } from '../services/geminiService';
 import { sound } from '../services/soundService';
-import { getRankingQuestionPoints } from '../services/dbService';
+import { getRankingQuestionPoints, getLevelGatingInfo } from '../services/dbService';
 import { QuestionReportModal } from './QuestionReportModal';
 
 interface QuizViewProps {
@@ -64,6 +64,21 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const [displayedOptions, setDisplayedOptions] = useState<Option[]>([]);
 
   const scoreInfo = getRankingQuestionPoints(currentQuestion, questionIndex);
+
+  let qLevel = 1;
+  if (currentQuestion.level) {
+    const match = String(currentQuestion.level).match(/\d+/);
+    if (match) qLevel = Number(match[0]);
+  } else if (currentQuestion.difficulty) {
+    const match = String(currentQuestion.difficulty).match(/\d+/);
+    if (match) qLevel = Number(match[0]);
+  } else if (quizMode === 'daily') {
+    if (questionIndex <= 2) qLevel = 1;
+    else if (questionIndex <= 5) qLevel = 2;
+    else if (questionIndex <= 8) qLevel = 3;
+    else qLevel = 4;
+  }
+  const levelGating = getLevelGatingInfo(qLevel);
 
   // Reset state and randomly shuffle options when currentQuestion changes
   useEffect(() => {
@@ -343,12 +358,22 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px] text-white font-black">+{scoreInfo.points}점</span>
                 </span>
               ) : (
-                currentQuestion.difficulty && (
-                  <span className={`inline-block font-bold text-xs px-3 py-1 rounded-full border ${scoreInfo.badgeBg} ${scoreInfo.badgeText} ${scoreInfo.badgeBorder}`}>
-                    {scoreInfo.levelLabel}
-                  </span>
-                )
+                <span className={`inline-flex items-center gap-1 font-bold text-xs px-3 py-1 rounded-full border ${levelGating.badgeBg} ${levelGating.badgeText} ${levelGating.badgeBorder}`}>
+                  <span>🎯 {levelGating.levelLabel}</span>
+                </span>
               )}
+
+              {/* 🪙 코인 보상 배지 */}
+              <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-black px-3 py-1 rounded-full flex items-center gap-1">
+                <span>🪙</span>
+                <span>정답 시 +{levelGating.coinsReward} 코인</span>
+              </span>
+
+              {/* 📈 랭크 승급 한도 배지 */}
+              <span className="bg-slate-800/90 text-slate-300 border border-slate-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1" title={levelGating.tierCapNotice}>
+                <span>📈</span>
+                <span>승급 한도: {levelGating.tierCap}</span>
+              </span>
             </div>
           </div>
 

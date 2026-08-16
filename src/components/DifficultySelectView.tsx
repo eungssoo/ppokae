@@ -1,7 +1,8 @@
 import React from 'react';
-import { ArrowLeft, ArrowRight, Zap, Sparkles, Target, PenTool, Clock, Coins, BookOpen } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Zap, Sparkles, Target, PenTool, Clock, Coins, BookOpen, ShieldAlert, Award } from 'lucide-react';
 import { DifficultyLevel, ViewType } from '../types';
 import { sound } from '../services/soundService';
+import { getLevelGatingInfo } from '../services/dbService';
 
 export const DIFFICULTY_LEVELS: DifficultyLevel[] = [
   { level: 1, label: 'Level 1 (입문/초급)', desc: '기본적인 어휘와 단순한 문장 구조 (중2~중3 수준)' },
@@ -47,9 +48,9 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
       default:
         return {
           title: '일반 퀴즈 풀기',
-          subtitle: '공용 DB에서 선택한 난이도의 10문제를 무작위로 추출하여 풉니다.',
+          subtitle: '공용 DB에서 선택한 난이도의 10문제를 1~5형식 골고루 추출하여 풉니다.',
           icon: <PenTool className="w-6 h-6 text-emerald-400" />,
-          badge: '정답 시 문제당 +5 코인 적립',
+          badge: '난이도별 코인 차등 지급 (최대 +7 코인)',
         };
     }
   };
@@ -87,7 +88,7 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
         </div>
 
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-3 bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
             <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
             <span>{header.badge}</span>
@@ -101,10 +102,22 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
           </p>
         </div>
 
+        {/* 💡 난이도 & 랭크 승급 한도 친절 가이드 배너 */}
+        <div className="bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 border border-amber-500/30 rounded-2xl p-4 mb-6 text-left shadow-sm">
+          <div className="flex items-center gap-2 mb-1 text-amber-300 font-black text-xs sm:text-sm">
+            <Award className="w-4 h-4 text-amber-400 animate-pulse" />
+            <span>💡 난이도별 승급 한도 & 레벨 해금 규칙</span>
+          </div>
+          <p className="text-slate-300 text-xs leading-relaxed">
+            쉬운 문제만 반복해서 풀면 승급 한도가 제한됩니다. <strong className="text-slate-200">1단계(실버까지)</strong> ➔ <strong className="text-yellow-300">2단계(골드까지)</strong> ➔ <strong className="text-cyan-300">3단계(다이아까지)</strong> ➔ <strong className="text-pink-300">4단계(👑 마스터 최종 승급)</strong> 등 상위 난이도에 도전하여 최고의 랭크에 도달해 보세요!
+          </p>
+        </div>
+
         {/* Level List */}
         <div className="flex flex-col gap-3.5">
           {DIFFICULTY_LEVELS.map((levelInfo) => {
             const count = getCountForLevel(levelInfo.level);
+            const gating = getLevelGatingInfo(levelInfo.level);
 
             return (
               <button
@@ -116,31 +129,44 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
                 disabled={isLoading}
                 className="group p-5 bg-slate-800/60 hover:bg-indigo-500/10 border border-slate-700/80 hover:border-indigo-500/50 rounded-2xl transition-all shadow-sm hover:shadow-md text-left flex items-center justify-between active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <div>
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                <div className="flex-1 pr-2">
+                  <div className="flex flex-wrap items-center gap-2 mb-1.5">
                     <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 font-black text-xs flex items-center justify-center border border-indigo-500/30">
                       {levelInfo.level}
                     </span>
                     <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-indigo-300 transition-colors">
                       {levelInfo.label}
                     </h3>
+                    
+                    {/* 코인 & 경험치 보상 */}
                     <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Coins className="w-3 h-3 text-amber-400" />
-                      <span>
-                        정답 시 {levelInfo.level === 1 ? '+1' : levelInfo.level === 2 ? '+3' : levelInfo.level === 3 ? '+5' : '+7'} 코인
-                      </span>
+                      <span>정답 시 +{gating.coinsReward} 코인 (+{gating.xpReward} XP)</span>
                     </span>
+
+                    {/* 승급 한도 뱃지 */}
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${gating.badgeBg} ${gating.badgeText} ${gating.badgeBorder}`}>
+                      📈 {gating.tierCap}
+                    </span>
+
                     <span className="bg-slate-700/80 text-slate-300 border border-slate-600 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
                       <BookOpen className="w-3 h-3 text-indigo-400" />
                       <span>{count}문제 준비됨</span>
                     </span>
                   </div>
-                  <p className="text-slate-400 text-xs sm:text-sm font-medium">
+
+                  <p className="text-slate-300 text-xs sm:text-sm font-medium mb-1">
                     {levelInfo.desc}
                   </p>
+
+                  {/* 승급 친절 가이드 */}
+                  <div className="text-[11px] text-indigo-300/90 font-medium flex items-center gap-1.5 mt-1">
+                    <span className="text-amber-300">🎯</span>
+                    <span>{gating.tierCapNotice}</span>
+                  </div>
                 </div>
 
-                <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all flex-shrink-0 ml-4" />
+                <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all flex-shrink-0 ml-2" />
               </button>
             );
           })}
