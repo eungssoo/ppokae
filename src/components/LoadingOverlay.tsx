@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Brain, Zap, Clock, BookOpen, CheckCircle2 } from 'lucide-react';
+import { Sparkles, Clock, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface LoadingOverlayProps {
   text?: string;
@@ -11,7 +11,7 @@ const STAGE_MESSAGES = [
   { icon: '🧠', text: '1~5형식 문법 원리와 매력적인 오답 함정을 정밀 설계 중입니다...' },
   { icon: '🎯', text: '100% 한국어 맞춤 해설과 청크 패턴 뉘앙스를 검수하는 중입니다...' },
   { icon: '💎', text: '단 1개의 유일 정답과 4지선다 보기를 최적화하고 있습니다...' },
-  { icon: '🚀', text: '초고속 4채널 병렬 AI 엔진이 문제 팩을 패키징 중입니다...' },
+  { icon: '🚀', text: '초고속 병렬 AI 엔진이 문제 팩을 패키징 중입니다...' },
   { icon: '✨', text: '마무리 검수가 완료되었습니다! 곧 문제가 열립니다...' },
 ];
 
@@ -45,12 +45,23 @@ const GRAMMAR_TIPS = [
     tag: '전치사의 목적어',
     tip: '전치사(in, at, for, of, without 등) 바로 뒤에는 [동명사 -ing] 또는 [명사]만 올 수 있습니다!',
     example: 'Thank you for helping me.'
+  },
+  {
+    tag: '당위성 동사 + should 생략',
+    tip: 'insist, suggest, demand, order 뒤 that절에는 [동사원형]이 옵니다! (should 생략)',
+    example: 'She insisted that he be on time. (was ❌)'
+  },
+  {
+    tag: '부정어 도치 공식',
+    tip: 'Never, Seldom, Hardly, Not only가 문두에 오면 [조동사/be동사 + 주어 + 본동사]로 도치됩니다!',
+    example: 'Never have I seen such a beautiful sight.'
   }
 ];
 
 export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ text = '처리 중...', progress = 0 }) => {
   const [stageIdx, setStageIdx] = useState(0);
   const [tipIdx, setTipIdx] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [smoothProgress, setSmoothProgress] = useState(progress > 0 ? progress : 10);
 
@@ -62,21 +73,22 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ text = '처리 �
     return () => clearInterval(timer);
   }, []);
 
-  // 2. Stage messages rotation (every 2.5s)
+  // 2. Stage messages rotation (every 3s)
   useEffect(() => {
     const stageTimer = setInterval(() => {
       setStageIdx(prev => (prev + 1) % STAGE_MESSAGES.length);
-    }, 2500);
+    }, 3000);
     return () => clearInterval(stageTimer);
   }, []);
 
-  // 3. Grammar tip rotation (every 3.8s)
+  // 3. Grammar tip rotation (여유롭게 읽을 수 있도록 8.5초로 연장 + 마우스 올리면 일시정지)
   useEffect(() => {
+    if (isPaused) return;
     const tipTimer = setInterval(() => {
       setTipIdx(prev => (prev + 1) % GRAMMAR_TIPS.length);
-    }, 3800);
+    }, 8500);
     return () => clearInterval(tipTimer);
-  }, []);
+  }, [isPaused]);
 
   // 4. Smooth visual progress animation
   useEffect(() => {
@@ -86,12 +98,22 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ text = '처리 �
       const progressTimer = setInterval(() => {
         setSmoothProgress(prev => {
           if (prev >= 92) return 92;
-          return prev + Math.random() * 8 + 2;
+          return prev + Math.random() * 6 + 1.5;
         });
-      }, 400);
+      }, 500);
       return () => clearInterval(progressTimer);
     }
   }, [progress]);
+
+  const handlePrevTip = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTipIdx(prev => (prev - 1 + GRAMMAR_TIPS.length) % GRAMMAR_TIPS.length);
+  };
+
+  const handleNextTip = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTipIdx(prev => (prev + 1) % GRAMMAR_TIPS.length);
+  };
 
   const currentStage = STAGE_MESSAGES[stageIdx];
   const currentTip = GRAMMAR_TIPS[tipIdx];
@@ -133,7 +155,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ text = '처리 �
         </div>
 
         {/* Progress Bar & Percentage */}
-        <div className="w-full mb-6">
+        <div className="w-full mb-5">
           <div className="flex justify-between items-center text-[11px] font-mono font-bold text-slate-400 mb-1.5 px-1">
             <span className="flex items-center gap-1">
               <Clock className="w-3 h-3 text-indigo-400" />
@@ -150,28 +172,63 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ text = '처리 �
           </div>
         </div>
 
-        {/* 💡 1타 강사 실전 꿀팁 카드 (지루하지 않게 3.8초마다 회전) */}
-        <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-left shadow-lg relative overflow-hidden transition-all">
+        {/* 💡 1타 강사 실전 꿀팁 카드 (여유로운 8.5초 회전 + 수동 이전/다음 탐색 지원) */}
+        <div 
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
+          className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 text-left shadow-lg relative overflow-hidden transition-all group"
+        >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
               <BookOpen className="w-3.5 h-3.5 text-amber-400" />
               <span className="text-[11px] font-black text-amber-300 uppercase tracking-wide">
-                1타 강사 수능/토익 족집게 Tip
+                1타 강사 족집게 Tip
               </span>
             </div>
-            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[9px] font-black">
-              {currentTip.tag}
-            </span>
+
+            <div className="flex items-center gap-1.5">
+              <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[9px] font-black">
+                {currentTip.tag}
+              </span>
+              <span className="text-[10px] font-mono text-slate-500">
+                {tipIdx + 1}/{GRAMMAR_TIPS.length}
+              </span>
+            </div>
           </div>
 
-          <p className="text-slate-200 text-xs font-bold leading-relaxed mb-1.5">
+          <p className="text-slate-200 text-xs font-bold leading-relaxed mb-2">
             {currentTip.tip}
           </p>
 
-          <div className="bg-slate-950/80 rounded-xl p-2 border border-slate-800/80">
+          <div className="bg-slate-950/80 rounded-xl p-2.5 border border-slate-800/80 mb-2">
             <span className="text-[10px] font-mono text-emerald-400 block font-bold">
               예시: {currentTip.example}
             </span>
+          </div>
+
+          {/* Tips Navigation Controls */}
+          <div className="flex justify-between items-center pt-1 text-[10px] text-slate-400">
+            <span className="text-[9px] text-slate-500">
+              {isPaused ? '⏸️ 일시정지됨' : '⏱️ 8.5초마다 자동 회전 (마우스 올리면 멈춤)'}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handlePrevTip}
+                className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all border border-slate-700"
+                title="이전 팁"
+              >
+                <ChevronLeft className="w-3 h-3" />
+              </button>
+              <button
+                type="button"
+                onClick={handleNextTip}
+                className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all border border-slate-700"
+                title="다음 팁"
+              >
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         </div>
 

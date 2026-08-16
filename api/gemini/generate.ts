@@ -31,7 +31,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { model = 'gemini-flash-latest', payload } = req.body || {};
+    const { model = 'gemini-3.5-flash-lite', payload } = req.body || {};
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
