@@ -18,10 +18,10 @@ export default async function handler(req: any, res: any) {
 
   try {
     const { model = 'gemini-2.5-flash', payload } = req.body || {};
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || 'AIzaSyDtDBLE5hjD8gJzAheQttUxWyNv5JwJ1mo';
 
     if (!apiKey) {
-      return res.status(500).json({ error: 'GEMINI_API_KEY is not configured in Vercel Environment Variables.' });
+      return res.status(500).json({ error: 'GEMINI_API_KEY is not configured.' });
     }
 
     if (!payload) {
