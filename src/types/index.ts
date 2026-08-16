@@ -70,6 +70,9 @@ export interface FormMastery {
   correct: number;
   accuracy: number;
   grade: 'S' | 'A' | 'B' | 'C';
+  masteryScore?: number;
+  nextGradeTarget?: number;
+  progressPercent?: number;
 }
 
 export interface UserProfile {

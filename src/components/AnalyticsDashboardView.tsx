@@ -152,30 +152,57 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
           </div>
         </div>
 
-        {/* 🧩 3. 1~5형식 문법 마스터리 카드 리스트 */}
+        {/* 🧩 3. 1~5형식 문법 마스터리 카드 리스트 (누적 정답 수 기반 마스터리 점수제) */}
         <div className="mb-6">
-          <h3 className="text-base sm:text-lg font-black text-white mb-3 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <span>1~5형식 문형별 마스터리 분석</span>
-          </h3>
+          <div className="flex justify-between items-end mb-3">
+            <div>
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <span>1~5형식 문형별 마스터리 분석</span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                문제를 풀 때마다 누적 정답 수와 숙련도 점수가 상승하여 S랭크(150정답)로 승급합니다.
+              </p>
+            </div>
+            <span className="text-[11px] font-bold text-indigo-300 bg-indigo-500/20 border border-indigo-500/30 px-2.5 py-1 rounded-lg">
+              3개월 마스터 챌린지
+            </span>
+          </div>
 
           <div className="space-y-2.5">
             {masteryStats.formMasteries.map((fm) => {
               const info = FORM_NAMES[fm.form];
               let gradeBg = 'bg-slate-700 text-slate-300';
-              if (fm.grade === 'S') gradeBg = 'bg-amber-500 text-slate-950 font-black shadow-[0_0_10px_rgba(245,158,11,0.4)]';
-              else if (fm.grade === 'A') gradeBg = 'bg-emerald-500 text-white font-black';
-              else if (fm.grade === 'B') gradeBg = 'bg-blue-500 text-white font-bold';
+              let gradeLabel = '입문';
+              if (fm.grade === 'S') {
+                gradeBg = 'bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black shadow-[0_0_15px_rgba(245,158,11,0.5)] ring-1 ring-amber-300';
+                gradeLabel = '마스터 👑';
+              } else if (fm.grade === 'A') {
+                gradeBg = 'bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black shadow-md';
+                gradeLabel = '전문가';
+              } else if (fm.grade === 'B') {
+                gradeBg = 'bg-gradient-to-r from-blue-400 to-indigo-500 text-white font-bold shadow-md';
+                gradeLabel = '숙련';
+              }
+
+              const score = fm.masteryScore ?? ((fm.correct * 10) + Math.round(fm.accuracy * 5));
+              const target = fm.nextGradeTarget ?? 150;
+              const remainingToTarget = Math.max(0, target - fm.correct);
 
               return (
                 <div
                   key={fm.form}
-                  className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+                  className="bg-slate-800/70 border border-slate-700/80 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:border-slate-600 transition-all shadow-md"
                 >
                   <div className="flex items-center gap-3">
-                    <span className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black ${gradeBg}`}>
-                      {fm.grade}
-                    </span>
+                    <div className="flex flex-col items-center">
+                      <span className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black ${gradeBg}`}>
+                        {fm.grade}
+                      </span>
+                      <span className="text-[9px] font-black text-slate-400 mt-1">
+                        {gradeLabel}
+                      </span>
+                    </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-extrabold text-white text-sm sm:text-base">
@@ -184,6 +211,9 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                         <span className="text-[11px] font-mono text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
                           {info.structure}
                         </span>
+                        <span className="text-[10px] font-black text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          숙련도 {score.toLocaleString()}P
+                        </span>
                       </div>
                       <p className="text-slate-400 text-xs mt-0.5">
                         {info.desc}
@@ -191,16 +221,31 @@ export const AnalyticsDashboardView: React.FC<AnalyticsDashboardViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="w-full sm:w-48 flex-shrink-0">
+                  <div className="w-full sm:w-52 flex-shrink-0">
                     <div className="flex justify-between text-xs font-bold mb-1">
-                      <span className="text-slate-400">{fm.correct} / {fm.total} 맞힘</span>
-                      <span className="text-emerald-400 font-black">{fm.accuracy}%</span>
+                      <span className="text-slate-300 font-mono">
+                        누적 <strong className="text-white">{fm.correct}</strong>문제 정답
+                      </span>
+                      <span className="text-emerald-400 font-black">
+                        {fm.accuracy}%
+                      </span>
                     </div>
                     <div className="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-700">
                       <div
-                        className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full rounded-full transition-all duration-500"
-                        style={{ width: `${fm.accuracy}%` }}
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          fm.grade === 'S' 
+                            ? 'bg-gradient-to-r from-amber-400 to-yellow-300' 
+                            : 'bg-gradient-to-r from-indigo-500 to-emerald-400'
+                        }`}
+                        style={{ width: `${fm.grade === 'S' ? 100 : Math.min(100, Math.round((fm.correct / target) * 100))}%` }}
                       />
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-medium mt-1 text-right">
+                      {fm.grade === 'S' ? (
+                        <span className="text-amber-300 font-black">✨ 완전 정복 달성!</span>
+                      ) : (
+                        <span>다음 승급까지 <strong>{remainingToTarget}문제</strong> 정답 필요</span>
+                      )}
                     </div>
                   </div>
                 </div>

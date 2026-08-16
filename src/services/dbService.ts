@@ -113,22 +113,22 @@ export function getCurrentCycleInfo(): CycleInfo {
   };
 }
 
-// 🏆 티어 계산기
+// 🏆 티어 계산기 (3개월 꾸준한 학습 시 마스터 티어 달성 밸런스)
 export function calculateTier(xp: number = 0): { tier: string; minXp: number; maxXp: number; progress: number; badgeColor: string; icon: string } {
-  if (xp >= 5000) {
-    return { tier: 'Master', minXp: 5000, maxXp: 10000, progress: 100, badgeColor: 'from-amber-400 via-rose-500 to-purple-600', icon: '👑' };
+  if (xp >= 7500) {
+    return { tier: 'Master', minXp: 7500, maxXp: 15000, progress: 100, badgeColor: 'from-amber-400 via-rose-500 to-purple-600', icon: '👑' };
+  } else if (xp >= 4500) {
+    const progress = Math.min(100, Math.round(((xp - 4500) / 3000) * 100));
+    return { tier: 'Diamond', minXp: 4500, maxXp: 7500, progress, badgeColor: 'from-cyan-400 to-blue-500', icon: '💎' };
   } else if (xp >= 2000) {
-    const progress = Math.min(100, Math.round(((xp - 2000) / 3000) * 100));
-    return { tier: 'Diamond', minXp: 2000, maxXp: 5000, progress, badgeColor: 'from-cyan-400 to-blue-500', icon: '💎' };
-  } else if (xp >= 1000) {
-    const progress = Math.min(100, Math.round(((xp - 1000) / 1000) * 100));
-    return { tier: 'Platinum', minXp: 1000, maxXp: 2000, progress, badgeColor: 'from-emerald-400 to-teal-500', icon: '🏆' };
-  } else if (xp >= 500) {
-    const progress = Math.min(100, Math.round(((xp - 500) / 500) * 100));
-    return { tier: 'Gold', minXp: 500, maxXp: 1000, progress, badgeColor: 'from-amber-400 to-yellow-500', icon: '🥇' };
+    const progress = Math.min(100, Math.round(((xp - 2000) / 2500) * 100));
+    return { tier: 'Platinum', minXp: 2000, maxXp: 4500, progress, badgeColor: 'from-emerald-400 to-teal-500', icon: '🏆' };
+  } else if (xp >= 800) {
+    const progress = Math.min(100, Math.round(((xp - 800) / 1200) * 100));
+    return { tier: 'Gold', minXp: 800, maxXp: 2000, progress, badgeColor: 'from-amber-400 to-yellow-500', icon: '🥇' };
   } else if (xp >= 200) {
-    const progress = Math.min(100, Math.round(((xp - 200) / 300) * 100));
-    return { tier: 'Silver', minXp: 200, maxXp: 500, progress, badgeColor: 'from-slate-300 to-slate-400', icon: '🥈' };
+    const progress = Math.min(100, Math.round(((xp - 200) / 600) * 100));
+    return { tier: 'Silver', minXp: 200, maxXp: 800, progress, badgeColor: 'from-slate-300 to-slate-400', icon: '🥈' };
   } else {
     const progress = Math.min(100, Math.round((xp / 200) * 100));
     return { tier: 'Bronze', minXp: 0, maxXp: 200, progress, badgeColor: 'from-amber-700 to-orange-800', icon: '🥉' };
@@ -834,17 +834,42 @@ export async function getUserMasteryStats(userName: string): Promise<{ formMaste
       const correct = Math.max(dataA[`stats_form_${f}_correct`] || 0, dataB[`stats_form_${f}_correct`] || 0);
       const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
 
+      // 🎯 누적 정답 수 기반 마스터리 점수 산정 (문제를 풀수록 절대 깎이지 않고 꾸준히 우상향!)
+      // masteryScore = (누적 정답 수 * 10) + (정답률 * 5)
+      const masteryScore = (correct * 10) + Math.round(accuracy * 5);
+
+      // 🏆 3개월 기준 마스터리 등급 (C -> B -> A -> S)
+      // C등급: 0 ~ 24문제 정답 (입문)
+      // B등급: 25 ~ 74문제 정답 (숙련)
+      // A등급: 75 ~ 149문제 정답 (전문가)
+      // S등급: 150문제 이상 정답 (3개월 꾸준한 학습 시 도달하는 절대 마스터 👑)
       let grade: 'S' | 'A' | 'B' | 'C' = 'C';
-      if (accuracy >= 90 && total >= 5) grade = 'S';
-      else if (accuracy >= 75) grade = 'A';
-      else if (accuracy >= 50) grade = 'B';
+      let nextGradeTarget = 25;
+      let progressPercent = Math.min(100, Math.round((correct / 25) * 100));
+
+      if (correct >= 150 || (correct >= 100 && accuracy >= 85)) {
+        grade = 'S';
+        nextGradeTarget = 150;
+        progressPercent = 100;
+      } else if (correct >= 75 || (correct >= 50 && accuracy >= 80)) {
+        grade = 'A';
+        nextGradeTarget = 150;
+        progressPercent = Math.min(100, Math.round(((correct - 75) / 75) * 100));
+      } else if (correct >= 25 || (correct >= 15 && accuracy >= 70)) {
+        grade = 'B';
+        nextGradeTarget = 75;
+        progressPercent = Math.min(100, Math.round(((correct - 25) / 50) * 100));
+      }
 
       formMasteries.push({
         form: f,
         total,
         correct,
         accuracy,
-        grade
+        grade,
+        masteryScore,
+        nextGradeTarget,
+        progressPercent
       });
     }
 
