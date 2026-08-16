@@ -1318,16 +1318,21 @@ export async function getOrCreateCycleQuestions(cycleInfo: CycleInfo): Promise<{
     // 2) 생성된 문제들을 난이도별로 공용 DB(questions 컬렉션)에도 영구 보관 (Level 1: 2문제, Level 2: 3문제, Level 3: 3문제, Level 4: 2문제)
     try {
       const byLevel: Record<string, Question[]> = {
-        'Level 1': [],
-        'Level 2': [],
-        'Level 3': [],
-        'Level 4': []
+        'Level 1 (입문/초급)': [],
+        'Level 2 (실력 중급)': [],
+        'Level 3 (고득점 도약)': [],
+        'Level 4 (실전 마스터)': []
       };
 
       selected10.forEach((q, idx) => {
-        const lvl = (q as any).level || (idx < 2 ? 'Level 1' : idx < 5 ? 'Level 2' : idx < 8 ? 'Level 3' : 'Level 4');
-        if (byLevel[lvl]) byLevel[lvl].push(q);
-        else byLevel['Level 2'].push(q);
+        const lvl = idx < 2 
+          ? 'Level 1 (입문/초급)' 
+          : idx < 5 
+          ? 'Level 2 (실력 중급)' 
+          : idx < 8 
+          ? 'Level 3 (고득점 도약)' 
+          : 'Level 4 (실전 마스터)';
+        byLevel[lvl].push(q);
       });
 
       for (const [lvlKey, qList] of Object.entries(byLevel)) {
@@ -1513,16 +1518,39 @@ export async function getCycleRankings(cycleId: string): Promise<RankingItem[]> 
   }
 }
 
-// 12. 전체 공용 DB 목록
+// 🏷️ 난이도 라벨 4종 공식 표준화 헬퍼
+export function normalizeDifficultyLabel(diff: string = ''): string {
+  const d = String(diff || '').trim();
+  if (d.includes('Level 1') || d.includes('초급') || d.includes('입문')) {
+    return 'Level 1 (입문/초급)';
+  }
+  if (d.includes('Level 2') || d.includes('중급') || d.includes('실력')) {
+    return 'Level 2 (실력 중급)';
+  }
+  if (d.includes('Level 3') || d.includes('고득점') || d.includes('도약') || d.includes('고3')) {
+    return 'Level 3 (고득점 도약)';
+  }
+  if (d.includes('Level 4') || d.includes('실전') || d.includes('마스터') || d.includes('토익')) {
+    return 'Level 4 (실전 마스터)';
+  }
+  return 'Level 1 (입문/초급)';
+}
+
+// 12. 전체 공용 DB 목록 (공식 4개 난이도로 자동 정렬/통합)
 export async function getAllSavedQuestions(): Promise<Record<string, Question[]>> {
   try {
     const snapshot = await getDocs(collection(db, 'questions'));
-    const grouped: Record<string, Question[]> = {};
+    const grouped: Record<string, Question[]> = {
+      'Level 1 (입문/초급)': [],
+      'Level 2 (실력 중급)': [],
+      'Level 3 (고득점 도약)': [],
+      'Level 4 (실전 마스터)': []
+    };
 
     snapshot.forEach(docSnap => {
       const d = docSnap.data();
-      const diff = d.difficulty || '기타';
-      if (!grouped[diff]) grouped[diff] = [];
+      const normDiff = normalizeDifficultyLabel(d.difficulty);
+      if (!grouped[normDiff]) grouped[normDiff] = [];
 
       let dateStr = "";
       if (d.createdAt && typeof d.createdAt.toDate === 'function') {
@@ -1530,7 +1558,7 @@ export async function getAllSavedQuestions(): Promise<Record<string, Question[]>
         dateStr = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
       }
 
-      grouped[diff].push({
+      grouped[normDiff].push({
         id: docSnap.id,
         form: sanitizeForm(d.form),
         sentence: d.sentence,
@@ -1538,12 +1566,27 @@ export async function getAllSavedQuestions(): Promise<Record<string, Question[]>
         answer: d.answer,
         translation: d.translation,
         explanation: d.explanation,
-        difficulty: diff,
+        difficulty: normDiff,
         createdAt: dateStr
       });
     });
 
-    return grouped;
+    // 비어있지 않은 카테고리만 깔끔하게 반환
+    const cleaned: Record<string, Question[]> = {};
+    const LEVEL_ORDER = [
+      'Level 1 (입문/초급)',
+      'Level 2 (실력 중급)',
+      'Level 3 (고득점 도약)',
+      'Level 4 (실전 마스터)'
+    ];
+
+    for (const key of LEVEL_ORDER) {
+      if (grouped[key] && grouped[key].length > 0) {
+        cleaned[key] = grouped[key];
+      }
+    }
+
+    return cleaned;
   } catch (error) {
     console.error("getAllSavedQuestions Error:", error);
     return {};

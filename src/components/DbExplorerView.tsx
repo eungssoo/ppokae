@@ -20,7 +20,19 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
     }));
   };
 
-  const diffKeys = Object.keys(dbData).sort();
+  const LEVEL_ORDER = [
+    'Level 1 (입문/초급)',
+    'Level 2 (실력 중급)',
+    'Level 3 (고득점 도약)',
+    'Level 4 (실전 마스터)'
+  ];
+
+  const diffKeys = Object.keys(dbData).sort((a, b) => {
+    const idxA = LEVEL_ORDER.indexOf(a);
+    const idxB = LEVEL_ORDER.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    return a.localeCompare(b);
+  });
 
   return (
     <div className="min-h-screen bg-animated-gradient flex justify-center p-4 sm:p-6 md:p-8">
