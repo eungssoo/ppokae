@@ -3,7 +3,6 @@ import { ArrowLeft, Star, Volume2, Plus, Sparkles, ChevronDown, ChevronUp, Play,
 import { BookmarkItem, Question } from '../types';
 import { sound } from '../services/soundService';
 import { useLanguage } from '../services/i18n';
-import { GrammarSkillVault } from './GrammarSkillVault';
 
 interface BookmarkedListViewProps {
   bookmarks: BookmarkItem[];
@@ -229,9 +228,6 @@ export const BookmarkedListView: React.FC<BookmarkedListViewProps> = ({
             })}
           </div>
         )}
-
-        {/* 🧠 Grammar Skill Vault (실전 영문법 1초 정답 치트키 & 꿀팁 보관소) */}
-        <GrammarSkillVault />
 
       </div>
     </div>

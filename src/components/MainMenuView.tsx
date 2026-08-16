@@ -28,6 +28,7 @@ import { UserProfile, ViewType, CycleInfo } from '../types';
 import { calculateTier, checkIsAdmin } from '../services/dbService';
 import { sound } from '../services/soundService';
 import { useLanguage } from '../services/i18n';
+import { GrammarSkillVault } from './GrammarSkillVault';
 
 interface MainMenuViewProps {
   user: UserProfile;
@@ -407,6 +408,9 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
 
           </div>
         </div>
+
+        {/* 🧠 시험장 1초 킬러 문법 보관소 (Grammar Pro Skill & Hacks Vault) */}
+        <GrammarSkillVault />
 
         {/* 📊 3. Analytics & Utility Hub: 학습 분석 & 도구 (하단 보조 메뉴) */}
         <div>
