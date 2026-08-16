@@ -345,15 +345,25 @@ export async function generateNativeExpressions(
   return { success: false, error: "원어민 표현을 생성하지 못했습니다. 잠시 후 다시 시도해 주세요." };
 }
 
-// 🤖 1타 강사 AI 튜터 1:1 실시간 질문 함수 (보안 프록시 호출)
+// 🤖 1타 강사 AI 튜터 1:1 실시간 질문 함수 (보안 프록시 호출 & 한/영 다국어 지원)
 export async function askAiTutor(
   question: Question,
   userQuestion: string,
-  userChoice?: string
+  userChoice?: string,
+  lang: 'ko' | 'en' = 'ko'
 ): Promise<{ success: boolean; answer?: string; error?: string }> {
   const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash'];
 
-  const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사이자 회화 튜터입니다.
+  const systemPrompt = lang === 'en'
+    ? `You are an elite, world-class English grammar master and ESL tutor.
+A student is asking a specific question regarding an English grammar problem they just attempted.
+Explain the core concept, why the correct answer works, why incorrect options fail, and provide practical tips entirely in friendly, clear, concise English.
+
+[GUIDELINES]:
+1. Be encouraging, concise, and structured.
+2. Clearly contrast the correct choice vs the student's choice or common traps.
+3. Use markdown bolding (**words**), bullet points, and clean formatting.`
+    : `당신은 대한민국 최고의 수능/토익 영문법 1타 강사이자 회화 튜터입니다.
 학생이 푼 영어 문제에 대해 궁금한 점을 질문했습니다.
 친절하고 명쾌하며 핵심을 찌르는 족집게 과외 선생님처럼 100% 한국어로 학생의 눈높이에 맞춰 설명해 주세요.
 
@@ -363,7 +373,19 @@ export async function askAiTutor(
 3. 실전 시험 및 회화에서 낚이지 않는 '1타 강사만의 꿀팁'을 1~2줄로 요약해 주세요.
 4. 가독성을 위해 마크다운 볼드(**단어**), 이모지, 글머리 기호를 적극 활용하세요.`;
 
-  const userPrompt = `[문제 정보]
+  const userPrompt = lang === 'en'
+    ? `[Problem Context]
+- Target Sentence: ${question.sentence}
+- Correct Answer: ${question.answer}
+- Student's Choice: ${userChoice || 'None'}
+- Form: Form ${sanitizeForm(question.form)}
+- Grammar Pattern: ${question.explanation?.chunk_pattern || 'Basic Structure'}
+
+[Student's Question]
+"${userQuestion}"
+
+Please provide a clear, helpful 1-on-1 tutoring response in English.`
+    : `[문제 정보]
 - 문제 문장: ${question.sentence}
 - 정답: ${question.answer}
 - 학생이 선택한 보기: ${userChoice || '미선택'}

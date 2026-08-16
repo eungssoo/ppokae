@@ -13,13 +13,16 @@ import {
   ChevronDown,
   ChevronUp,
   Star,
-  AlertTriangle
+  AlertTriangle,
+  Globe
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Question, Option, QuizMode } from '../types';
 import { askAiTutor } from '../services/geminiService';
 import { sound } from '../services/soundService';
 import { getRankingQuestionPoints, getLevelGatingInfo } from '../services/dbService';
+import { useLanguage } from '../services/i18n';
+import { getOrFetchEnglishExplanation, prefetchEnglishExplanation, EnglishExplanation } from '../services/englishExplanationService';
 import { QuestionReportModal } from './QuestionReportModal';
 
 interface QuizViewProps {
@@ -63,6 +66,11 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
   const [displayedOptions, setDisplayedOptions] = useState<Option[]>([]);
 
+  const { language, setLanguage, t } = useLanguage();
+  const [enExplanation, setEnExplanation] = useState<EnglishExplanation | null>(null);
+  const [isEnLoading, setIsEnLoading] = useState<boolean>(false);
+  const [explanationLang, setExplanationLang] = useState<'ko' | 'en'>(language);
+
   const scoreInfo = getRankingQuestionPoints(currentQuestion, questionIndex);
 
   let qLevel = 1;
@@ -90,6 +98,13 @@ export const QuizView: React.FC<QuizViewProps> = ({
     setAiQuestion('');
     setAiAnswer('');
     setIsAiLoading(false);
+    setEnExplanation(null);
+    setExplanationLang(language);
+
+    // 🚀 영어 모드일 경우 백그라운드에서 조용히 영문 해설 사전 프리페치 (체감 지연 0ms)
+    if (language === 'en' && currentQuestion) {
+      prefetchEnglishExplanation(currentQuestion);
+    }
 
     // 🎲 보기 4종 무작위 셔플 (정답이 1번에 고정되는 현상 100% 원천 차단)
     if (currentQuestion && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
@@ -98,7 +113,31 @@ export const QuizView: React.FC<QuizViewProps> = ({
     } else {
       setDisplayedOptions([]);
     }
-  }, [currentQuestion]);
+  }, [currentQuestion, language]);
+
+  // 제출 시 영어 모드인 경우 영문 해설 로드
+  useEffect(() => {
+    if (isSubmitted && explanationLang === 'en' && !enExplanation && currentQuestion) {
+      setIsEnLoading(true);
+      getOrFetchEnglishExplanation(currentQuestion).then((res) => {
+        setEnExplanation(res);
+        setIsEnLoading(false);
+      }).catch(() => {
+        setIsEnLoading(false);
+      });
+    }
+  }, [isSubmitted, explanationLang, currentQuestion, enExplanation]);
+
+  const handleToggleExplanationLang = async (targetLang: 'ko' | 'en') => {
+    sound.playClick();
+    setExplanationLang(targetLang);
+    if (targetLang === 'en' && !enExplanation && currentQuestion) {
+      setIsEnLoading(true);
+      const res = await getOrFetchEnglishExplanation(currentQuestion);
+      setEnExplanation(res);
+      setIsEnLoading(false);
+    }
+  };
 
   // Option text helper
   const getOptText = (opt: any): string => {
@@ -172,14 +211,14 @@ export const QuizView: React.FC<QuizViewProps> = ({
     setIsAiTutorOpen(true);
 
     try {
-      const res = await askAiTutor(currentQuestion, qToAsk, userInput);
+      const res = await askAiTutor(currentQuestion, qToAsk, userInput, explanationLang);
       if (res.success && res.answer) {
         setAiAnswer(res.answer);
       } else {
-        setAiAnswer(res.error || '답변을 불러오지 못했습니다. 다시 시도해 주세요.');
+        setAiAnswer(res.error || (explanationLang === 'en' ? 'Failed to load tutor response. Please try again.' : '답변을 불러오지 못했습니다. 다시 시도해 주세요.'));
       }
     } catch (e: any) {
-      setAiAnswer(`오류 발생: ${e.message}`);
+      setAiAnswer(explanationLang === 'en' ? `Error occurred: ${e.message}` : `오류 발생: ${e.message}`);
     } finally {
       setIsAiLoading(false);
     }
@@ -219,7 +258,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
   }, [isSubmitted, userInput, displayedOptions, isAiTutorOpen, playAudio, handleCheck, handleNext]);
 
   const selectedOptObj = displayedOptions.find(o => getOptText(o) === viewingFeedback) || currentQuestion?.options?.find(o => getOptText(o) === viewingFeedback);
-  const feedbackText = typeof selectedOptObj === 'object' ? selectedOptObj.feedback : null;
+  const selectedOptText = selectedOptObj ? getOptText(selectedOptObj) : '';
+  
+  let feedbackText = typeof selectedOptObj === 'object' ? selectedOptObj.feedback : null;
+  if (explanationLang === 'en' && enExplanation?.option_feedbacks?.[selectedOptText]) {
+    feedbackText = enExplanation.option_feedbacks[selectedOptText];
+  }
 
   const renderBoldText = (text?: string) => {
     if (!text || typeof text !== 'string') return null;
@@ -462,13 +506,58 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 </div>
               </div>
 
-              {/* Translation */}
+              {/* 🌐 Explanation Language Switcher Bar */}
+              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-cyan-400" />
+                  <span className="text-xs font-black text-slate-300">
+                    {explanationLang === 'en' ? 'AI English Immersion Explanation' : 'AI 상세 문법 해설'}
+                  </span>
+                  {isEnLoading && (
+                    <span className="text-[10px] text-cyan-300 bg-cyan-500/20 px-2 py-0.5 rounded-full border border-cyan-400/40 animate-pulse flex items-center gap-1">
+                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                      <span>Translating...</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleExplanationLang('ko')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+                      explanationLang === 'ko'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    🇰🇷 한국어
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleExplanationLang('en')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                      explanationLang === 'en'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>🇺🇸 English</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Translation / English Meaning */}
               <div className="p-4 sm:p-5 bg-slate-800/80 rounded-2xl border border-slate-700/80">
-                <span className="inline-block bg-slate-700 text-slate-300 px-2.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider mb-2">
-                  Korean Translation
-                </span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="inline-block bg-slate-700 text-slate-300 px-2.5 py-0.5 rounded text-[11px] font-black uppercase tracking-wider">
+                    {explanationLang === 'en' ? '🇺🇸 English Paraphrase & Meaning' : '🇰🇷 Korean Translation'}
+                  </span>
+                </div>
                 <p className="text-slate-200 font-medium text-base sm:text-lg leading-relaxed">
-                  {currentQuestion.translation}
+                  {explanationLang === 'en'
+                    ? (enExplanation?.translation_en || currentQuestion.translation)
+                    : currentQuestion.translation}
                 </p>
               </div>
 
@@ -476,7 +565,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
               <div>
                 <h4 className="font-black mb-3 text-slate-300 flex items-center gap-2 text-xs uppercase tracking-wider">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Option Analysis (보기별 상세 해설)</span>
+                  <span>{explanationLang === 'en' ? 'Option Analysis' : 'Option Analysis (보기별 상세 해설)'}</span>
                 </h4>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {displayedOptions.map((opt, idx) => {
@@ -517,20 +606,28 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 <div className="bg-amber-500/10 p-5 rounded-2xl border border-amber-500/20 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400" />
                   <h4 className="font-black text-amber-300 text-xs uppercase tracking-wider mb-2">
-                    🧩 Chunk Pattern
+                    🧩 {explanationLang === 'en' ? 'Grammar Chunk Pattern' : 'Chunk Pattern'}
                   </h4>
                   <p className="text-amber-100 text-sm leading-relaxed">
-                    {renderBoldText(currentQuestion.explanation?.chunk_pattern)}
+                    {renderBoldText(
+                      explanationLang === 'en'
+                        ? (enExplanation?.chunk_pattern || currentQuestion.explanation?.chunk_pattern)
+                        : currentQuestion.explanation?.chunk_pattern
+                    )}
                   </p>
                 </div>
 
                 <div className="bg-cyan-500/10 p-5 rounded-2xl border border-cyan-500/20 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-cyan-400" />
                   <h4 className="font-black text-cyan-300 text-xs uppercase tracking-wider mb-2">
-                    💡 Nuance
+                    💡 {explanationLang === 'en' ? 'Native Nuance & Usage' : 'Nuance'}
                   </h4>
                   <p className="text-cyan-100 text-sm leading-relaxed">
-                    {renderBoldText(currentQuestion.explanation?.nuance)}
+                    {renderBoldText(
+                      explanationLang === 'en'
+                        ? (enExplanation?.nuance || currentQuestion.explanation?.nuance)
+                        : currentQuestion.explanation?.nuance
+                    )}
                   </p>
                 </div>
               </div>
