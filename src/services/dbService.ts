@@ -521,6 +521,55 @@ export async function changeUserNickname(
     // 기존 문서 삭제
     await deleteDoc(oldRef);
 
+    // 🔄 랭킹 및 각종 사용자 기록 컬렉션 닉네임 일괄 동기화 (비동기 병렬 처리)
+    try {
+      // 1) cycle_rankings 컬렉션 이름 변경
+      const cycleRankQuery = query(collection(db, 'cycle_rankings'), where('name', '==', currentName));
+      const cycleRankSnap = await getDocs(cycleRankQuery);
+      if (!cycleRankSnap.empty) {
+        const batch = writeBatch(db);
+        cycleRankSnap.forEach(d => {
+          batch.update(d.ref, { name: trimmed });
+        });
+        await batch.commit();
+      }
+
+      // 2) rankings 컬렉션 이름 변경
+      const rankQuery = query(collection(db, 'rankings'), where('name', '==', currentName));
+      const rankSnap = await getDocs(rankQuery);
+      if (!rankSnap.empty) {
+        const batch = writeBatch(db);
+        rankSnap.forEach(d => {
+          batch.update(d.ref, { name: trimmed });
+        });
+        await batch.commit();
+      }
+
+      // 3) incorrect_questions 오답노트 이름 동기화
+      const incQuery = query(collection(db, 'incorrect_questions'), where('userName', '==', currentName));
+      const incSnap = await getDocs(incQuery);
+      if (!incSnap.empty) {
+        const batch = writeBatch(db);
+        incSnap.forEach(d => {
+          batch.update(d.ref, { userName: trimmed });
+        });
+        await batch.commit();
+      }
+
+      // 4) bookmarks 북마크 이름 동기화
+      const bmQuery = query(collection(db, 'bookmarks'), where('userName', '==', currentName));
+      const bmSnap = await getDocs(bmQuery);
+      if (!bmSnap.empty) {
+        const batch = writeBatch(db);
+        bmSnap.forEach(d => {
+          batch.update(d.ref, { userName: trimmed });
+        });
+        await batch.commit();
+      }
+    } catch (syncErr) {
+      console.warn("Ranking/History collection nickname sync error:", syncErr);
+    }
+
     return { success: true, newName: trimmed, newCoins: updatedCoins };
   } catch (e: any) {
     return { success: false, error: e.message || "닉네임 변경 실패" };
@@ -1428,13 +1477,20 @@ export async function getUserIncorrectQuestions(userName: string): Promise<Weakn
   }
 }
 
-// 10. 🔥 3사이클 랭킹 저장 및 정렬
-export async function saveAndGetCycleRankings(cycleId: string, userName: string, score: number): Promise<RankingItem[]> {
+// 10. 🔥 3사이클 랭킹 저장 및 정렬 (장착된 아바타 프로필 연동)
+export async function saveAndGetCycleRankings(
+  cycleId: string, 
+  userName: string, 
+  score: number,
+  avatarId?: string
+): Promise<RankingItem[]> {
   try {
     const rankDocId = `${cycleId}_${userName}`;
     const rankRef = doc(db, 'cycle_rankings', rankDocId);
 
     const existingSnap = await getDoc(rankRef);
+    const resolvedAvatarId = avatarId || 'lion';
+
     if (existingSnap.exists()) {
       const data = existingSnap.data();
       const currentScore = data.score || 0;
@@ -1447,12 +1503,14 @@ export async function saveAndGetCycleRankings(cycleId: string, userName: string,
           name: userName,
           score,
           attempts: newAttempts,
+          avatarId: resolvedAvatarId,
           completedAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         }), { merge: true });
       } else {
         await setDoc(rankRef, {
           attempts: newAttempts,
+          avatarId: resolvedAvatarId,
           updatedAt: serverTimestamp()
         }, { merge: true });
       }
@@ -1462,6 +1520,7 @@ export async function saveAndGetCycleRankings(cycleId: string, userName: string,
         name: userName,
         score,
         attempts: 1,
+        avatarId: resolvedAvatarId,
         completedAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       }), { merge: true });
@@ -1474,7 +1533,7 @@ export async function saveAndGetCycleRankings(cycleId: string, userName: string,
   }
 }
 
-// 11. 특정 사이클 랭킹 불러오기
+// 11. 특정 사이클 랭킹 불러오기 (아바타 정보 및 등급 디자인 연동)
 export async function getCycleRankings(cycleId: string): Promise<RankingItem[]> {
   try {
     const qQuery = query(collection(db, 'cycle_rankings'), where('cycleId', '==', cycleId));
@@ -1496,11 +1555,20 @@ export async function getCycleRankings(cycleId: string): Promise<RankingItem[]> 
         completedAtFormatted = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}:${String(dt.getSeconds()).padStart(2, '0')}`;
       }
 
+      const avId = d.avatarId || 'lion';
+      const avObj = AVATAR_DATABASE.find(a => a.id === avId);
+
       list.push({
         name: d.name,
         score: Number(d.score) || 0,
         completedAt: timeVal,
-        completedAtFormatted
+        completedAtFormatted,
+        avatarId: avId,
+        avatarIcon: avObj?.icon || '🦁',
+        avatarName: avObj?.name || '라이언',
+        avatarGrade: avObj?.grade || 'starter',
+        avatarBgGradient: avObj?.bgGradient || 'from-slate-700 to-slate-800 border-slate-600',
+        avatarColor: avObj?.color || 'text-slate-200'
       });
     });
 

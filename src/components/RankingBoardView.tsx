@@ -149,22 +149,41 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
           })}
         </div>
 
-        {/* 🏆 차등 보상 안내 배지 바 */}
-        <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 mb-5 flex items-center justify-between overflow-x-auto text-[11px] font-bold text-slate-400 gap-2 scrollbar-none">
-          <div className="flex items-center gap-1 text-amber-300 shrink-0">
-            <span>🥇 1위: 🪙200</span>
+        {/* 🏆 회차별 차등 순위 보상표 */}
+        <div className="bg-gradient-to-r from-slate-900/90 via-indigo-950/40 to-slate-900/90 border border-indigo-500/30 rounded-2xl p-3.5 mb-5 shadow-lg">
+          <div className="flex items-center justify-between mb-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-black text-amber-300 uppercase tracking-wider">
+              <Trophy className="w-4 h-4 text-amber-400" />
+              <span>{selectedCycleIndex}차전 종료 시 지급 순위 보상</span>
+            </div>
+            <span className="text-[10px] text-slate-400 font-medium">회차 마감 시 자동 정산</span>
           </div>
-          <div className="flex items-center gap-1 text-slate-200 shrink-0">
-            <span>🥈 2위: 🪙120</span>
-          </div>
-          <div className="flex items-center gap-1 text-orange-300 shrink-0">
-            <span>🥉 3위: 🪙80</span>
-          </div>
-          <div className="flex items-center gap-1 text-purple-300 shrink-0">
-            <span>4~10위: 🪙40</span>
-          </div>
-          <div className="flex items-center gap-1 text-slate-400 shrink-0">
-            <span>참가: 🪙15</span>
+          <div className="grid grid-cols-5 gap-1.5 text-center text-[11px]">
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-2 flex flex-col justify-center">
+              <div className="font-black text-amber-300">🥇 1위</div>
+              <div className="text-white font-black text-xs mt-0.5">🪙 200</div>
+              <div className="text-[9px] text-amber-200/80 font-bold">+150 XP</div>
+            </div>
+            <div className="bg-slate-700/30 border border-slate-500/30 rounded-xl p-2 flex flex-col justify-center">
+              <div className="font-black text-slate-200">🥈 2위</div>
+              <div className="text-white font-black text-xs mt-0.5">🪙 120</div>
+              <div className="text-[9px] text-slate-300/80 font-bold">+100 XP</div>
+            </div>
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-2 flex flex-col justify-center">
+              <div className="font-black text-orange-300">🥉 3위</div>
+              <div className="text-white font-black text-xs mt-0.5">🪙 80</div>
+              <div className="text-[9px] text-orange-200/80 font-bold">+60 XP</div>
+            </div>
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-2 flex flex-col justify-center">
+              <div className="font-black text-purple-300">4~10위</div>
+              <div className="text-white font-black text-xs mt-0.5">🪙 40</div>
+              <div className="text-[9px] text-purple-200/80 font-bold">+30 XP</div>
+            </div>
+            <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-2 flex flex-col justify-center">
+              <div className="font-black text-slate-400">참가자</div>
+              <div className="text-white font-black text-xs mt-0.5">🪙 15</div>
+              <div className="text-[9px] text-slate-400 font-bold">+10 XP</div>
+            </div>
           </div>
         </div>
 
@@ -192,7 +211,7 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
             {rankingData.map((rank, index) => {
               const isCurrentUser = user.name === rank.name;
               let badge: React.ReactNode = (
-                <span className="w-7 h-7 flex items-center justify-center bg-slate-800 rounded-full text-slate-400 font-bold text-xs border border-slate-700">
+                <span className="w-7 h-7 flex items-center justify-center bg-slate-800 rounded-full text-slate-400 font-bold text-xs border border-slate-700 shrink-0">
                   {index + 1}
                 </span>
               );
@@ -200,15 +219,15 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
               let textStyle = 'text-slate-200';
 
               if (index === 0) {
-                badge = <span className="text-2xl sm:text-3xl filter drop-shadow">🥇</span>;
+                badge = <span className="text-2xl sm:text-3xl filter drop-shadow shrink-0">🥇</span>;
                 rowStyle = 'bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border-amber-400/50 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-1 ring-amber-400/30';
                 textStyle = 'text-amber-200';
               } else if (index === 1) {
-                badge = <span className="text-2xl sm:text-3xl filter drop-shadow">🥈</span>;
+                badge = <span className="text-2xl sm:text-3xl filter drop-shadow shrink-0">🥈</span>;
                 rowStyle = 'bg-gradient-to-r from-slate-700/40 to-slate-800/40 border-slate-500/40';
                 textStyle = 'text-slate-100';
               } else if (index === 2) {
-                badge = <span className="text-2xl sm:text-3xl filter drop-shadow">🥉</span>;
+                badge = <span className="text-2xl sm:text-3xl filter drop-shadow shrink-0">🥉</span>;
                 rowStyle = 'bg-gradient-to-r from-orange-950/40 to-slate-800/40 border-orange-700/40';
                 textStyle = 'text-orange-200';
               }
@@ -220,27 +239,42 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
                     isCurrentUser ? 'ring-2 ring-indigo-500/50' : ''
                   }`}
                 >
-                  <div className="flex items-center gap-3.5">
+                  <div className="flex items-center gap-3 min-w-0">
                     {badge}
-                    <div>
+
+                    {/* 🌟 장착된 아바타 프로필 아이콘 & 등급 테두리 */}
+                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br ${rank.avatarBgGradient || 'from-slate-700 to-slate-800 border-slate-600'} border flex items-center justify-center text-xl sm:text-2xl shadow-md shrink-0 relative`}>
+                      <span>{rank.avatarIcon || '🦁'}</span>
+                      {rank.avatarGrade && rank.avatarGrade !== 'starter' && rank.avatarGrade !== 'common' && (
+                        <span className="absolute -bottom-1 -right-1 text-[8px] font-black px-1 rounded-full bg-slate-950 border border-amber-400 text-amber-300 uppercase leading-tight shadow-sm">
+                          {rank.avatarGrade === 'transcendent' ? '초월' : rank.avatarGrade === 'mythic' ? '신화' : rank.avatarGrade === 'legendary' ? '전설' : '에픽'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className={`text-sm sm:text-base font-black tracking-tight ${textStyle}`}>
+                        <span className={`text-sm sm:text-base font-black tracking-tight truncate ${textStyle}`}>
                           {rank.name}
                         </span>
                         {isCurrentUser && (
-                          <span className="text-[9px] bg-indigo-600 text-white font-black px-1.5 py-0.5 rounded-full shadow-sm">
+                          <span className="text-[9px] bg-indigo-600 text-white font-black px-1.5 py-0.5 rounded-full shadow-sm shrink-0">
                             ME
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
-                        <Clock className="w-3 h-3 text-slate-500" />
-                        <span>완료 {rank.completedAtFormatted || '--:--:--'}</span>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
+                        <span className="text-slate-300 font-medium truncate max-w-[100px] sm:max-w-none">{rank.avatarName || '아바타'}</span>
+                        <span>•</span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Clock className="w-3 h-3 text-slate-500" />
+                          <span>{rank.completedAtFormatted || '--:--:--'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="text-right">
+                  <div className="text-right shrink-0 ml-2">
                     <span className="text-lg sm:text-2xl font-black text-white tracking-tight">
                       {rank.score}
                       <span className="text-xs font-bold text-slate-400 ml-1">점</span>

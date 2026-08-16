@@ -997,7 +997,12 @@ function AppContent() {
           await refreshUserData(user.name);
         }
 
-        const updatedLeaderboard = await saveAndGetCycleRankings(currentCycle.cycleId, user.name, score);
+        const updatedLeaderboard = await saveAndGetCycleRankings(
+          currentCycle.cycleId, 
+          user.name, 
+          score,
+          user.currentAvatarId || user.avatar || 'lion'
+        );
         setRankingData(updatedLeaderboard);
         setSelectedCycleTab(currentCycle.cycleIndex);
         setIsLoading(false);

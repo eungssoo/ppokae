@@ -136,6 +136,12 @@ export interface RankingItem {
   score: number;
   completedAt?: number;
   completedAtFormatted?: string;
+  avatarId?: string;
+  avatarIcon?: string;
+  avatarName?: string;
+  avatarGrade?: string;
+  avatarBgGradient?: string;
+  avatarColor?: string;
 }
 
 export interface DifficultyLevel {
