@@ -330,7 +330,7 @@ export async function authenticateUser(
 }
 
 // 🔐 1-0. Google User Profile Creator / Getter (UID 및 displayName 양방향 완벽 동기화 및 데이터 유실 방지)
-export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserProfile> {
+export async function createOrGetGoogleUserProfile(gUser: User): Promise<{ profile: UserProfile; isNew: boolean }> {
   const displayName = gUser.displayName || (gUser.email ? gUser.email.split('@')[0] : '학습자');
   const uidRef = doc(db, 'users', gUser.uid);
   const nameRef = doc(db, 'users', displayName);
@@ -339,6 +339,7 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
   const uidData = uidSnap.exists() ? uidSnap.data() : {};
   const nameData = nameSnap.exists() ? nameSnap.data() : {};
   const hasExisting = uidSnap.exists() || nameSnap.exists();
+  const hasCompletedInitialSetup = !!(nameData.hasCompletedInitialSetup || uidData.hasCompletedInitialSetup);
 
   if (hasExisting) {
     const currentXp = Math.max(nameData.xp || 0, uidData.xp || 0);
@@ -383,6 +384,7 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
       email: gUser.email || undefined,
       photoURL: gUser.photoURL || undefined,
       isAdmin,
+      hasCompletedInitialSetup,
       createdAt: nameData.createdAt?.toMillis ? nameData.createdAt.toMillis() : uidData.createdAt?.toMillis ? uidData.createdAt.toMillis() : Date.now()
     };
 
@@ -400,7 +402,7 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
       setDoc(nameRef, cleanPayload, { merge: true })
     ]);
 
-    return profile;
+    return { profile, isNew: !hasCompletedInitialSetup };
   } else {
     const isAdmin = checkIsAdmin({ name: displayName, email: gUser.email || undefined });
     const newProfile: UserProfile = {
@@ -418,7 +420,8 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
       totalCorrect: 0,
       email: gUser.email || undefined,
       photoURL: gUser.photoURL || undefined,
-      isAdmin
+      isAdmin,
+      hasCompletedInitialSetup: false
     };
 
     const cleanPayload = removeUndefinedDeep({
@@ -434,19 +437,19 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<UserPro
       setDoc(nameRef, cleanPayload, { merge: true })
     ]);
 
-    return newProfile;
+    return { profile: newProfile, isNew: true };
   }
 }
 
 // 🔐 1-1. 구글 공식 암호화 OAuth 2.0 로그인
-export async function signInWithGoogle(): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
+export async function signInWithGoogle(): Promise<{ success: boolean; profile?: UserProfile; isNew?: boolean; error?: string }> {
   try {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
     const result = await signInWithPopup(auth, provider);
-    const profile = await createOrGetGoogleUserProfile(result.user);
-    return { success: true, profile };
+    const { profile, isNew } = await createOrGetGoogleUserProfile(result.user);
+    return { success: true, profile, isNew };
   } catch (error: any) {
     console.error("signInWithGoogle Error:", error);
     const code = error.code || '';
@@ -468,6 +471,119 @@ export async function signInWithGoogle(): Promise<{ success: boolean; profile?: 
     }
     
     return { success: false, error: error.message || "구글 로그인에 실패했습니다." };
+  }
+}
+
+// ✨ 1-1-1. 구글 첫 로그인 사용자 무료 프로필 최초 설정 (닉네임 & 스타터 아바타 1회 무료 확정)
+export async function completeInitialGoogleSetup(
+  currentName: string,
+  newName: string,
+  starterAvatarId: string
+): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
+  try {
+    const trimmed = newName.trim();
+    if (!trimmed) return { success: false, error: "닉네임을 입력해 주세요." };
+
+    const selectedStarter = AVATAR_DATABASE.find(a => a.id === starterAvatarId) || AVATAR_DATABASE.find(a => a.id === 'lion');
+    const avatar = selectedStarter?.icon || '🦁';
+    const currentAvatarId = selectedStarter?.id || 'lion';
+
+    // 닉네임이 변경된 경우
+    if (trimmed !== currentName) {
+      const targetRef = doc(db, 'users', trimmed);
+      const targetSnap = await getDoc(targetRef);
+      if (targetSnap.exists()) {
+        return { success: false, error: "이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요." };
+      }
+
+      const oldRef = doc(db, 'users', currentName);
+      const oldSnap = await getDoc(oldRef);
+      const oldData = oldSnap.exists() ? oldSnap.data() : {};
+
+      const updatedPayload = removeUndefinedDeep({
+        ...oldData,
+        name: trimmed,
+        avatar,
+        currentAvatarId,
+        unlockedAvatars: STARTER_AVATAR_IDS,
+        hasCompletedInitialSetup: true,
+        updatedAt: serverTimestamp()
+      });
+
+      await setDoc(targetRef, updatedPayload, { merge: true });
+      if (auth.currentUser?.uid) {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), updatedPayload, { merge: true });
+      }
+
+      if (oldSnap.exists()) {
+        await deleteDoc(oldRef);
+      }
+
+      const newProfile: UserProfile = {
+        ...oldData,
+        name: trimmed,
+        pin: oldData.pin || '000000',
+        coins: oldData.coins ?? 200,
+        bookmarkLimit: oldData.bookmarkLimit || 50,
+        avatar,
+        currentAvatarId,
+        unlockedAvatars: STARTER_AVATAR_IDS,
+        xp: oldData.xp || 0,
+        tier: oldData.tier || 'Bronze',
+        dailyGoal: oldData.dailyGoal || 10,
+        totalSolved: oldData.totalSolved || 0,
+        totalCorrect: oldData.totalCorrect || 0,
+        email: oldData.email || auth.currentUser?.email || undefined,
+        photoURL: oldData.photoURL || auth.currentUser?.photoURL || undefined,
+        isAdmin: checkIsAdmin({ name: trimmed, email: oldData.email || auth.currentUser?.email || undefined }),
+        hasCompletedInitialSetup: true
+      };
+
+      return { success: true, profile: newProfile };
+    } else {
+      // 닉네임 변경 없이 아바타만 선택한 경우
+      const userRef = doc(db, 'users', currentName);
+      const snap = await getDoc(userRef);
+      const data = snap.exists() ? snap.data() : {};
+
+      const updatedPayload = removeUndefinedDeep({
+        avatar,
+        currentAvatarId,
+        unlockedAvatars: STARTER_AVATAR_IDS,
+        hasCompletedInitialSetup: true,
+        updatedAt: serverTimestamp()
+      });
+
+      await setDoc(userRef, updatedPayload, { merge: true });
+      if (auth.currentUser?.uid) {
+        await setDoc(doc(db, 'users', auth.currentUser.uid), updatedPayload, { merge: true });
+      }
+
+      const updatedProfile: UserProfile = {
+        ...data,
+        name: currentName,
+        pin: data.pin || '000000',
+        coins: data.coins ?? 200,
+        bookmarkLimit: data.bookmarkLimit || 50,
+        avatar,
+        currentAvatarId,
+        unlockedAvatars: STARTER_AVATAR_IDS,
+        xp: data.xp || 0,
+        tier: data.tier || 'Bronze',
+        dailyGoal: data.dailyGoal || 10,
+        totalSolved: data.totalSolved || 0,
+        totalCorrect: data.totalCorrect || 0,
+        email: data.email || auth.currentUser?.email || undefined,
+        photoURL: data.photoURL || auth.currentUser?.photoURL || undefined,
+        isAdmin: checkIsAdmin({ name: currentName, email: data.email || auth.currentUser?.email || undefined }),
+        hasCompletedInitialSetup: true
+      };
+
+      return { success: true, profile: updatedProfile };
+    }
+  } catch (e: any) {
+    console.error("completeInitialGoogleSetup Error:", e);
+    return { success: false, error: e.message || "프로필 설정 처리 중 오류가 발생했습니다." };
   }
 }
 
@@ -574,7 +690,8 @@ export async function checkGoogleRedirectResult(): Promise<UserProfile | null> {
   try {
     const result = await getRedirectResult(auth);
     if (result && result.user) {
-      return await createOrGetGoogleUserProfile(result.user);
+      const { profile } = await createOrGetGoogleUserProfile(result.user);
+      return profile;
     }
     return null;
   } catch (e) {

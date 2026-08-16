@@ -97,6 +97,7 @@ export interface UserProfile {
   photoURL?: string;
   lastGeneratedAt?: number;
   isAdmin?: boolean;
+  hasCompletedInitialSetup?: boolean;
   createdAt?: number;
 }
 

@@ -51,6 +51,7 @@ import {
   getBookmarkLimit,
   expandBookmarkLimit,
   changeUserNickname,
+  completeInitialGoogleSetup,
   drawGachaAvatar,
   equipUserAvatar,
   checkGoogleRedirectResult,
@@ -91,6 +92,7 @@ import { AvatarGachaModal } from './components/AvatarGachaModal';
 import { ReportCenterModal } from './components/ReportCenterModal';
 import { AdminCenterModal } from './components/AdminCenterModal';
 import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
+import { InitialProfileSetupModal } from './components/InitialProfileSetupModal';
 import { ToastProvider, useToast } from './components/ToastContainer';
 import { SystemSettings } from './types';
 
@@ -111,10 +113,11 @@ function AppContent() {
   const [isRevengeModalOpen, setIsRevengeModalOpen] = useState<boolean>(false);
   const [previousCycleScore, setPreviousCycleScore] = useState<number>(0);
 
-  // Gacha & Report & Admin & Notification Modal State
+  // Gacha & Report & Admin & Initial Setup Modal State
   const [isGachaModalOpen, setIsGachaModalOpen] = useState<boolean>(false);
   const [isReportCenterOpen, setIsReportCenterOpen] = useState<boolean>(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
+  const [isInitialSetupModalOpen, setIsInitialSetupModalOpen] = useState<boolean>(false);
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(DEFAULT_SYSTEM_SETTINGS);
 
   // PWA Home Screen Prompt State
@@ -334,13 +337,43 @@ function AppContent() {
         setBookmarkLimit(result.profile.bookmarkLimit || 50);
         setView('menu');
         await refreshUserData(result.profile.name);
-        toast.coin(`구글 로그인 성공! 🎉`, `환영합니다, ${result.profile.name}님!`);
+
+        // 구글 신규 가입자 또는 최초 프로필 미설정 시 무료 설정 모달 자동 오픈!
+        if (result.isNew || !result.profile.hasCompletedInitialSetup) {
+          setIsInitialSetupModalOpen(true);
+        } else {
+          toast.coin(`구글 로그인 성공! 🎉`, `환영합니다, ${result.profile.name}님!`);
+        }
         trackUserAction('LOGIN', `Google OAuth: ${result.profile.name}`, result.profile);
       } else {
         toast.error('구글 로그인 안내', result.error || '구글 인증이 취소되었습니다.');
       }
     } catch (e: any) {
       toast.error('구글 로그인 오류', e.message || '인증 중 문제가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ✨ 최초 1회 무료 프로필 설정 완료 핸들러
+  const handleSaveInitialSetup = async (newName: string, starterAvatarId: string) => {
+    if (!user) return;
+    setIsLoading(true);
+    setLoadingText('프로필 설정 적용 중...');
+
+    try {
+      const res = await completeInitialGoogleSetup(user.name, newName, starterAvatarId);
+      if (res.success && res.profile) {
+        setIsInitialSetupModalOpen(false);
+        localStorage.setItem('ai_grammar_user', JSON.stringify(res.profile));
+        setUser(res.profile);
+        await refreshUserData(res.profile.name);
+        toast.coin('🎉 프로필 무료 설정 완료!', `환영합니다, ${res.profile.name}님! 🪙 200 코인이 지급되었습니다.`);
+      } else {
+        toast.error('설정 오류', res.error || '프로필을 설정하지 못했습니다.');
+      }
+    } catch (e: any) {
+      toast.error('오류 발생', e.message || '프로필 저장 중 문제가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -1415,6 +1448,16 @@ function AppContent() {
         <DbExplorerView
           dbData={dbData}
           onBack={() => setView('menu')}
+        />
+      )}
+
+      {/* ✨ 구글 첫 로그인 무료 프로필 설정 모달 */}
+      {user && (
+        <InitialProfileSetupModal
+          isOpen={isInitialSetupModalOpen}
+          user={user}
+          onSave={handleSaveInitialSetup}
+          isLoading={isLoading}
         />
       )}
 
