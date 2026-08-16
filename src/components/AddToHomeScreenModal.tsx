@@ -78,6 +78,7 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
         const { outcome } = await deferredPrompt.userChoice;
         if (outcome === 'accepted') {
           trackUserAction('ADD_TO_HOME_SUCCESS', 'User Accepted Prompt');
+          localStorage.setItem('pwa_installed', 'true');
           sessionStorage.setItem('pwa_prompt_dismissed', 'true');
           if (onAddedSuccess) onAddedSuccess();
           onClose();

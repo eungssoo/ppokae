@@ -555,6 +555,14 @@ export async function changeUserNickname(
       updatedAt: serverTimestamp()
     }));
 
+    if (auth.currentUser?.uid) {
+      await setDoc(doc(db, 'users', auth.currentUser.uid), {
+        name: trimmed,
+        coins: updatedCoins,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
     // 기존 문서 삭제
     await deleteDoc(oldRef);
 
