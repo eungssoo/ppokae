@@ -117,13 +117,19 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
                 className="group p-5 bg-slate-800/60 hover:bg-indigo-500/10 border border-slate-700/80 hover:border-indigo-500/50 rounded-2xl transition-all shadow-sm hover:shadow-md text-left flex items-center justify-between active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
                     <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 font-black text-xs flex items-center justify-center border border-indigo-500/30">
                       {levelInfo.level}
                     </span>
                     <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-indigo-300 transition-colors">
                       {levelInfo.label}
                     </h3>
+                    <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Coins className="w-3 h-3 text-amber-400" />
+                      <span>
+                        정답 시 {levelInfo.level === 1 ? '+1' : levelInfo.level === 2 ? '+3' : levelInfo.level === 3 ? '+5' : '+7'} 코인
+                      </span>
+                    </span>
                     <span className="bg-slate-700/80 text-slate-300 border border-slate-600 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
                       <BookOpen className="w-3 h-3 text-indigo-400" />
                       <span>{count}문제 준비됨</span>

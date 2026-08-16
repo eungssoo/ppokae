@@ -127,6 +127,9 @@ function AppContent() {
     earnedXp: number;
   }>({ correctCount: 0, totalQuestions: 10, earnedCoins: 0, earnedXp: 0 });
 
+  // 🪙 실시간 퀴즈 누적 획득 코인 (난이도별 차등 계산)
+  const [earnedCoinsTotal, setEarnedCoinsTotal] = useState<number>(0);
+
   // Action Confirmation Modal State
   const [actionModalConfig, setActionModalConfig] = useState<ActionModalConfig | null>(null);
 
@@ -775,6 +778,7 @@ function AppContent() {
       setQuestionCount(1);
       setScore(0);
       setCorrectCount(0);
+      setEarnedCoinsTotal(0);
       setView('solve');
     } else {
       toast.error('문제 로딩 실패', result.error || '문제를 불러오지 못했습니다.');
@@ -799,6 +803,7 @@ function AppContent() {
       setQuestionCount(1);
       setScore(0);
       setCorrectCount(0);
+      setEarnedCoinsTotal(0);
       setView('solve');
     } else {
       toast.error('약점 문제 없음', result.error || '약점 문제를 먼저 생성해주세요.');
@@ -826,6 +831,7 @@ function AppContent() {
       setQuestionCount(1);
       setScore(0);
       setCorrectCount(0);
+      setEarnedCoinsTotal(0);
       setView('solve');
     } else {
       toast.error('랭킹전 준비 실패', result.error || '문제가 부족합니다.');
@@ -1049,7 +1055,11 @@ function AppContent() {
     });
 
     if (isCorrect) {
+      // 🪙 난이도별 차등 코인 지급 (1단계 1C, 2단계 3C, 3단계 5C, 4단계 7C)
+      const qCoin = questionLevel === 1 ? 1 : questionLevel === 2 ? 3 : questionLevel === 3 ? 5 : 7;
+      setEarnedCoinsTotal(prev => prev + qCoin);
       setCorrectCount(prev => prev + 1);
+
       if (quizMode === 'daily') {
         const qPoints = getRankingQuestionPoints(currentQ, questionCount).points;
         setScore(prev => prev + qPoints);
@@ -1070,13 +1080,12 @@ function AppContent() {
     } else {
       if (!user) return;
 
-      const coinRate = typeof systemSettings.rewardCoinsPerQuestion === 'number' ? systemSettings.rewardCoinsPerQuestion : 3;
+      const rewardCoins = earnedCoinsTotal;
 
       if (quizMode === 'daily') {
         setIsLoading(true);
         setLoadingText('실시간 랭킹 순위 등록 & 코인/XP 보상 지급 중...');
         
-        const rewardCoins = correctCount * coinRate;
         if (rewardCoins > 0) {
           await addCoins(user.name, rewardCoins);
         }
@@ -1097,11 +1106,10 @@ function AppContent() {
         toast.coin(`🏆 ${currentCycle.cycleName} 랭킹전 완료!`, `정답 ${correctCount}개 맞춤 ➔ 🪙 +${rewardCoins} 코인 & 🏆 +50 XP 획득!`);
         trackUserAction('RANKING_PLAY', `${currentCycle.cycleName}: ${score}점 (정답 ${correctCount}개)`, user);
       } else {
-        const earnedCoins = correctCount * coinRate;
-        if (earnedCoins > 0) {
-          await addCoins(user.name, earnedCoins);
+        if (rewardCoins > 0) {
+          await addCoins(user.name, rewardCoins);
           await refreshUserData(user.name);
-          toast.coin('학습 완료! 🎉', `정답 ${correctCount}개 맞춤 ➔ 🪙 +${earnedCoins} 코인 획득!`);
+          toast.coin('학습 완료! 🎉', `정답 ${correctCount}개 맞춤 ➔ 🪙 +${rewardCoins} 코인 획득!`);
         } else {
           await refreshUserData(user.name);
           toast.info('학습 완료! 🎉', '준비된 모든 문제를 풀었습니다.');
