@@ -2066,21 +2066,13 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   maintenanceNotice: '현재 시스템 점검 및 서버 업그레이드 중입니다. 잠시 후 다시 접속해 주세요.'
 };
 
-// 👑 15-1. 관리자 권한 여부 확인 (이름+PIN 조합 및 인증된 마스터 구글 이메일만 허용)
+// 👑 15-1. 관리자 권한 여부 확인 (오직 공식 구글 계정 rladmdtn01010@gmail.com 만 승인)
 export function checkIsAdmin(user: Partial<UserProfile> | null | undefined): boolean {
   if (!user) return false;
-  if (user.isAdmin) return true;
-  const name = (user.name || '').trim().toLowerCase();
   const email = (user.email || '').trim().toLowerCase();
-  const pin = (user.pin || '').trim();
-
-  // 1) 마스터 PIN 관리자 (관리자 계정명 + 6자리 마스터 PIN 조합 시에만 승인)
-  const isMasterPinAuth = (name === 'admin' || name === '뽀개마스터' || name === 'eungsookim' || name === '김응수') && (pin === '777777' || pin === '7777');
   
-  // 2) 개발자 공식 구글 이메일 인증
-  const isMasterEmailAuth = email === 'rladmdtn01010@gmail.com' || email === 'rladmdtn010@gmail.com' || email.includes('rladmdtn') || email.includes('eungssoo');
-
-  return isMasterPinAuth || isMasterEmailAuth;
+  // 👑 오직 공식 구글 계정 (rladmdtn01010@gmail.com, rladmdtn010@gmail.com) 로그인 시에만 관리자 권한 부여
+  return email === 'rladmdtn01010@gmail.com' || email === 'rladmdtn010@gmail.com';
 }
 
 // ⚙️ 15-2. 전역 시스템 파라미터 / 게임 경제 설정 조회

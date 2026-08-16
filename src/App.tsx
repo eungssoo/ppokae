@@ -1090,25 +1090,6 @@ function AppContent() {
         setView(quizMode === 'expression' ? 'expression_select' : quizMode === 'bookmark' ? 'bookmark_view' : 'menu');
         trackUserAction('SOLVE_COMPLETE', `모드: ${quizMode}, 정답: ${correctCount}/${questionCount}개`, user);
       }
-
-      // 📲 퀴즈 1세트 완료 시 홈 화면 바로가기 추가 유도 (PWA standalone 아니며 이번 세션에 닫지 않은 유저 대상)
-      try {
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-        const isDismissed = sessionStorage.getItem('pwa_prompt_dismissed') === 'true';
-        if (!isStandalone && !isDismissed) {
-          setQuizCompletionStats({
-            correctCount,
-            totalQuestions: questionCount,
-            earnedCoins: correctCount * coinRate,
-            earnedXp: quizMode === 'daily' ? 50 : 0
-          });
-          setTimeout(() => {
-            setIsAddToHomeModalOpen(true);
-          }, 1200);
-        }
-      } catch (e) {
-        console.warn("PWA prompt check warning:", e);
-      }
     }
   };
 

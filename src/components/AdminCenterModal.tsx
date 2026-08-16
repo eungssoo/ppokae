@@ -225,7 +225,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
       const res = await grantAdminGodMode(user.name);
       if (res.success && res.profile) {
         onUserUpdate(res.profile);
-        onShowToast('⚡ 갓 모드(God Mode) 발동 완료!', '🪙 999,999 코인 + 전 아바타 24종 올 언락 + 마스터 티어가 적용되었습니다.', 'coin');
+        onShowToast('⚡ 갓 모드(God Mode) 발동 완료!', `🪙 999,999 코인 + 전 아바타 ${AVATAR_DATABASE.length}종 올 언락 + 마스터 티어가 적용되었습니다.`, 'coin');
       } else {
         onShowToast('오류', res.error || '갓 모드 적용에 실패했습니다.', 'error');
       }
@@ -391,7 +391,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
       const targetName = selectedUserForDetail.name;
       const success = await adminUnlockUserAvatar(targetName, avatarIdOrAll);
       if (success) {
-        const avatarName = avatarIdOrAll === 'ALL' ? '24종 전체 아바타' : AVATAR_DATABASE.find(a => a.id === avatarIdOrAll)?.name || avatarIdOrAll;
+        const avatarName = avatarIdOrAll === 'ALL' ? `${AVATAR_DATABASE.length}종 전체 아바타` : AVATAR_DATABASE.find(a => a.id === avatarIdOrAll)?.name || avatarIdOrAll;
         onShowToast('🎁 아바타 선물 완료', `[${targetName}]님에게 [${avatarName}]이(가) 즉시 해금되었습니다!`, 'coin');
         const updatedUsers = await getAllUsersList();
         setUserList(updatedUsers);
@@ -632,7 +632,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                       원클릭 갓 모드 (God Mode)
                     </h3>
                     <p className="text-sm text-slate-300 max-w-xl">
-                      버튼 클릭 한 번으로 내 관리자 계정에 <strong>🪙 999,999 코인</strong>, <strong>전체 24종 아바타 올 해금</strong>, <strong>마스터 티어</strong>, <strong>즐겨찾기 9,999칸</strong>을 즉시 부여합니다.
+                      버튼 클릭 한 번으로 내 관리자 계정에 <strong>🪙 999,999 코인</strong>, <strong>전체 {AVATAR_DATABASE.length}종 아바타 올 해금</strong>, <strong>마스터 티어</strong>, <strong>즐겨찾기 9,999칸</strong>을 즉시 부여합니다.
                     </p>
                   </div>
 
@@ -1284,7 +1284,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                           </td>
                           <td className="p-3.5 font-bold text-slate-300">
                             <span className="px-2 py-0.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 font-mono">
-                              {(u.unlockedAvatars || []).length} / 24종
+                              {(u.unlockedAvatars || []).length} / {AVATAR_DATABASE.length}종
                             </span>
                           </td>
                           <td className="p-3.5 font-bold text-emerald-300 font-mono">
@@ -1445,7 +1445,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                             <span>아바타 강제 해금 & 선물</span>
                           </span>
                           <span className="text-[10px] text-slate-400 font-normal">
-                            보유: {(selectedUserForDetail.unlockedAvatars || []).length}/24종
+                            보유: {(selectedUserForDetail.unlockedAvatars || []).length}/{AVATAR_DATABASE.length}종
                           </span>
                         </label>
                         <div className="flex gap-2">
@@ -1475,7 +1475,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                           onClick={() => handleGiftAvatarToUser('ALL')}
                           className="w-full py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-black text-xs shadow-md active:scale-95 transition-all"
                         >
-                          ✨ 24종 전설 아바타 전체 올 해금 (God Mode)
+                          ✨ {AVATAR_DATABASE.length}종 전설 아바타 전체 올 해금 (God Mode)
                         </button>
                       </div>
 
