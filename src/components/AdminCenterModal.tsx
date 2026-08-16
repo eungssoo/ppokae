@@ -52,6 +52,8 @@ import {
   adminBulkImportQuestions,
   adminExportAllQuestions,
   adminInjectGhostRanking,
+  adminBatchInjectGhostRankings,
+  adminClearGhostRankings,
   RANDOM_GHOST_NAMES,
   getCycleRankings,
   getTodayDateString,
@@ -116,6 +118,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   const [isImportingQuestions, setIsImportingQuestions] = useState(false);
 
   // Ghost Rankings State
+  const [ghostMode, setGhostMode] = useState<'batch' | 'single'>('batch');
   const [ghostCycleIndex, setGhostCycleIndex] = useState<1 | 2 | 3>(1);
   const [ghostName, setGhostName] = useState<string>('토익만점가자');
   const [ghostAvatarId, setGhostAvatarId] = useState<string>('gemini_god');
@@ -123,6 +126,15 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   const [ghostMinutesAgo, setGhostMinutesAgo] = useState<number>(25);
   const [ghostLeaderboard, setGhostLeaderboard] = useState<RankingItem[]>([]);
   const [isInjectingGhost, setIsInjectingGhost] = useState<boolean>(false);
+
+  // 👥 Batch Ghost Generation States
+  const [ghostBatchCount, setGhostBatchCount] = useState<number>(10);
+  const [ghostMinCorrect, setGhostMinCorrect] = useState<number>(4);
+  const [ghostMaxCorrect, setGhostMaxCorrect] = useState<number>(10);
+  const [ghostMinMinutesAgo, setGhostMinMinutesAgo] = useState<number>(5);
+  const [ghostMaxMinutesAgo, setGhostMaxMinutesAgo] = useState<number>(360);
+  const [isBatchInjecting, setIsBatchInjecting] = useState<boolean>(false);
+  const [isClearingGhosts, setIsClearingGhosts] = useState<boolean>(false);
 
   // 📊 Analytics State
   const [analyticsList, setAnalyticsList] = useState<UserAnalyticsSummary[]>([]);
@@ -217,6 +229,55 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
       onShowToast('오류', e.message, 'error');
     } finally {
       setIsInjectingGhost(false);
+    }
+  };
+
+  const handleBatchInjectGhosts = async () => {
+    sound.playReward();
+    setIsBatchInjecting(true);
+
+    try {
+      const cycleId = `${getTodayDateString()}_cycle${ghostCycleIndex}`;
+      const res = await adminBatchInjectGhostRankings({
+        cycleId,
+        count: ghostBatchCount,
+        minCorrect: ghostMinCorrect,
+        maxCorrect: ghostMaxCorrect,
+        minMinutesAgo: ghostMinMinutesAgo,
+        maxMinutesAgo: ghostMaxMinutesAgo
+      });
+
+      if (res.success) {
+        onShowToast('👥 고스트 대량 투입 성공!', `오늘 ${ghostCycleIndex}차전에 중복 없는 고스트 ${res.injectedCount}명이 고유 시간/점수로 일괄 배치되었습니다!`, 'coin');
+        await loadGhostLeaderboard(ghostCycleIndex);
+      } else {
+        onShowToast('오류', res.error || '고스트 일괄 투입 실패', 'error');
+      }
+    } catch (e: any) {
+      onShowToast('오류', e.message, 'error');
+    } finally {
+      setIsBatchInjecting(false);
+    }
+  };
+
+  const handleClearGhosts = async () => {
+    if (!window.confirm(`정말로 오늘 ${ghostCycleIndex}차전의 모든 고스트 랭커 데이터를 일괄 삭제하시겠습니까?`)) return;
+    sound.playClick();
+    setIsClearingGhosts(true);
+
+    try {
+      const cycleId = `${getTodayDateString()}_cycle${ghostCycleIndex}`;
+      const res = await adminClearGhostRankings(cycleId);
+      if (res.success) {
+        onShowToast('🧹 고스트 청소 완료', `오늘 ${ghostCycleIndex}차전에서 고스트 랭커 ${res.deletedCount}명이 삭제되었습니다.`, 'info');
+        await loadGhostLeaderboard(ghostCycleIndex);
+      } else {
+        onShowToast('오류', res.error || '고스트 삭제 실패', 'error');
+      }
+    } catch (e: any) {
+      onShowToast('오류', e.message, 'error');
+    } finally {
+      setIsClearingGhosts(false);
     }
   };
 
@@ -682,7 +743,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-400 font-bold">해금 아바타</span>
-                    <h4 className="text-xl font-black text-purple-300">{(user.unlockedAvatars || []).length} / 24 종</h4>
+                    <h4 className="text-xl font-black text-purple-300">{(user.unlockedAvatars || []).length} / {AVATAR_DATABASE.length} 종</h4>
                   </div>
                 </div>
 
@@ -1629,188 +1690,403 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
           {activeTab === 'ghost_rankings' && (
             <div className="space-y-6 animate-in fade-in duration-200">
               
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
                 <div>
                   <h3 className="text-lg font-black text-white flex items-center gap-2">
                     <Trophy className="w-5 h-5 text-amber-400" />
-                    <span>랭킹전 고스트 플레이어 (더미 랭커) 주입기</span>
+                    <span>랭킹전 고스트 플레이어 (더미 랭커) 사령탑</span>
                   </h3>
                   <p className="text-xs text-slate-400">
-                    실제 일반 사용자와 100% 동일한 데이터 스키마로 자연스러운 랭킹 데이터를 실시간 생성 및 주입합니다.
+                    실제 유저와 100% 동일한 데이터 스키마로 자연스러운 고유 랭킹 데이터를 실시간 일괄 생성 및 주입합니다.
                   </p>
+                </div>
+
+                {/* 모드 전환 탭 */}
+                <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-2xl">
+                  <button
+                    type="button"
+                    onClick={() => setGhostMode('batch')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                      ghostMode === 'batch'
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>👥 N명 일괄 자동 투입</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGhostMode('single')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                      ghostMode === 'single'
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>🎯 1명 정밀 수동 주입</span>
+                  </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
-                {/* 📝 주입 폼 */}
-                <form onSubmit={handleInjectGhostPlayer} className="p-5 rounded-3xl bg-slate-800/80 border border-slate-700 space-y-4">
-                  <h4 className="text-sm font-black text-amber-300 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    <span>고스트 플레이어 프로필 & 점수 설정</span>
-                  </h4>
-
-                  {/* 차전 선택 */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-300">대상 차전 선택</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[1, 2, 3].map(idx => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => {
-                            setGhostCycleIndex(idx as 1 | 2 | 3);
-                            loadGhostLeaderboard(idx as 1 | 2 | 3);
-                          }}
-                          className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
-                            ghostCycleIndex === idx
-                              ? 'bg-amber-500 text-slate-950 font-black shadow-md'
-                              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-700'
-                          }`}
-                        >
-                          오늘 {idx}차전
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* 닉네임 입력 + 랜덤 생성 버튼 */}
-                  <div className="space-y-1.5">
+                {/* 📝 1. 일괄 자동 투입 모드 */}
+                {ghostMode === 'batch' ? (
+                  <div className="p-5 rounded-3xl bg-slate-800/80 border border-amber-500/30 space-y-4 shadow-xl">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-300">고스트 닉네임</label>
+                      <h4 className="text-sm font-black text-amber-300 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-yellow-400" />
+                        <span>고스트 여러 마리 일괄 투입 설정</span>
+                      </h4>
+                      <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/30">
+                        중복 0% & 시간 분산 보장
+                      </span>
+                    </div>
+
+                    {/* 차전 선택 */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-300">대상 차전 선택</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[1, 2, 3].map(idx => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setGhostCycleIndex(idx as 1 | 2 | 3);
+                              loadGhostLeaderboard(idx as 1 | 2 | 3);
+                            }}
+                            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+                              ghostCycleIndex === idx
+                                ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+                                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-700'
+                            }`}
+                          >
+                            오늘 {idx}차전
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 투입 인원 수 프리셋 & 슬라이더 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-300">투입할 고스트 인원 수</label>
+                        <span className="text-sm font-black text-amber-300 font-mono">
+                          {ghostBatchCount} 명
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {[5, 10, 20, 30, 50].map(cnt => (
+                          <button
+                            key={cnt}
+                            type="button"
+                            onClick={() => setGhostBatchCount(cnt)}
+                            className={`py-1.5 rounded-xl text-xs font-bold transition-all ${
+                              ghostBatchCount === cnt
+                                ? 'bg-amber-400 text-slate-950 font-black shadow-sm'
+                                : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-700'
+                            }`}
+                          >
+                            {cnt}명
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={50}
+                        value={ghostBatchCount}
+                        onChange={e => setGhostBatchCount(parseInt(e.target.value) || 1)}
+                        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                      />
+                    </div>
+
+                    {/* 정답 문제 수 (점수 범위) 설정 */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-300">점수 난수 범위 (맞힌 문제 수)</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <span className="text-[11px] text-slate-400 block mb-1">최소 정답 수</span>
+                          <select
+                            value={ghostMinCorrect}
+                            onChange={e => setGhostMinCorrect(parseInt(e.target.value) || 1)}
+                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-amber-400"
+                          >
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                              <option key={n} value={n}>{n}문제 ({[10, 10, 15, 15, 15, 25, 25, 25, 30, 30].slice(0, n).reduce((a, b) => a + b, 0)}점)</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-400 block mb-1">최대 정답 수</span>
+                          <select
+                            value={ghostMaxCorrect}
+                            onChange={e => setGhostMaxCorrect(parseInt(e.target.value) || 10)}
+                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-amber-400"
+                          >
+                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                              <option key={n} value={n}>{n}문제 ({[10, 10, 15, 15, 15, 25, 25, 25, 30, 30].slice(0, n).reduce((a, b) => a + b, 0)}점)</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        * 각 고스트는 {ghostMinCorrect}문제~{ghostMaxCorrect}문제 사이에서 고유한 점수를 부여받습니다.
+                      </p>
+                    </div>
+
+                    {/* 시간 분산 범위 설정 */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-300">완료 시간 분산 간격</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <span className="text-[11px] text-slate-400 block mb-1">최소 경과 시간</span>
+                          <select
+                            value={ghostMinMinutesAgo}
+                            onChange={e => setGhostMinMinutesAgo(parseInt(e.target.value) || 5)}
+                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none"
+                          >
+                            <option value={5}>5분 전</option>
+                            <option value={15}>15분 전</option>
+                            <option value={30}>30분 전</option>
+                            <option value={60}>1시간 전</option>
+                          </select>
+                        </div>
+                        <div>
+                          <span className="text-[11px] text-slate-400 block mb-1">최대 경과 시간</span>
+                          <select
+                            value={ghostMaxMinutesAgo}
+                            onChange={e => setGhostMaxMinutesAgo(parseInt(e.target.value) || 360)}
+                            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none"
+                          >
+                            <option value={120}>2시간 전까지</option>
+                            <option value={240}>4시간 전까지</option>
+                            <option value={360}>6시간 전까지</option>
+                            <option value={480}>8시간 전까지</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3대 안심 특성 뱃지 */}
+                    <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-700/60 grid grid-cols-3 gap-2 text-center text-[10px] text-slate-300 font-bold">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-amber-400 text-sm">🔒</span>
+                        <span>중복 닉네임 0%</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-cyan-400 text-sm">⏱️</span>
+                        <span>시간대 100% 분산</span>
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-purple-400 text-sm">🪐</span>
+                        <span>104종 아바타 착용</span>
+                      </div>
+                    </div>
+
+                    {/* 일괄 투입 & 청소 버튼 */}
+                    <div className="space-y-2 pt-1">
                       <button
                         type="button"
-                        onClick={handleRandomizeGhostName}
-                        className="text-[11px] text-amber-300 hover:text-amber-200 font-bold flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/30 transition-all"
+                        onClick={handleBatchInjectGhosts}
+                        disabled={isBatchInjecting}
+                        className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black text-sm rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                       >
-                        <Shuffle className="w-3 h-3" />
-                        <span>🎲 닉네임 & 아바타 랜덤 뽑기</span>
+                        <Trophy className="w-4 h-4 fill-slate-950" />
+                        <span>{isBatchInjecting ? '대량 투입 중...' : `오늘 ${ghostCycleIndex}차전에 고스트 ${ghostBatchCount}명 일괄 투입하기 🚀`}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleClearGhosts}
+                        disabled={isClearingGhosts}
+                        className="w-full py-2 bg-slate-900 hover:bg-rose-950/60 border border-slate-700 hover:border-rose-500/50 text-slate-400 hover:text-rose-300 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>{isClearingGhosts ? '청소 중...' : `오늘 ${ghostCycleIndex}차전 고스트 랭커 데이터 전체 삭제 (클린업)`}</span>
                       </button>
                     </div>
-                    <input
-                      type="text"
-                      value={ghostName}
-                      onChange={e => setGhostName(e.target.value)}
-                      placeholder="플레이어 닉네임 입력"
-                      required
-                      className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
-                    />
                   </div>
+                ) : (
+                  /* 📝 2. 단일 1명 정밀 수동 주입 폼 */
+                  <form onSubmit={handleInjectGhostPlayer} className="p-5 rounded-3xl bg-slate-800/80 border border-slate-700 space-y-4">
+                    <h4 className="text-sm font-black text-purple-300 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      <span>단일 고스트 1명 프로필 & 점수 수동 설정</span>
+                    </h4>
 
-                  {/* 🎭 고스트 대표 아바타 프로필 설정 */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-300">장착할 대표 아바타 프로필</label>
-                      <span className="text-[11px] text-amber-300 font-bold">
-                        {AVATAR_DATABASE.find(a => a.id === ghostAvatarId)?.name}
-                      </span>
+                    {/* 차전 선택 */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-300">대상 차전 선택</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[1, 2, 3].map(idx => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => {
+                              setGhostCycleIndex(idx as 1 | 2 | 3);
+                              loadGhostLeaderboard(idx as 1 | 2 | 3);
+                            }}
+                            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+                              ghostCycleIndex === idx
+                                ? 'bg-purple-500 text-white font-black shadow-md'
+                                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-700'
+                            }`}
+                          >
+                            오늘 {idx}차전
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* 선택된 아바타 프리뷰 카드 */}
-                    {(() => {
-                      const cur = AVATAR_DATABASE.find(a => a.id === ghostAvatarId) || AVATAR_DATABASE[0];
-                      return (
-                        <div className={`p-2.5 rounded-2xl bg-gradient-to-r ${cur.bgGradient || 'from-slate-800 to-slate-900 border-slate-700'} border flex items-center justify-between shadow-md`}>
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-2xl">{cur.icon}</span>
-                            <div>
-                              <div className="flex items-center gap-1.5">
-                                <span className={`text-xs font-black ${cur.color || 'text-white'}`}>{cur.name}</span>
-                                <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full bg-slate-950/80 text-amber-300 border border-amber-400/40">
-                                  {cur.grade === 'transcendent' ? '초월' : cur.grade === 'mythic' ? '신화' : cur.grade === 'legendary' ? '전설' : cur.grade === 'epic' ? '에픽' : '스타터'}
-                                </span>
+                    {/* 닉네임 입력 + 랜덤 생성 버튼 */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-300">고스트 닉네임</label>
+                        <button
+                          type="button"
+                          onClick={handleRandomizeGhostName}
+                          className="text-[11px] text-purple-300 hover:text-purple-200 font-bold flex items-center gap-1 bg-purple-500/10 px-2 py-0.5 rounded-lg border border-purple-500/30 transition-all"
+                        >
+                          <Shuffle className="w-3 h-3" />
+                          <span>🎲 닉네임 & 아바타 랜덤 뽑기</span>
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        value={ghostName}
+                        onChange={e => setGhostName(e.target.value)}
+                        placeholder="플레이어 닉네임 입력"
+                        required
+                        className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-purple-400"
+                      />
+                    </div>
+
+                    {/* 🎭 고스트 대표 아바타 프로필 설정 */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-300">장착할 대표 아바타 프로필</label>
+                        <span className="text-[11px] text-purple-300 font-bold">
+                          {AVATAR_DATABASE.find(a => a.id === ghostAvatarId)?.name}
+                        </span>
+                      </div>
+
+                      {/* 선택된 아바타 프리뷰 카드 */}
+                      {(() => {
+                        const cur = AVATAR_DATABASE.find(a => a.id === ghostAvatarId) || AVATAR_DATABASE[0];
+                        return (
+                          <div className={`p-2.5 rounded-2xl bg-gradient-to-r ${cur.bgGradient || 'from-slate-800 to-slate-900 border-slate-700'} border flex items-center justify-between shadow-md`}>
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-2xl">{cur.icon}</span>
+                              <div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`text-xs font-black ${cur.color || 'text-white'}`}>{cur.name}</span>
+                                  <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded-full bg-slate-950/80 text-amber-300 border border-amber-400/40">
+                                    {cur.grade === 'transcendent' ? '초월' : cur.grade === 'mythic' ? '신화' : cur.grade === 'legendary' ? '전설' : cur.grade === 'epic' ? '에픽' : '스타터'}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-slate-300/80 italic line-clamp-1">"{cur.quote}"</p>
                               </div>
-                              <p className="text-[10px] text-slate-300/80 italic line-clamp-1">"{cur.quote}"</p>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })()}
+                        );
+                      })()}
 
-                    {/* 아바타 선택 셀렉트 박스 */}
-                    <select
-                      value={ghostAvatarId}
-                      onChange={e => setGhostAvatarId(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-amber-400"
-                    >
-                      <optgroup label="🌟 초월 (0.05% 천상계 아바타)">
-                        {AVATAR_DATABASE.filter(a => a.grade === 'transcendent').map(a => (
-                          <option key={a.id} value={a.id}>{a.icon} {a.name} [초월]</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="🌌 신화 (1.0% 신화 아바타)">
-                        {AVATAR_DATABASE.filter(a => a.grade === 'mythic').map(a => (
-                          <option key={a.id} value={a.id}>{a.icon} {a.name} [신화]</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="🏆 전설 (5.0% 레전드 아바타)">
-                        {AVATAR_DATABASE.filter(a => a.grade === 'legendary').map(a => (
-                          <option key={a.id} value={a.id}>{a.icon} {a.name} [전설]</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="🔮 에픽 (20.0% 에픽 아바타)">
-                        {AVATAR_DATABASE.filter(a => a.grade === 'epic').map(a => (
-                          <option key={a.id} value={a.id}>{a.icon} {a.name} [에픽]</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="🦁 스타터 기본 아바타">
-                        {AVATAR_DATABASE.filter(a => a.grade === 'starter').map(a => (
-                          <option key={a.id} value={a.id}>{a.icon} {a.name} [스타터]</option>
-                        ))}
-                      </optgroup>
-                    </select>
-                  </div>
-
-                  {/* 맞힌 문제 수 & 점수 */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-300">맞힌 문제 수 (정답 수)</label>
-                      <span className="text-xs font-black text-amber-300 font-mono">
-                        {ghostCorrectCount}문제 / 10문제 ({[10, 10, 15, 15, 15, 25, 25, 25, 30, 30].slice(0, ghostCorrectCount).reduce((a, b) => a + b, 0)}점)
-                      </span>
+                      {/* 아바타 선택 셀렉트 박스 */}
+                      <select
+                        value={ghostAvatarId}
+                        onChange={e => setGhostAvatarId(e.target.value)}
+                        className="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none focus:border-purple-400"
+                      >
+                        <optgroup label="🌟 초월 (0.05% 천상계 아바타)">
+                          {AVATAR_DATABASE.filter(a => a.grade === 'transcendent').map(a => (
+                            <option key={a.id} value={a.id}>{a.icon} {a.name} [초월]</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🌌 신화 (1.0% 신화 아바타)">
+                          {AVATAR_DATABASE.filter(a => a.grade === 'mythic').map(a => (
+                            <option key={a.id} value={a.id}>{a.icon} {a.name} [신화]</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🏆 전설 (5.0% 레전드 아바타)">
+                          {AVATAR_DATABASE.filter(a => a.grade === 'legendary').map(a => (
+                            <option key={a.id} value={a.id}>{a.icon} {a.name} [전설]</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🔮 영웅 (15.0% 에픽 아바타)">
+                          {AVATAR_DATABASE.filter(a => a.grade === 'epic').map(a => (
+                            <option key={a.id} value={a.id}>{a.icon} {a.name} [에픽]</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🎖️ 희귀 (30.0% 희귀 아바타)">
+                          {AVATAR_DATABASE.filter(a => a.grade === 'rare').map(a => (
+                            <option key={a.id} value={a.id}>{a.icon} {a.name} [희귀]</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🌿 일반 (48.95% 일반 아바타)">
+                          {AVATAR_DATABASE.filter(a => a.grade === 'common').map(a => (
+                            <option key={a.id} value={a.id}>{a.icon} {a.name} [일반]</option>
+                          ))}
+                        </optgroup>
+                        <optgroup label="🦁 스타터 기본 아바타">
+                          {AVATAR_DATABASE.filter(a => a.grade === 'starter').map(a => (
+                            <option key={a.id} value={a.id}>{a.icon} {a.name} [스타터]</option>
+                          ))}
+                        </optgroup>
+                      </select>
                     </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={10}
-                      value={ghostCorrectCount}
-                      onChange={e => setGhostCorrectCount(parseInt(e.target.value) || 1)}
-                      className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
-                    />
-                    <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                      <span>1개(10점)</span>
-                      <span>5개(65점)</span>
-                      <span>8개(140점)</span>
-                      <span>10개(200점 만점)</span>
+
+                    {/* 맞힌 문제 수 & 점수 */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-300">맞힌 문제 수 (정답 수)</label>
+                        <span className="text-xs font-black text-purple-300 font-mono">
+                          {ghostCorrectCount}문제 / 10문제 ({[10, 10, 15, 15, 15, 25, 25, 25, 30, 30].slice(0, ghostCorrectCount).reduce((a, b) => a + b, 0)}점)
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={10}
+                        value={ghostCorrectCount}
+                        onChange={e => setGhostCorrectCount(parseInt(e.target.value) || 1)}
+                        className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-400"
+                      />
+                      <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                        <span>1개(10점)</span>
+                        <span>5개(65점)</span>
+                        <span>8개(140점)</span>
+                        <span>10개(200점 만점)</span>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* 완료 시점 오프셋 */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-300">완료 시간 설정 (얼마 전 푼 것으로 기록)</label>
-                    <select
-                      value={ghostMinutesAgo}
-                      onChange={e => setGhostMinutesAgo(parseInt(e.target.value) || 15)}
-                      className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none"
+                    {/* 완료 시점 오프셋 */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-300">완료 시간 설정 (얼마 전 푼 것으로 기록)</label>
+                      <select
+                        value={ghostMinutesAgo}
+                        onChange={e => setGhostMinutesAgo(parseInt(e.target.value) || 15)}
+                        className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-bold text-white focus:outline-none"
+                      >
+                        <option value={5}>5분 전 (방금 전 푼 느낌)</option>
+                        <option value={15}>15분 전</option>
+                        <option value={30}>30분 전</option>
+                        <option value={60}>1시간 전</option>
+                        <option value={120}>2시간 전</option>
+                        <option value={240}>4시간 전</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isInjectingGhost || !ghostName.trim()}
+                      className="w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-black text-sm rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
-                      <option value={5}>5분 전 (방금 전 푼 느낌)</option>
-                      <option value={15}>15분 전</option>
-                      <option value={30}>30분 전</option>
-                      <option value={60}>1시간 전</option>
-                      <option value={120}>2시간 전</option>
-                      <option value={240}>4시간 전</option>
-                    </select>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isInjectingGhost || !ghostName.trim()}
-                    className="w-full py-3.5 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black text-sm rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    <Trophy className="w-4 h-4 fill-slate-950" />
-                    <span>{isInjectingGhost ? '주입 중...' : `오늘 ${ghostCycleIndex}차전에 [${ghostName}] (${ghostCorrectCount * 10}점) 즉시 주입`}</span>
-                  </button>
-                </form>
+                      <Trophy className="w-4 h-4" />
+                      <span>{isInjectingGhost ? '주입 중...' : `오늘 ${ghostCycleIndex}차전에 [${ghostName}] (${ghostCorrectCount * 10}점) 단일 주입`}</span>
+                    </button>
+                  </form>
+                )}
 
                 {/* 📊 대상 차전 실시간 랭킹 프리뷰 */}
                 <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 flex flex-col h-[400px]">

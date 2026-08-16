@@ -24,7 +24,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { UserProfile, AvatarItem, AvatarGrade, FormMastery } from '../types';
-import { AVATAR_DATABASE, GRADE_CONFIG, STARTER_AVATAR_IDS } from '../services/avatarService';
+import { AVATAR_DATABASE, GRADE_CONFIG, STARTER_AVATAR_IDS, generateRandomNickname } from '../services/avatarService';
 import { checkIsAdmin, calculateTier } from '../services/dbService';
 import { sound } from '../services/soundService';
 
@@ -46,6 +46,7 @@ interface ProfileViewProps {
   onLinkGoogleAccount?: () => void;
   onOpenAdminCenter?: () => void;
   onOpenInstallModal?: () => void;
+  isStandalone?: boolean;
   onGoAnalytics?: () => void;
 }
 
@@ -80,6 +81,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onLinkGoogleAccount,
   onOpenAdminCenter,
   onOpenInstallModal,
+  isStandalone = false,
   onGoAnalytics,
 }) => {
   const [name, setName] = useState<string>(user.name);
@@ -523,10 +525,24 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* ✏️ Nickname Change Form (🪙 30 코인 소모) */}
         <form onSubmit={handleNicknameSubmit} className="bg-slate-900/80 rounded-2xl p-3.5 sm:p-4 border border-slate-800 mb-5">
-          <label className="block text-xs font-black text-slate-300 mb-2 uppercase tracking-wider flex items-center justify-between">
-            <span>닉네임 변경 (🪙 30 코인 소모)</span>
-            <span className="text-[11px] text-slate-500 font-normal">현재: {user.name}</span>
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black text-slate-300 uppercase tracking-wider">
+              닉네임 변경 (🪙 30 코인 소모)
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-500 font-normal">현재: {user.name}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  setName(generateRandomNickname());
+                }}
+                className="text-[10px] font-bold text-purple-300 hover:text-purple-200 bg-purple-500/20 hover:bg-purple-500/30 px-2 py-0.5 rounded-lg border border-purple-500/40 transition-all flex items-center gap-1 active:scale-95"
+              >
+                <span>🎲 랜덤 추천</span>
+              </button>
+            </div>
+          </div>
           <div className="flex gap-2">
             <input
               type="text"
@@ -539,7 +555,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <button
               type="submit"
               disabled={!name.trim() || name.trim() === user.name}
-              className="px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 disabled:opacity-40 disabled:grayscale text-white rounded-xl font-black text-xs sm:text-sm transition-all active:scale-95 flex items-center gap-1"
+              className="px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 disabled:opacity-40 disabled:grayscale text-white rounded-xl font-black text-xs sm:text-sm transition-all active:scale-95 flex items-center gap-1 shrink-0"
             >
               <Coins className="w-3.5 h-3.5 text-yellow-300" />
               <span>변경 (🪙 30)</span>
@@ -575,8 +591,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
 
-        {/* 📲 스마트폰 정식 앱 설치 안내 (WebAPK / PWA) */}
-        {onOpenInstallModal && (
+        {/* 📲 스마트폰 정식 앱 설치 안내 (웹 브라우저에서만 표시) */}
+        {!isStandalone && onOpenInstallModal && (
           <div className="mb-5 p-4 rounded-2xl bg-gradient-to-r from-indigo-950/70 via-purple-950/70 to-slate-900 border border-indigo-500/40 flex items-center justify-between shadow-md">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🪐</span>

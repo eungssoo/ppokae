@@ -32,7 +32,7 @@ import {
   PushAnnouncement
 } from '../types';
 import { sanitizeForm, generateRankingCycleQuestions, shuffleOptions } from './geminiService';
-import { STARTER_AVATAR_IDS, performGachaDraw, AVATAR_DATABASE } from './avatarService';
+import { STARTER_AVATAR_IDS, performGachaDraw, AVATAR_DATABASE, generateRandomNickname } from './avatarService';
 
 export function getTodayDateString(): string {
   const now = new Date();
@@ -2958,17 +2958,23 @@ export async function adminExportAllQuestions(): Promise<Question[]> {
   return allList;
 }
 
-// 🎲 자연스러운 고스트 플레이어 닉네임 목록
+// 🎲 자연스러운 고스트 플레이어 닉네임 대규모 목록 (60종 이상)
 export const RANDOM_GHOST_NAMES = [
   '토익만점가자', '영포자탈출러', '새벽공부왕', '하버드지망생', '단어마스터민',
   'Chloe_99', 'Jake_Eng', '스터디윗미', '카투사준비생', '문법파괴자',
   '영어정복자', 'Olivia_Kim', 'Ryan_Park', '수능1등급가자', '오픽AL목표',
   '미드자막없이', '회화신동', '밤샘열공러', 'Leo_Lee', 'Sophia_W',
   '영어괴물', 'TOEFL_Master', '기상스터디', '매일10문제', '지하철영단어',
-  'Sunny_Day', 'Alex_Grammar', '토익990', '원어민처럼'
+  'Sunny_Day', 'Alex_Grammar', '토익990', '원어민처럼', '영단어스나이퍼',
+  '5형식마스터', '토스Lv8달성', '아이엘츠7점', '강남토익커', '신촌스터디장',
+  '새벽5시클럽', '영문학도진', '통번역꿈나무', '직장인야간반', '수능영어만점',
+  '스피킹장인', '발음깡패', '외항사준비생', '교환학생가자', '문맥천재',
+  '에타영어1타', '공부자극제', '리스닝만점러', '단어장뽀개기', '열공모드ON',
+  'David_Cho', 'Emily_In_Seoul', 'Harry_Potter', 'Luna_Love', 'Ethan_Hunt',
+  'Lucas_Grammar', 'Hannah_Study', 'Daniel_K', 'Grace_Lee', 'Mia_English'
 ];
 
-// 🎭 15-10. 랭킹전 가짜 플레이어 (더미 랭커) 자연스러운 데이터 및 프로필 아바타 주입
+// 🎭 15-10-1. 랭킹전 단일 고스트 플레이어 주입
 export async function adminInjectGhostRanking(payload: {
   cycleId: string;
   name: string;
@@ -3008,6 +3014,7 @@ export async function adminInjectGhostRanking(payload: {
       avatarGrade,
       avatarBgGradient,
       currentAvatarId: targetAvatar?.id || 'lion',
+      isGhost: true,
       updatedAt: serverTimestamp()
     });
 
@@ -3031,6 +3038,139 @@ export async function adminInjectGhostRanking(payload: {
   } catch (e: any) {
     console.error("adminInjectGhostRanking Error:", e);
     return { success: false, error: e.message || '가짜 랭킹 데이터 주입에 실패했습니다.' };
+  }
+}
+
+// 🎭 15-10-2. 랭킹전 고스트 플레이어 N명 일괄 자동 투입 (중복 절대 방지 & 시간 및 점수 분산)
+export async function adminBatchInjectGhostRankings(payload: {
+  cycleId: string;
+  count: number;
+  minCorrect?: number;
+  maxCorrect?: number;
+  minMinutesAgo?: number;
+  maxMinutesAgo?: number;
+}): Promise<{ success: boolean; injectedCount: number; error?: string }> {
+  try {
+    const { cycleId, count } = payload;
+    const minCorrect = Math.max(1, Math.min(10, payload.minCorrect ?? 4));
+    const maxCorrect = Math.max(minCorrect, Math.min(10, payload.maxCorrect ?? 10));
+    const minMins = payload.minMinutesAgo ?? 5;
+    const maxMins = payload.maxMinutesAgo ?? 300;
+
+    // 1. 현재 랭킹 조회하여 닉네임 중복 완벽 배제
+    const existingRankings = await getCycleRankings(cycleId);
+    const existingNames = new Set(existingRankings.map(r => r.name.toLowerCase()));
+
+    // 2. 가용한 고유 닉네임 풀 준비
+    const availableNames: string[] = [];
+    const shuffledPreset = [...RANDOM_GHOST_NAMES].sort(() => Math.random() - 0.5);
+    for (const name of shuffledPreset) {
+      if (!existingNames.has(name.toLowerCase()) && !availableNames.includes(name)) {
+        availableNames.push(name);
+      }
+    }
+
+    // 부족할 경우 generateRandomNickname()으로 고유 닉네임 무한 생성
+    while (availableNames.length < count) {
+      const rand = generateRandomNickname();
+      if (!existingNames.has(rand.toLowerCase()) && !availableNames.includes(rand)) {
+        availableNames.push(rand);
+      }
+    }
+
+    const targetCount = Math.min(count, availableNames.length);
+    const pointsLadder = [10, 10, 15, 15, 15, 25, 25, 25, 30, 30];
+
+    // 시간 분산 (각 고스트마다 절대 겹치지 않게 배치)
+    const timeStep = (maxMins - minMins) / Math.max(1, targetCount);
+    const usedMinutes = new Set<number>();
+    const nonStarterAvatars = AVATAR_DATABASE.filter(a => a.grade !== 'starter');
+
+    const writePromises = [];
+
+    for (let i = 0; i < targetCount; i++) {
+      const name = availableNames[i];
+
+      // 정답 수 및 점수 계산
+      const correctCount = Math.floor(Math.random() * (maxCorrect - minCorrect + 1)) + minCorrect;
+      let score = 0;
+      for (let c = 0; c < Math.min(10, correctCount); c++) {
+        score += pointsLadder[c];
+      }
+
+      // 시간 계산 (고유한 분 단위)
+      let minutesAgo = Math.round(minMins + i * timeStep + (Math.random() * 4 - 2));
+      while (usedMinutes.has(minutesAgo)) {
+        minutesAgo += 1;
+      }
+      usedMinutes.add(minutesAgo);
+
+      const fakeCompletedAt = new Date(Date.now() - minutesAgo * 60 * 1000);
+
+      // 다양한 등급의 아바타 착용
+      const targetAvatar = nonStarterAvatars[Math.floor(Math.random() * nonStarterAvatars.length)] || AVATAR_DATABASE[0];
+
+      const rankDocId = `${cycleId}_${name}`;
+      const rankRef = doc(db, 'cycle_rankings', rankDocId);
+
+      const docData = removeUndefinedDeep({
+        cycleId,
+        name,
+        score,
+        completedAt: fakeCompletedAt,
+        avatarIcon: targetAvatar.icon,
+        avatarName: targetAvatar.name,
+        avatarGrade: targetAvatar.grade,
+        avatarBgGradient: targetAvatar.bgGradient || '',
+        currentAvatarId: targetAvatar.id,
+        isGhost: true,
+        updatedAt: serverTimestamp()
+      });
+
+      writePromises.push(setDoc(rankRef, docData));
+
+      // users 프로필도 함께 생성
+      const userRef = doc(db, 'users', name);
+      writePromises.push(setDoc(userRef, {
+        name,
+        avatar: targetAvatar.icon,
+        currentAvatarId: targetAvatar.id,
+        xp: score * 10 + 50,
+        tier: calculateTier(score * 10 + 50).tier,
+        isGhost: true,
+        updatedAt: serverTimestamp()
+      }, { merge: true }));
+    }
+
+    await Promise.all(writePromises);
+    return { success: true, injectedCount: targetCount };
+  } catch (e: any) {
+    console.error("adminBatchInjectGhostRankings Error:", e);
+    return { success: false, injectedCount: 0, error: e.message || '고스트 일괄 주입에 실패했습니다.' };
+  }
+}
+
+// 🧹 15-10-3. 해당 차전 고스트 랭커 데이터 전체 일괄 삭제
+export async function adminClearGhostRankings(cycleId: string): Promise<{ success: boolean; deletedCount: number; error?: string }> {
+  try {
+    const q = query(collection(db, 'cycle_rankings'), where('cycleId', '==', cycleId));
+    const snap = await getDocs(q);
+    const deletePromises = [];
+    let count = 0;
+
+    for (const docSnap of snap.docs) {
+      const data = docSnap.data();
+      if (data.isGhost) {
+        deletePromises.push(deleteDoc(docSnap.ref));
+        count++;
+      }
+    }
+
+    await Promise.all(deletePromises);
+    return { success: true, deletedCount: count };
+  } catch (e: any) {
+    console.error("adminClearGhostRankings Error:", e);
+    return { success: false, deletedCount: 0, error: e.message || '고스트 삭제에 실패했습니다.' };
   }
 }
 

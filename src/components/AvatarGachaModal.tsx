@@ -120,8 +120,11 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
             <span>0.05% Ultra Rare Avatar Gacha</span>
           </div>
 
-          <h2 className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-300 to-purple-400 tracking-tight">
-            전설 & 초월 아바타 소환 🎰
+          <h2 className="text-2xl sm:text-4xl font-black tracking-tight flex items-center justify-center gap-2">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-300 to-purple-400">
+              전설 & 초월 아바타 소환
+            </span>
+            <span className="inline-block text-2xl sm:text-3xl">🎰</span>
           </h2>
 
           <div className="flex items-center justify-center gap-2 mt-2">

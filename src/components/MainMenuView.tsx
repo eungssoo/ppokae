@@ -243,8 +243,8 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           </div>
         </div>
 
-        {/* 📲 정식 모바일 앱 설치 안내 배너 */}
-        {onOpenInstallModal && (
+        {/* 📲 정식 모바일 앱 설치 안내 배너 (웹 브라우저에서만 표시) */}
+        {!isStandalone && onOpenInstallModal && (
           <div className="mb-4">
             <button
               onClick={() => {

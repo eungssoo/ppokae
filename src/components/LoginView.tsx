@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, ShieldCheck, User, KeyRound, UserPlus, Link2, ArrowLeft } from 'lucide-react';
+import { Sparkles, ArrowRight, ShieldCheck, User, KeyRound, UserPlus, Link2, ArrowLeft, Dice5 } from 'lucide-react';
 import { sound } from '../services/soundService';
+import { generateRandomNickname } from '../services/avatarService';
 
 interface LoginViewProps {
   onLogin: (name: string, pin: string, starterAvatarId?: string) => void;
   onGoogleLogin?: () => void;
   onOpenInstallModal?: () => void;
+  isStandalone?: boolean;
   isLoading: boolean;
 }
 
@@ -20,6 +22,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   onLogin,
   onGoogleLogin,
   onOpenInstallModal,
+  isStandalone = false,
   isLoading,
 }) => {
   const [showPinRegister, setShowPinRegister] = useState(false);
@@ -59,7 +62,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </p>
 
           {/* 📲 PWA 모바일 앱 무료 다운로드 / 설치 퀵 배너 */}
-          {onOpenInstallModal && (
+          {!isStandalone && onOpenInstallModal && (
             <button
               type="button"
               onClick={() => {
@@ -151,9 +154,22 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
             <form onSubmit={handleSubmit} className="space-y-3.5 pt-1">
               <div>
-                <label className="text-[11px] font-bold text-slate-300 mb-1 block">
-                  1. 닉네임 설정 (무료)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-slate-300">
+                    1. 닉네임 설정 (무료)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playClick();
+                      setName(generateRandomNickname());
+                    }}
+                    className="text-[10px] font-bold text-purple-300 hover:text-purple-200 bg-purple-500/20 hover:bg-purple-500/30 px-2 py-0.5 rounded-lg border border-purple-500/40 transition-all flex items-center gap-1 active:scale-95"
+                  >
+                    <Dice5 className="w-3 h-3" />
+                    <span>랜덤</span>
+                  </button>
+                </div>
                 <div className="relative">
                   <User className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
                   <input

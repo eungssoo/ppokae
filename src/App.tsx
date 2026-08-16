@@ -122,6 +122,34 @@ function AppContent() {
   const [isUserInquiryModalOpen, setIsUserInquiryModalOpen] = useState<boolean>(false);
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(DEFAULT_SYSTEM_SETTINGS);
 
+  // 📲 Standalone App Detection (스마트폰 앱으로 실행되었는지 여부 실시간 감지)
+  const [isAppStandalone, setIsAppStandalone] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const isStandaloneDisplay = window.matchMedia('(display-mode: standalone)').matches;
+    const isIOSStandalone = (window.navigator as any).standalone === true;
+    const isReferrerAndroidApp = document.referrer?.includes('android-app://');
+    const isUrlPwa = window.location.search.includes('source=pwa');
+    return isStandaloneDisplay || isIOSStandalone || isReferrerAndroidApp || isUrlPwa;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkStandalone = () => {
+      const isStandaloneDisplay = window.matchMedia('(display-mode: standalone)').matches;
+      const isIOSStandalone = (window.navigator as any).standalone === true;
+      const isReferrerAndroidApp = document.referrer?.includes('android-app://');
+      const isUrlPwa = window.location.search.includes('source=pwa');
+      setIsAppStandalone(isStandaloneDisplay || isIOSStandalone || isReferrerAndroidApp || isUrlPwa);
+    };
+
+    checkStandalone();
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    mediaQuery.addEventListener?.('change', checkStandalone);
+    return () => {
+      mediaQuery.removeEventListener?.('change', checkStandalone);
+    };
+  }, []);
+
   // PWA Home Screen Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [isAddToHomeModalOpen, setIsAddToHomeModalOpen] = useState<boolean>(false);
@@ -1189,13 +1217,6 @@ function AppContent() {
     ? bookmarks.some(b => (b.sentence || b.question?.sentence || '').trim() === (currentQ.sentence || '').trim()) 
     : false;
 
-  // 📲 Check if app is running in PWA standalone mode or installed
-  const isAppStandalone = typeof window !== 'undefined' && (
-    window.matchMedia('(display-mode: standalone)').matches || 
-    (window.navigator as any).standalone === true || 
-    localStorage.getItem('pwa_installed') === 'true'
-  );
-
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 selection:bg-indigo-500 selection:text-white">
       {isLoading && <LoadingOverlay text={loadingText} progress={progress} />}
@@ -1273,6 +1294,7 @@ function AppContent() {
           onLogin={handleLogin}
           onGoogleLogin={handleGoogleLogin}
           onOpenInstallModal={() => setIsAddToHomeModalOpen(true)}
+          isStandalone={isAppStandalone}
           isLoading={isLoading}
         />
       )}
@@ -1333,6 +1355,7 @@ function AppContent() {
           onLinkGoogleAccount={handleLinkGoogleAccount}
           onOpenAdminCenter={() => setIsAdminModalOpen(true)}
           onOpenInstallModal={() => setIsAddToHomeModalOpen(true)}
+          isStandalone={isAppStandalone}
           onGoAnalytics={() => setView('analytics_view')}
         />
       )}

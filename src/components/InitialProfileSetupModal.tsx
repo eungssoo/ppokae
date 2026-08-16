@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, CheckCircle2, User, ArrowRight } from 'lucide-react';
 import { UserProfile } from '../types';
+import { generateRandomNickname } from '../services/avatarService';
 import { sound } from '../services/soundService';
 import { validateNicknameWithAI } from '../services/geminiService';
 
@@ -87,11 +88,26 @@ export const InitialProfileSetupModal: React.FC<InitialProfileSetupModalProps> =
         <form onSubmit={handleSubmit} className="space-y-5 text-left">
           {/* 1. Nickname Input */}
           <div>
-            <label className="block text-xs font-black text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-indigo-400" />
-              <span>활동 닉네임 설정</span>
-              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">무료 변경</span>
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-black text-slate-300 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-indigo-400" />
+                <span>활동 닉네임 설정</span>
+                <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/30">무료 변경</span>
+              </label>
+
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playClick();
+                  const randName = generateRandomNickname();
+                  setName(randName);
+                  if (error) setError('');
+                }}
+                className="text-[11px] font-bold text-indigo-300 hover:text-indigo-200 bg-indigo-500/20 hover:bg-indigo-500/30 px-2.5 py-1 rounded-xl border border-indigo-500/40 transition-all flex items-center gap-1 active:scale-95"
+              >
+                <span>🎲 랜덤 생성</span>
+              </button>
+            </div>
             <input
               type="text"
               value={name}
