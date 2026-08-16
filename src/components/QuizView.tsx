@@ -309,7 +309,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
             {/* Sentence with Blank */}
             <p className="text-xl sm:text-2xl md:text-3xl mt-4 sm:mt-6 leading-relaxed font-serif tracking-wide">
-              {currentQuestion.sentence.split(/_{2,}/).map((part, i, arr) => (
+              {currentQuestion.sentence.split(/(?:_{2,}|\[blank\]|\(blank\)|<blank>|\[빈칸\]|\(빈칸\)|\(_{1,}\)|\[_{1,}\]|\[___+\])/gi).map((part, i, arr) => (
                 <React.Fragment key={i}>
                   {part}
                   {i < arr.length - 1 && (

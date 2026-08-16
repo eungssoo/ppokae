@@ -48,6 +48,12 @@ export function sanitizeForm(form: any): number {
   return 3;
 }
 
+// 🔤 빈칸 표기 표준화 헬퍼 ([blank], (blank), [빈칸], ___ 등을 ______ 로 통일)
+export function normalizeSentenceBlank(sentence: string): string {
+  if (!sentence || typeof sentence !== 'string') return '';
+  return sentence.replace(/(?:_{2,}|\[blank\]|\(blank\)|<blank>|\[빈칸\]|\(빈칸\)|\(_{1,}\)|\[_{1,}\]|\[___+\])/gi, '______');
+}
+
 // 🎲 4지선다 보기 랜덤 셔플 헬퍼 (정답 1번 편중 100% 원천 차단)
 export function shuffleOptions<T = any>(options: T[]): T[] {
   if (!Array.isArray(options) || options.length <= 1) return options || [];
@@ -97,13 +103,14 @@ async function generateSingleBatch(
 [🚨 출제 원칙]
 1. [100% 한국어 상세 해설] feedback, chunk_pattern, nuance, translation 모두 자연스럽고 명쾌한 한국어로 작성.
 2. [1~5형식만 허용] form 필드는 1, 2, 3, 4, 5 정수만 허용.
-3. [단 1개의 유일 정답] 명백한 시간/문맥 단서를 부여하여 논란의 여지가 없는 1개 정답 및 3개 오답 출제.`;
+3. [단 1개의 유일 정답] 명백한 시간/문맥 단서를 부여하여 논란의 여지가 없는 1개 정답 및 3개 오답 출제.
+4. [빈칸 표기 엄격 준수] sentence의 빈칸은 반드시 언더스코어 6개 '______' 로 표기하세요. [blank] 또는 (빈칸) 같은 텍스트를 절대 쓰지 마세요.`;
 
   let userPrompt = `난이도: ${difficultyLabel}\n[기준]\n${matchedRule}\n`;
   if (weaknessFocus) {
     userPrompt += `[맞춤] 취약 문법 형식(${weaknessFocus})을 집중 포함하세요.\n`;
   }
-  userPrompt += `정확히 ${batchCount}개의 4지선다 JSON 배열을 생성하세요.`;
+  userPrompt += `정확히 ${batchCount}개의 4지선다 JSON 배열을 생성하세요. sentence의 빈칸 자리는 반드시 '______' 로 작성하세요.`;
 
   const payload = {
     contents: [{ parts: [{ text: userPrompt }] }],
@@ -156,6 +163,7 @@ async function generateSingleBatch(
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed.map(q => ({
             ...q,
+            sentence: normalizeSentenceBlank(q.sentence),
             form: sanitizeForm(q.form),
             options: shuffleOptions(q.options)
           }));

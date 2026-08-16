@@ -954,11 +954,20 @@ export async function isQuestionBookmarked(userName: string, sentence: string): 
   }
 }
 
+// 🔤 빈칸 표기 표준화 헬퍼 ([blank], (blank), [빈칸], ___ 등을 ______ 로 통일)
+export function normalizeSentenceBlank(sentence: string): string {
+  if (!sentence || typeof sentence !== 'string') return '';
+  return sentence.replace(/(?:_{2,}|\[blank\]|\(blank\)|<blank>|\[빈칸\]|\(빈칸\)|\(_{1,}\)|\[_{1,}\]|\[___+\])/gi, '______');
+}
+
 // Helper: Firestore 안전 저장을 위한 Question 객체 정제 (undefined 100% 제거)
 export function cleanQuestionForStorage(q: any): any {
+  const rawSentence = q?.sentence || '';
+  const normalizedSentence = normalizeSentenceBlank(rawSentence);
+
   return removeUndefinedDeep({
     form: sanitizeForm(q?.form),
-    sentence: q?.sentence || '',
+    sentence: normalizedSentence,
     options: Array.isArray(q?.options)
       ? shuffleOptions(q.options.map((opt: any) => {
           if (typeof opt === 'string') return opt;

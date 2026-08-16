@@ -106,7 +106,7 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                         >
                           <div className="flex justify-between items-start mb-2 gap-4">
                             <p className="font-bold text-base sm:text-lg text-white leading-relaxed font-serif">
-                              {q.sentence.replace(/_{2,}/, `[ ${q.answer} ]`)}
+                              {q.sentence.replace(/(?:_{2,}|\[blank\]|\(blank\)|<blank>|\[빈칸\]|\(빈칸\)|\(_{1,}\)|\[_{1,}\]|\[___+\])/gi, `[ ${q.answer} ]`)}
                             </p>
                             {q.createdAt && (
                               <span className="text-[10px] font-bold text-slate-400 bg-slate-900 px-2 py-1 rounded whitespace-nowrap border border-slate-800">
