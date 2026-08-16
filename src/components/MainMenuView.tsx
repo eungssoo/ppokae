@@ -21,11 +21,13 @@ import {
   BookMarked,
   Smartphone,
   Bell,
-  MessageSquare
+  MessageSquare,
+  Globe
 } from 'lucide-react';
 import { UserProfile, ViewType, CycleInfo } from '../types';
 import { calculateTier, checkIsAdmin } from '../services/dbService';
 import { sound } from '../services/soundService';
+import { useLanguage } from '../services/i18n';
 
 interface MainMenuViewProps {
   user: UserProfile;
@@ -59,6 +61,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
   onOpenAdminCenter,
   onLogout,
 }) => {
+  const { language, setLanguage, t } = useLanguage();
   const currentXp = user.xp || 0;
   const tierInfo = calculateTier(currentXp);
   const isAdmin = checkIsAdmin(user);
@@ -121,6 +124,19 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
 
           <div className="flex items-center gap-1.5 ml-auto">
 
+            {/* 🌐 언어 전환 버튼 (KO / EN) */}
+            <button
+              onClick={() => {
+                sound.playClick();
+                setLanguage(language === 'ko' ? 'en' : 'ko');
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700/90 hover:border-cyan-400 text-slate-300 hover:text-white font-black text-xs shadow-sm active:scale-95 transition-all"
+              title={language === 'ko' ? 'Switch to English' : '한국어로 전환'}
+            >
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{language === 'ko' ? 'EN 🇺🇸' : '한 🇰🇷'}</span>
+            </button>
+
             {/* 💌 문의하기 / 피드백 Quick Button */}
             {onOpenInquiryModal && (
               <button
@@ -132,7 +148,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 title="개발자에게 문의 및 피드백 보내기"
               >
                 <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
-                <span>문의하기</span>
+                <span>{t('inquiryBtn')}</span>
               </button>
             )}
 
@@ -147,7 +163,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 title="아바타 가챠 소환소"
               >
                 <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
-                <span>🎰 소환소</span>
+                <span>{t('avatarGachaBtn')}</span>
               </button>
             )}
 

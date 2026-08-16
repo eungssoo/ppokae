@@ -21,12 +21,14 @@ import {
   TrendingUp,
   Zap,
   Award,
-  ChevronRight
+  ChevronRight,
+  Globe
 } from 'lucide-react';
 import { UserProfile, AvatarItem, AvatarGrade, FormMastery } from '../types';
 import { AVATAR_DATABASE, GRADE_CONFIG, STARTER_AVATAR_IDS, generateRandomNickname } from '../services/avatarService';
 import { checkIsAdmin, calculateTier } from '../services/dbService';
 import { sound } from '../services/soundService';
+import { useLanguage } from '../services/i18n';
 
 interface ProfileViewProps {
   user: UserProfile;
@@ -84,6 +86,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   isStandalone = false,
   onGoAnalytics,
 }) => {
+  const { language, setLanguage, t } = useLanguage();
   const [name, setName] = useState<string>(user.name);
   const [dailyGoal, setDailyGoal] = useState<number>(user.dailyGoal || 10);
   const [filterMode, setFilterMode] = useState<'all' | 'owned'>('all');
@@ -563,11 +566,59 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </form>
 
+        {/* 🌐 앱 기본 언어 설정 (Language Settings) */}
+        <div className="mb-5 bg-slate-900/80 rounded-2xl p-3.5 sm:p-4 border border-slate-800">
+          <label className="block text-xs font-black text-slate-300 mb-2 uppercase tracking-wider flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{t('languageSetting')}</span>
+            </div>
+            <span className="text-[11px] text-cyan-300 font-bold">
+              {language === 'en' ? 'English 🇺🇸' : '한국어 🇰🇷'}
+            </span>
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                setLanguage('ko');
+              }}
+              className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                language === 'ko'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-400 text-white shadow-md font-black'
+                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🇰🇷 한국어 (Korean)</span>
+              {language === 'ko' && <Check className="w-3.5 h-3.5" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                sound.playClick();
+                setLanguage('en');
+              }}
+              className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2 ${
+                language === 'en'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-purple-400 text-white shadow-md font-black'
+                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🇺🇸 English (영어)</span>
+              {language === 'en' && <Check className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-2 text-left">
+            * {t('languageDesc')}
+          </p>
+        </div>
+
         {/* 🎯 Daily Study Goal */}
         <div className="mb-5">
           <label className="block text-xs font-black text-slate-300 mb-2 uppercase tracking-wider flex items-center gap-1.5">
             <Target className="w-3.5 h-3.5 text-indigo-400" />
-            <span>하루 목표 문제 수 설정</span>
+            <span>{t('dailyGoalSetting')}</span>
           </label>
           <div className="grid grid-cols-3 gap-2">
             {[5, 10, 20].map((goal) => (

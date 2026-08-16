@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, ShieldCheck, User, KeyRound, UserPlus, Link2, ArrowLeft, Dice5 } from 'lucide-react';
+import { Sparkles, ArrowRight, ShieldCheck, User, KeyRound, UserPlus, Link2, ArrowLeft, Dice5, Globe } from 'lucide-react';
 import { sound } from '../services/soundService';
 import { generateRandomNickname } from '../services/avatarService';
+import { useLanguage } from '../services/i18n';
 
 interface LoginViewProps {
   onLogin: (name: string, pin: string, starterAvatarId?: string) => void;
@@ -25,6 +26,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   isStandalone = false,
   isLoading,
 }) => {
+  const { language, setLanguage, t } = useLanguage();
   const [showPinRegister, setShowPinRegister] = useState(false);
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
@@ -38,8 +40,24 @@ export const LoginView: React.FC<LoginViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-animated-gradient flex items-center justify-center p-4 sm:p-6 md:p-8">
+    <div className="min-h-screen bg-animated-gradient flex items-center justify-center p-4 sm:p-6 md:p-8 relative">
+      {/* 🌐 Top Right Language Switcher */}
+      <div className="absolute top-4 right-4 z-20">
+        <button
+          type="button"
+          onClick={() => {
+            sound.playClick();
+            setLanguage(language === 'ko' ? 'en' : 'ko');
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white font-bold text-xs shadow-lg transition-all active:scale-95"
+        >
+          <Globe className="w-3.5 h-3.5 text-cyan-400" />
+          <span>{language === 'ko' ? '🇺🇸 English' : '🇰🇷 한국어'}</span>
+        </button>
+      </div>
+
       <div className="max-w-md w-full glass-card rounded-[2.5rem] p-6 sm:p-10 border border-slate-700/60 shadow-2xl relative overflow-hidden text-center transition-all duration-300">
+
         
         {/* Background Ambient Light */}
         <div className="absolute -top-24 -left-24 w-60 h-60 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />

@@ -98,6 +98,7 @@ export interface UserProfile {
   lastGeneratedAt?: number;
   isAdmin?: boolean;
   hasCompletedInitialSetup?: boolean;
+  preferredLanguage?: 'ko' | 'en';
   createdAt?: number;
 }
 
