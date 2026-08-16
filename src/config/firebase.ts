@@ -3,13 +3,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyClxA4i0G4ATpxLrJ3uSNmVFsS_Qs9U-Wk",
-  authDomain: "daybreak-72ea7.firebaseapp.com",
-  projectId: "daybreak-72ea7",
-  storageBucket: "daybreak-72ea7.firebasestorage.app",
-  messagingSenderId: "452098908230",
-  appId: "1:452098908230:web:e8c32ae4f68893cf5baa47",
-  measurementId: "G-CJB2MJKT27"
+  apiKey: "AIzaSyB3CCu_wIHC19PpMMfoV7O_SE_3nW9r0EQ",
+  authDomain: "ppokae-app.firebaseapp.com",
+  projectId: "ppokae-app",
+  storageBucket: "ppokae-app.firebasestorage.app",
+  messagingSenderId: "458839661742",
+  appId: "1:458839661742:web:e52e5a49889c352134613f",
+  measurementId: "G-PSPK6JQQHS"
 };
 
 // Initialize Firebase
