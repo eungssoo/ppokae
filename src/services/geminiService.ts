@@ -81,7 +81,7 @@ async function generateSingleBatch(
   weaknessFocus: string = "",
   batchCount: number = 20
 ): Promise<Question[]> {
-  const models = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
+  const models = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
   
   let matchedRule = LEVEL_RULES['Level 1 (입문/초급)'];
   for (const [key, rule] of Object.entries(LEVEL_RULES)) {
@@ -223,7 +223,7 @@ export async function generateNativeExpressions(
   existingExpressions: string[] = [],
   count: number = 5
 ): Promise<{ success: boolean; expressions?: ExpressionItem[]; error?: string }> {
-  const models = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
+  const models = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
 
   const categoryNames = {
     daily: '미드 & 일상 생활 회화 / 슬랭 / 관용구',
@@ -329,7 +329,7 @@ export async function askAiTutor(
   userQuestion: string,
   userChoice?: string
 ): Promise<{ success: boolean; answer?: string; error?: string }> {
-  const models = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
+  const models = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
 
   const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사이자 회화 튜터입니다.
 학생이 푼 영어 문제에 대해 궁금한 점을 질문했습니다.
@@ -571,7 +571,7 @@ export async function generateRankingCycleQuestions(
   cycleId: string,
   cycleName: string
 ): Promise<{ success: boolean; questions?: Question[]; error?: string }> {
-  const models = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
+  const models = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
 
   const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사이자 공인 랭킹전 출제위원장입니다.
 오늘의 실시간 명예의 전당 랭킹전(${cycleName})을 위해 객관식 4지선다 영문법 문제를 **정확히 10문제** JSON 배열로 생성하세요.

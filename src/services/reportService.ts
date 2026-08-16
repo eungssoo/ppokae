@@ -135,7 +135,7 @@ export async function auditReportWithAI(report: QuestionReport): Promise<{
   fixedQuestion?: Question;
   rewardCoins: number;
 }> {
-  const models = ['gemini-flash-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
+  const models = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-3-flash-preview'];
 
   const auditPrompt = `당신은 대한민국 최고 권위의 수능/토익 영문법 출제위원장이자 엄격한 문제 검수관입니다.
 사용자가 제보한 다음 영문법 문제의 오류 신고를 정밀하게 4단계로 심사하세요.
