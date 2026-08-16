@@ -11,7 +11,9 @@ import {
   CalendarCheck,
   MoreVertical,
   Compass,
-  Monitor
+  Monitor,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { sound } from '../services/soundService';
 import { trackUserAction } from '../services/analyticsService';
@@ -39,7 +41,6 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
 }) => {
   const [deviceType, setDeviceType] = useState<'ios' | 'android' | 'desktop'>('android');
   const [isStandalone, setIsStandalone] = useState(false);
-  const [showManualGuide, setShowManualGuide] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -70,7 +71,7 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
 
   const handleNativeAddToHome = async () => {
     sound.playReward();
-    trackUserAction('ADD_TO_HOME_CLICK', deferredPrompt ? 'Native Prompt' : 'Manual Guide Triggered');
+    trackUserAction('ADD_TO_HOME_CLICK', deferredPrompt ? 'Native Prompt' : 'Fallback');
 
     if (deferredPrompt) {
       try {
@@ -84,11 +85,8 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
           onClose();
         }
       } catch (e) {
-        setShowManualGuide(true);
+        console.warn('Native install prompt error:', e);
       }
-    } else {
-      // If browser security blocks direct prompt, smoothly show the visual guide
-      setShowManualGuide(true);
     }
   };
 
@@ -115,23 +113,23 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
           </div>
         </div>
 
-        {/* Result & Habit Header */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 mb-2">
+        {/* Header Tag */}
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 mb-2">
           <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-          <span>오늘의 문제 1세트 완료!</span>
+          <span>정식 앱 무료 다운로드 & 설치</span>
         </div>
 
         <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mb-2">
-          내일도 1초 만에 복습하기
+          스마트폰 앱으로 1초 만에 실행
         </h3>
 
-        <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-5">
-          스마트폰 홈 화면에 바로가기를 추가해 두면,<br />
-          <strong>매일 1초 만에 주소창 없이 쾌적하게</strong> 영어 실력을 뽀갤 수 있습니다!
+        <p className="text-slate-300 text-xs sm:text-sm leading-relaxed mb-4">
+          앱으로 설치하면 <strong>상단 주소창 없는 깔끔한 전체화면</strong>으로<br />
+          스마트폰 바탕화면에서 매일 1초 만에 영어 실력을 뽀갤 수 있습니다!
         </p>
 
         {/* 🌟 3가지 특장점 */}
-        <div className="grid grid-cols-3 gap-2 mb-5 text-left">
+        <div className="grid grid-cols-3 gap-2 mb-4 text-left">
           <div className="p-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-center">
             <Zap className="w-4 h-4 text-amber-400 mx-auto mb-1" />
             <span className="text-[11px] font-black text-white block">1초 실행</span>
@@ -139,22 +137,33 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
           </div>
           <div className="p-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-center">
             <Smartphone className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
-            <span className="text-[11px] font-black text-white block">풀스크린 뷰</span>
-            <span className="text-[9px] text-slate-400">주소창 없는 몰입감</span>
+            <span className="text-[11px] font-black text-white block">풀스크린</span>
+            <span className="text-[9px] text-slate-400">주소창 100% 제거</span>
           </div>
           <div className="p-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-center">
             <CalendarCheck className="w-4 h-4 text-pink-400 mx-auto mb-1" />
-            <span className="text-[11px] font-black text-white block">매일 복습</span>
-            <span className="text-[9px] text-slate-400">연속 학습 유지</span>
+            <span className="text-[11px] font-black text-white block">자동 연결</span>
+            <span className="text-[9px] text-slate-400">설치 시 앱으로 실행</span>
           </div>
         </div>
 
-        {/* Interactive Guide by Device */}
+        {/* ⚡ 1-Click Native Install Button (if browser prompt is ready) */}
+        {deferredPrompt && (
+          <button
+            onClick={handleNativeAddToHome}
+            className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-black text-sm sm:text-base shadow-xl shadow-purple-500/30 active:scale-95 transition-all flex items-center justify-center gap-2.5 mb-3.5"
+          >
+            <Download className="w-5 h-5 animate-bounce" />
+            <span>✨ 지금 바로 스마트폰 앱 설치하기</span>
+          </button>
+        )}
+
+        {/* 📋 Device & Browser Visual Step-by-Step Guide */}
         {deviceType === 'ios' ? (
-          /* 🍏 iOS Safari 2-Step Visual Guide */
-          <div className="p-4 rounded-2xl bg-slate-800/90 border border-pink-500/40 text-left space-y-2.5 shadow-inner mb-4">
+          /* 🍏 iOS Safari Guide */
+          <div className="p-4 rounded-2xl bg-slate-800/90 border border-pink-500/40 text-left space-y-2 shadow-inner mb-4">
             <span className="text-xs font-black text-pink-300 flex items-center gap-1.5">
-              <span>🍏 아이폰(iOS Safari) 바로가기 추가 2단계</span>
+              <span>🍏 아이폰(iOS Safari) 설치 방법</span>
             </span>
             <div className="space-y-2 text-xs text-slate-200">
               <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
@@ -163,83 +172,56 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
               </div>
               <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
                 <span className="w-5 h-5 rounded-full bg-pink-500/30 border border-pink-400 text-[10px] font-black flex items-center justify-center shrink-0">2</span>
-                <span>아래로 스크롤하여 <strong>[홈 화면에 추가 <PlusSquare className="w-3.5 h-3.5 inline text-pink-300 mx-0.5" />]</strong> 터치</span>
+                <span>메뉴에서 <strong>[홈 화면에 추가 <PlusSquare className="w-3.5 h-3.5 inline text-pink-300 mx-0.5" />]</strong> 선택</span>
               </div>
             </div>
-            <p className="text-[10px] text-pink-300/80 mt-1">
-              * 에타/카톡 인앱 브라우저에서는 우측 상단 `···` ➔ [Safari로 열기] 후 추가해 주세요!
+            <p className="text-[10px] text-pink-300/90 pt-1">
+              💡 에타/카톡 인앱 브라우저는 우측 상단 `···` ➔ <strong>[Safari로 열기]</strong> 후 추가해 주세요!
             </p>
           </div>
-        ) : showManualGuide || !deferredPrompt ? (
-          /* 🤖 Android / PC Visual Guide when prompt is unavailable */
-          <div className="space-y-3 mb-4">
-            <div className="p-4 rounded-2xl bg-slate-800/90 border border-indigo-500/40 text-left space-y-2.5 shadow-inner">
+        ) : (
+          /* 🤖 Android Samsung Internet & Chrome Guide */
+          <div className="p-4 rounded-2xl bg-slate-800/90 border border-indigo-500/40 text-left space-y-2.5 shadow-inner mb-4">
+            <div className="flex items-center justify-between">
               <span className="text-xs font-black text-indigo-300 flex items-center gap-1.5">
-                {deviceType === 'desktop' ? (
-                  <>
-                    <Monitor className="w-3.5 h-3.5 text-indigo-300" />
-                    <span>🖥️ PC 브라우저 바로가기 추가 방법</span>
-                  </>
-                ) : (
-                  <>
-                    <Compass className="w-3.5 h-3.5 text-indigo-300" />
-                    <span>🤖 안드로이드/크롬 바로가기 추가 2단계</span>
-                  </>
-                )}
+                <Smartphone className="w-4 h-4 text-indigo-300" />
+                <span>🤖 삼성 인터넷 / 크롬(Chrome) 주소창 설치</span>
               </span>
-              <div className="space-y-2 text-xs text-slate-200">
-                <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
-                  <span className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400 text-[10px] font-black flex items-center justify-center shrink-0">1</span>
-                  <span>
-                    {deviceType === 'desktop' 
-                      ? '상단 주소창 우측의 [앱 설치 ⊕] 아이콘 클릭'
-                      : <>브라우저 우측 상단 <strong>메뉴 (<MoreVertical className="w-3.5 h-3.5 inline text-indigo-300 mx-0.5" />)</strong> 터치</>
-                    }
-                  </span>
-                </div>
-                <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
-                  <span className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400 text-[10px] font-black flex items-center justify-center shrink-0">2</span>
-                  <span><strong>[홈 화면에 추가]</strong> 또는 <strong>[앱으로 추가]</strong> 선택</span>
-                </div>
+              <span className="text-[10px] text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/40 font-black">
+                가장 쉬움
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs text-slate-200">
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
+                <span className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400 text-[10px] font-black flex items-center justify-center shrink-0">1</span>
+                <span>
+                  브라우저 <strong>상단 주소창 우측</strong>의 <strong>[앱 설치 <Download className="w-3 h-3 inline text-indigo-300 mx-0.5" />]</strong> 또는 <strong>[⊕]</strong> 아이콘 터치
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
+                <span className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400 text-[10px] font-black flex items-center justify-center shrink-0">2</span>
+                <span>하단 팝업에서 <strong>[설치]</strong>를 누르면 1초 만에 스마트폰 앱으로 등록 완료!</span>
               </div>
             </div>
 
-            {/* 📥 Direct APK Download Option */}
-            <a
-              href="https://github.com/eungssoo/ppokae/releases"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-indigo-400 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-98 shadow-sm"
-            >
-              <span>📥 안드로이드 APK 파일 직접 다운로드 (GitHub)</span>
-            </a>
-          </div>
-        ) : (
-          /* ⚡ Direct 1-Click Native Add Button */
-          <div className="space-y-2.5 mb-3">
-            <button
-              onClick={handleNativeAddToHome}
-              className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-black text-sm sm:text-base shadow-xl shadow-purple-500/30 active:scale-95 transition-all flex items-center justify-center gap-2.5"
-            >
-              <PlusCircle className="w-5 h-5 animate-pulse" />
-              <span>✨ 홈 화면에 바로가기 추가 (1초 완성)</span>
-            </button>
+            <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+              <p className="text-slate-300 font-bold">💡 이미 설치되어 있다면?</p>
+              <p className="text-[10px] text-slate-400 leading-snug">
+                주소창 옆에 <strong>[앱으로 열기 ↗]</strong> 버튼이 뜨며, 링크를 누르면 브라우저 대신 설치된 뽀개 앱으로 바로 실행됩니다!
+              </p>
+            </div>
 
-            <a
-              href="https://github.com/eungssoo/ppokae/releases"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-2.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-all"
-            >
-              <span>📥 안드로이드 APK 파일 직접 다운로드</span>
-            </a>
+            <p className="text-[10px] text-indigo-300/80 pt-0.5">
+              * 에타/카톡 인앱 브라우저는 우측 상단 `···` ➔ <strong>[기본 브라우저로 열기]</strong> 후 설치해 주세요!
+            </p>
           </div>
         )}
 
         {/* 닫기 버튼 */}
         <button
           onClick={handleDismiss}
-          className="text-xs text-slate-400 hover:text-slate-200 font-bold py-2 transition-colors"
+          className="text-xs text-slate-400 hover:text-slate-200 font-bold py-1.5 transition-colors"
         >
           다음에 할게요
         </button>

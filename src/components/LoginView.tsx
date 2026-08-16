@@ -71,11 +71,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-base animate-bounce">📲</span>
                 <span className="text-slate-200 text-left text-[11px] sm:text-xs">
-                  스마트폰 앱으로 더 편하게! <strong className="text-amber-300 underline underline-offset-2">1초 무료 설치</strong>
+                  스마트폰 정식 앱으로 더 쾌적하게! <strong className="text-amber-300 underline underline-offset-2">1초 설치 안내</strong>
                 </span>
               </div>
               <span className="text-pink-300 font-black text-[11px] group-hover:translate-x-1 transition-transform shrink-0">
-                다운로드 ➔
+                설치 안내 ➔
               </span>
             </button>
           )}

@@ -243,7 +243,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           </div>
         </div>
 
-        {/* 📲 홈 화면 바로가기 추가 안내 배너 */}
+        {/* 📲 정식 모바일 앱 설치 안내 배너 */}
         {onOpenInstallModal && (
           <div className="mb-4">
             <button
@@ -259,19 +259,19 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-white">홈 화면에 뽀개 바로가기 추가</span>
+                    <span className="text-xs font-black text-white">뽀개 정식 앱 1초 무료 설치</span>
                     <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                      1초 완성
+                      주소창 없는 전체화면
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-300">
-                    스마트폰 바탕화면에서 주소창 없이 1초 만에 바로 복습을 시작하세요!
+                    삼성 인터넷/크롬 주소창 우측의 [앱 설치] 또는 1초 간편 설치로 앱을 소장하세요!
                   </p>
                 </div>
               </div>
               <span className="px-3 py-1.5 rounded-xl bg-indigo-600 group-hover:bg-indigo-500 text-white font-black text-xs shrink-0 shadow-md flex items-center gap-1">
                 <Smartphone className="w-3.5 h-3.5" />
-                <span>바로가기</span>
+                <span>앱 설치하기</span>
               </span>
             </button>
           </div>
