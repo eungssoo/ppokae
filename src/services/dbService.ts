@@ -12,7 +12,8 @@ import {
   updateDoc,
   increment,
   deleteDoc,
-  arrayUnion
+  arrayUnion,
+  runTransaction
 } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
 import { signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, User } from 'firebase/auth';
@@ -2269,77 +2270,169 @@ export async function deleteAnnouncement(announcementId: string): Promise<boolea
   }
 }
 
-// 🎁 15-7. 공지 확인 및 영구 읽음 처리 (Firestore + localStorage 영구 동기화)
+// In-memory Mutex Lock for preventing rapid click concurrency exploits
+const activeAnnouncementClaimLocks = new Set<string>();
+
+// 🎁 15-7. 공지 확인 및 영구 읽음 처리 (Firestore User 문서 + status 컬렉션 + localStorage 3중 영구 동기화)
 export async function markAnnouncementRead(userName: string, announcementId: string): Promise<void> {
   try {
     const claimKey = `seen_announce_${userName}_${announcementId}`;
     localStorage.setItem(claimKey, 'true');
-    const ref = doc(db, 'announcement_user_status', `${userName}_${announcementId}`);
-    await setDoc(ref, {
-      userName,
-      announcementId,
-      isRead: true,
-      readAt: serverTimestamp()
-    }, { merge: true });
+
+    const statusRef = doc(db, 'announcement_user_status', `${userName}_${announcementId}`);
+    const userRef = doc(db, 'users', userName);
+
+    const promises: Promise<any>[] = [
+      setDoc(statusRef, {
+        userName,
+        announcementId,
+        isRead: true,
+        readAt: serverTimestamp()
+      }, { merge: true }),
+      setDoc(userRef, {
+        readAnnouncements: arrayUnion(announcementId),
+        updatedAt: serverTimestamp()
+      }, { merge: true })
+    ];
+
+    if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+      promises.push(
+        setDoc(doc(db, 'users', auth.currentUser.uid), {
+          readAnnouncements: arrayUnion(announcementId),
+          updatedAt: serverTimestamp()
+        }, { merge: true })
+      );
+    }
+
+    await Promise.all(promises);
   } catch (e) {
     console.warn("markAnnouncementRead Error:", e);
   }
 }
 
-// 🎁 15-8. 공지 첨부 보상 1회 수령 처리 (Firestore 중복 방지 락)
+// 🎁 15-8. 공지 첨부 보상 1회 수령 처리 (Firestore 원자적 트랜잭션 + 인메모리 뮤텍스 락)
 export async function claimAnnouncementReward(
   userName: string, 
   announcementId: string, 
   coins: number
-): Promise<{ success: boolean; alreadyClaimed?: boolean }> {
+): Promise<{ success: boolean; alreadyClaimed?: boolean; newCoins?: number; error?: string }> {
+  const lockKey = `${userName}_${announcementId}`;
+
+  // 🔒 1단계: 인메모리 초고속 동시성 락 (연타 100% 즉시 원천 차단)
+  if (activeAnnouncementClaimLocks.has(lockKey)) {
+    return { success: false, alreadyClaimed: true };
+  }
+  activeAnnouncementClaimLocks.add(lockKey);
+
   try {
     const claimKey = `claimed_announce_${userName}_${announcementId}`;
     if (localStorage.getItem(claimKey)) {
+      activeAnnouncementClaimLocks.delete(lockKey);
       return { success: false, alreadyClaimed: true };
     }
 
-    const ref = doc(db, 'announcement_user_status', `${userName}_${announcementId}`);
-    const snap = await getDoc(ref);
-    if (snap.exists() && snap.data()?.isClaimed) {
+    const userRef = doc(db, 'users', userName);
+    const statusRef = doc(db, 'announcement_user_status', `${userName}_${announcementId}`);
+
+    // 🔐 2단계: Firestore 원자적 트랜잭션 (서버 레벨 1회 한정 락)
+    const result = await runTransaction(db, async (transaction) => {
+      const [userSnap, statusSnap] = await Promise.all([
+        transaction.get(userRef),
+        transaction.get(statusRef)
+      ]);
+
+      const userData = userSnap.exists() ? userSnap.data() : {};
+      const statusData = statusSnap.exists() ? statusSnap.data() : {};
+
+      const claimedList: string[] = Array.isArray(userData.claimedAnnouncements) ? userData.claimedAnnouncements : [];
+
+      // 이미 수령했는지 철저히 이중 검사
+      if (claimedList.includes(announcementId) || statusData.isClaimed === true) {
+        return { success: false, alreadyClaimed: true };
+      }
+
+      const currentCoins = userData.coins ?? 200;
+      const finalCoins = currentCoins + Math.max(0, coins);
+
+      // 1) 유저 문서 코인 증액 및 claimedAnnouncements 배열 추가
+      transaction.set(userRef, {
+        coins: finalCoins,
+        claimedAnnouncements: arrayUnion(announcementId),
+        readAnnouncements: arrayUnion(announcementId),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // 2) status 문서 수령 완료 마킹
+      transaction.set(statusRef, {
+        userName,
+        announcementId,
+        isRead: true,
+        isClaimed: true,
+        rewardCoins: coins,
+        claimedAt: serverTimestamp()
+      }, { merge: true });
+
+      return { success: true, newCoins: finalCoins };
+    });
+
+    if (result.success) {
       localStorage.setItem(claimKey, 'true');
-      return { success: false, alreadyClaimed: true };
+      localStorage.setItem(`seen_announce_${userName}_${announcementId}`, 'true');
+
+      // Google UID 문서 동기화
+      if (auth.currentUser?.uid && auth.currentUser.uid !== userName) {
+        setDoc(doc(db, 'users', auth.currentUser.uid), {
+          coins: result.newCoins,
+          claimedAnnouncements: arrayUnion(announcementId),
+          readAnnouncements: arrayUnion(announcementId),
+          updatedAt: serverTimestamp()
+        }, { merge: true }).catch(() => {});
+      }
     }
 
-    if (coins > 0) {
-      await addCoins(userName, coins);
-    }
-
-    await setDoc(ref, {
-      userName,
-      announcementId,
-      isRead: true,
-      isClaimed: true,
-      rewardCoins: coins,
-      claimedAt: serverTimestamp()
-    }, { merge: true });
-
-    localStorage.setItem(claimKey, 'true');
-    localStorage.setItem(`seen_announce_${userName}_${announcementId}`, 'true');
-    return { success: true };
-  } catch (e) {
+    return result;
+  } catch (e: any) {
     console.error("claimAnnouncementReward error:", e);
-    return { success: false };
+    return { success: false, error: e.message || "보상 수령 실패" };
+  } finally {
+    // 락 안전 해제
+    setTimeout(() => {
+      activeAnnouncementClaimLocks.delete(lockKey);
+    }, 1200);
   }
 }
 
-// 🎁 15-9. 유저별 공지 읽음/수령 상태 맵 조회
+// 🎁 15-9. 유저별 공지 읽음/수령 상태 맵 조회 (User 문서 + status 컬렉션 양방향 통합)
 export async function getUserAnnouncementStatusMap(userName: string): Promise<Record<string, { isRead: boolean; isClaimed: boolean }>> {
   const result: Record<string, { isRead: boolean; isClaimed: boolean }> = {};
   try {
-    const col = collection(db, 'announcement_user_status');
-    const q = query(col, where('userName', '==', userName));
-    const snap = await getDocs(q);
-    snap.forEach(d => {
+    const userRef = doc(db, 'users', userName);
+    const [userSnap, colSnap] = await Promise.all([
+      getDoc(userRef),
+      getDocs(query(collection(db, 'announcement_user_status'), where('userName', '==', userName)))
+    ]);
+
+    // 1) User 문서에서 claimed & read 목록 반영
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      const claimed: string[] = Array.isArray(data.claimedAnnouncements) ? data.claimedAnnouncements : [];
+      const read: string[] = Array.isArray(data.readAnnouncements) ? data.readAnnouncements : [];
+
+      for (const id of read) {
+        result[id] = { isRead: true, isClaimed: false };
+      }
+      for (const id of claimed) {
+        result[id] = { isRead: true, isClaimed: true };
+      }
+    }
+
+    // 2) announcement_user_status 컬렉션 기록도 병합
+    colSnap.forEach(d => {
       const data = d.data();
       if (data.announcementId) {
         result[data.announcementId] = {
-          isRead: !!data.isRead,
-          isClaimed: !!data.isClaimed
+          isRead: !!data.isRead || !!result[data.announcementId]?.isRead,
+          isClaimed: !!data.isClaimed || !!result[data.announcementId]?.isClaimed
         };
       }
     });

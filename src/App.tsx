@@ -124,6 +124,7 @@ function AppContent() {
   const [announcementsList, setAnnouncementsList] = useState<PushAnnouncement[]>([]);
   const [announcementStatusMap, setAnnouncementStatusMap] = useState<Record<string, { isRead: boolean; isClaimed: boolean }>>({});
   const [announcementPopup, setAnnouncementPopup] = useState<PushAnnouncement | null>(null);
+  const [isClaimingAnnouncement, setIsClaimingAnnouncement] = useState<boolean>(false);
 
   // PWA Home Screen Prompt State
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -264,24 +265,30 @@ function AppContent() {
     }
   }, [user?.name]);
 
-  // 🎁 Claim announcement reward handler
+  // 🎁 Claim announcement reward handler (동시성 락 & 연타 100% 방어)
   const handleClaimAnnouncementReward = async (announcement: PushAnnouncement) => {
-    if (!user) return;
+    if (!user || isClaimingAnnouncement) return;
+    setIsClaimingAnnouncement(true);
     sound.playReward();
-    const coins = announcement.rewardCoins || 0;
-    const res = await claimAnnouncementReward(user.name, announcement.id, coins);
-    if (res.success) {
-      await refreshUserData(user.name);
-      toast.coin('보상 수령 완료! 🎉', `🪙 +${coins} 코인이 안전하게 지급되었습니다!`);
-    } else if (res.alreadyClaimed) {
-      toast.warning('이미 수령된 보상', '이미 지급받으신 보상입니다.');
-    } else {
-      toast.error('수령 실패', '보상 수령 중 오류가 발생했습니다.');
-    }
-    const updated = await getUserAnnouncementStatusMap(user.name);
-    setAnnouncementStatusMap(updated);
-    if (announcementPopup?.id === announcement.id) {
-      setAnnouncementPopup(null);
+
+    try {
+      const coins = announcement.rewardCoins || 0;
+      const res = await claimAnnouncementReward(user.name, announcement.id, coins);
+      if (res.success) {
+        await refreshUserData(user.name);
+        toast.coin('보상 수령 완료! 🎉', `🪙 +${coins} 코인이 안전하게 지급되었습니다!`);
+      } else if (res.alreadyClaimed) {
+        toast.warning('이미 수령된 보상', '이미 지급받으신 보상입니다.');
+      } else {
+        toast.error('수령 실패', '보상 수령 중 오류가 발생했습니다.');
+      }
+      const updated = await getUserAnnouncementStatusMap(user.name);
+      setAnnouncementStatusMap(updated);
+      if (announcementPopup?.id === announcement.id) {
+        setAnnouncementPopup(null);
+      }
+    } finally {
+      setIsClaimingAnnouncement(false);
     }
   };
 
@@ -1271,10 +1278,11 @@ function AppContent() {
                 닫기
               </button>
               <button
+                disabled={isClaimingAnnouncement}
                 onClick={() => handleClaimAnnouncementReward(announcementPopup)}
-                className="flex-2 py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all"
+                className="flex-2 py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:to-indigo-600 text-white rounded-2xl font-black text-xs shadow-lg active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {announcementPopup.rewardCoins && announcementPopup.rewardCoins > 0 ? `🪙 ${announcementPopup.rewardCoins} 코인 받고 닫기` : '확인 완료'}
+                {isClaimingAnnouncement ? '수령 처리 중...' : (announcementPopup.rewardCoins && announcementPopup.rewardCoins > 0 ? `🪙 ${announcementPopup.rewardCoins} 코인 받고 닫기` : '확인 완료')}
               </button>
             </div>
           </div>

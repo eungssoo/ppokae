@@ -30,6 +30,8 @@ export const NotificationInboxModal: React.FC<NotificationInboxModalProps> = ({
   user,
   onClaimReward
 }) => {
+  const [claimingIds, setClaimingIds] = React.useState<Record<string, boolean>>({});
+
   if (!isOpen) return null;
 
   const BADGE_CONFIG = {
@@ -126,11 +128,19 @@ export const NotificationInboxModal: React.FC<NotificationInboxModalProps> = ({
                         </span>
                       ) : (
                         <button
-                          onClick={() => onClaimReward(item)}
-                          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black text-xs shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+                          disabled={!!claimingIds[item.id]}
+                          onClick={async () => {
+                            setClaimingIds(prev => ({ ...prev, [item.id]: true }));
+                            try {
+                              await onClaimReward(item);
+                            } finally {
+                              setClaimingIds(prev => ({ ...prev, [item.id]: false }));
+                            }
+                          }}
+                          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-950 font-black text-xs shadow-md transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Coins className="w-3.5 h-3.5 fill-slate-950" />
-                          <span>🪙 {item.rewardCoins} 코인 받기</span>
+                          <span>{claimingIds[item.id] ? '수령 처리 중...' : `🪙 ${item.rewardCoins} 코인 받기`}</span>
                         </button>
                       )}
                     </div>
