@@ -23,7 +23,10 @@ import {
   Search,
   MessageSquare,
   Trophy,
-  Shuffle
+  Shuffle,
+  BarChart3,
+  Activity,
+  Smartphone
 } from 'lucide-react';
 import { UserProfile, SystemSettings, PushAnnouncement, RankingItem } from '../types';
 import { 
@@ -42,6 +45,7 @@ import {
 } from '../services/dbService';
 import { getPendingReports, approveReportAndReward, rejectReport, QuestionReport } from '../services/reportService';
 import { AVATAR_DATABASE } from '../services/avatarService';
+import { getAllUserAnalytics, UserAnalyticsSummary } from '../services/analyticsService';
 import { sound } from '../services/soundService';
 
 interface AdminCenterModalProps {
@@ -59,7 +63,7 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   onUserUpdate,
   onShowToast
 }) => {
-  const [activeTab, setActiveTab] = useState<'god_mode' | 'variables' | 'announcements' | 'reports' | 'users' | 'ghost_rankings'>('god_mode');
+  const [activeTab, setActiveTab] = useState<'god_mode' | 'variables' | 'announcements' | 'reports' | 'users' | 'ghost_rankings' | 'analytics'>('god_mode');
   const [isLoading, setIsLoading] = useState(false);
 
   // Settings State
@@ -92,10 +96,17 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   const [ghostLeaderboard, setGhostLeaderboard] = useState<RankingItem[]>([]);
   const [isInjectingGhost, setIsInjectingGhost] = useState<boolean>(false);
 
+  // 📊 Analytics State
+  const [analyticsList, setAnalyticsList] = useState<UserAnalyticsSummary[]>([]);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<boolean>(false);
+  const [selectedUserForTimeline, setSelectedUserForTimeline] = useState<UserAnalyticsSummary | null>(null);
+  const [analyticsSearch, setAnalyticsSearch] = useState<string>('');
+
   useEffect(() => {
     if (isOpen) {
       loadInitialData();
       loadGhostLeaderboard(ghostCycleIndex);
+      loadAnalyticsData();
     }
   }, [isOpen]);
 
@@ -116,6 +127,18 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
       console.error("Admin loadInitialData error:", e);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadAnalyticsData = async () => {
+    setIsLoadingAnalytics(true);
+    try {
+      const list = await getAllUserAnalytics();
+      setAnalyticsList(list);
+    } catch (e) {
+      console.error("loadAnalyticsData error:", e);
+    } finally {
+      setIsLoadingAnalytics(false);
     }
   };
 
@@ -417,6 +440,22 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
           >
             <Trophy className="w-4 h-4 text-yellow-300" />
             <span>🎭 랭킹전 고스트 주입</span>
+          </button>
+
+          <button
+            onClick={() => { 
+              sound.playClick(); 
+              setActiveTab('analytics'); 
+              loadAnalyticsData();
+            }}
+            className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all whitespace-nowrap ${
+              activeTab === 'analytics'
+                ? 'bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-500 text-white shadow-lg shadow-indigo-500/20'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4 text-cyan-300" />
+            <span>📊 유저 행동 지표 ({analyticsList.length})</span>
           </button>
         </div>
 
@@ -1279,6 +1318,197 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
 
               </div>
 
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* 📊 TAB 7: 유저 행동 지표 & 텔레메트리 (Analytics) */}
+          {/* ======================================================== */}
+          {activeTab === 'analytics' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header */}
+              <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-purple-950/70 via-indigo-950/80 to-slate-900 border border-indigo-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-cyan-300" />
+                    <span>실시간 유저 행동 지표 & 텔레메트리</span>
+                  </h3>
+                  <p className="text-xs text-indigo-200/80 mt-1">
+                    각 유저(auth.currentUser.uid)의 방문, 문제 풀이, 랭킹전 참여, 가챠 소환, PWA 홈화면 추가 이력을 실시간 집계합니다.
+                  </p>
+                </div>
+
+                <button
+                  onClick={loadAnalyticsData}
+                  disabled={isLoadingAnalytics}
+                  className="px-3.5 py-2 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 shrink-0"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoadingAnalytics ? 'animate-spin' : ''}`} />
+                  <span>새로고침</span>
+                </button>
+              </div>
+
+              {/* 5종 핵심 KPI 카드 */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700">
+                  <span className="text-[11px] font-bold text-slate-400 block mb-1">👥 누적 활동 유저</span>
+                  <span className="text-xl font-black text-white">{analyticsList.length}명</span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700">
+                  <span className="text-[11px] font-bold text-emerald-400 block mb-1">✍️ 누적 푼 문제</span>
+                  <span className="text-xl font-black text-emerald-300">
+                    {analyticsList.reduce((acc, u) => acc + (u.totalSolved || 0), 0).toLocaleString()}개
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700">
+                  <span className="text-[11px] font-bold text-amber-400 block mb-1">🏆 랭킹전 세션</span>
+                  <span className="text-xl font-black text-amber-300">
+                    {analyticsList.reduce((acc, u) => acc + (u.rankingPlayedCount || 0), 0)}회
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700">
+                  <span className="text-[11px] font-bold text-purple-400 block mb-1">🎰 가챠 소환</span>
+                  <span className="text-xl font-black text-purple-300">
+                    {analyticsList.reduce((acc, u) => acc + (u.gachaPullsCount || 0), 0)}회
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700 col-span-2 sm:col-span-1">
+                  <span className="text-[11px] font-bold text-pink-400 block mb-1">📲 홈화면 바로가기</span>
+                  <span className="text-xl font-black text-pink-300">
+                    {analyticsList.filter(u => u.isStandalone || u.addToHomeClicks > 0).length}명
+                  </span>
+                </div>
+              </div>
+
+              {/* 검색 바 */}
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={analyticsSearch}
+                  onChange={e => setAnalyticsSearch(e.target.value)}
+                  placeholder="유저 닉네임 또는 UID 검색..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-2xl text-xs sm:text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+
+              {/* 유저 행동 지표 테이블 */}
+              <div className="rounded-3xl bg-slate-900/90 border border-slate-800 overflow-hidden shadow-md">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-950/80 border-b border-slate-800 text-slate-400 font-black uppercase text-[10px]">
+                      <tr>
+                        <th className="py-3 px-4">유저 / UID</th>
+                        <th className="py-3 px-4">디바이스 / PWA</th>
+                        <th className="py-3 px-3 text-center">방문</th>
+                        <th className="py-3 px-3 text-center">푼 문제</th>
+                        <th className="py-3 px-3 text-center">랭킹전</th>
+                        <th className="py-3 px-3 text-center">가챠</th>
+                        <th className="py-3 px-4 text-center">최근 활동</th>
+                        <th className="py-3 px-4 text-right">행동 로그</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 font-medium text-slate-300">
+                      {analyticsList.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="py-8 text-center text-slate-500">
+                            수집된 유저 행동 데이터가 없습니다. 유저들이 활동하면 실시간으로 누적됩니다.
+                          </td>
+                        </tr>
+                      ) : (
+                        analyticsList
+                          .filter(u => 
+                            u.userName.toLowerCase().includes(analyticsSearch.toLowerCase()) ||
+                            u.userId.toLowerCase().includes(analyticsSearch.toLowerCase())
+                          )
+                          .map((u) => (
+                            <tr key={u.userId} className="hover:bg-slate-800/40 transition-colors">
+                              <td className="py-3 px-4">
+                                <div className="font-black text-white flex items-center gap-1.5">
+                                  <span>{u.userName}</span>
+                                  {u.isStandalone && (
+                                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                                      홈화면 PWA
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-slate-500 font-mono block truncate max-w-[140px]">
+                                  {u.authUid ? `UID: ${u.authUid}` : `ID: ${u.userId}`}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-slate-400 text-[11px]">
+                                {u.platform}
+                              </td>
+                              <td className="py-3 px-3 text-center font-bold text-slate-200">
+                                {u.totalVisits}회
+                              </td>
+                              <td className="py-3 px-3 text-center font-bold text-emerald-300">
+                                {u.totalSolved}개
+                              </td>
+                              <td className="py-3 px-3 text-center font-bold text-amber-300">
+                                {u.rankingPlayedCount}회
+                              </td>
+                              <td className="py-3 px-3 text-center font-bold text-purple-300">
+                                {u.gachaPullsCount}회
+                              </td>
+                              <td className="py-3 px-4 text-center text-[11px] text-slate-400 font-mono">
+                                {u.lastActiveAt?.toDate ? u.lastActiveAt.toDate().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '방금 전'}
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <button
+                                  onClick={() => setSelectedUserForTimeline(u)}
+                                  className="px-2.5 py-1 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 text-[11px] font-bold transition-all"
+                                >
+                                  타임라인 ({u.recentActions?.length || 0})
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* 선택된 유저 실시간 타임라인 모달 */}
+              {selectedUserForTimeline && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                  <div className="bg-slate-900 border border-slate-700 rounded-3xl p-5 max-w-lg w-full shadow-2xl space-y-4 max-h-[80vh] flex flex-col">
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Activity className="w-5 h-5 text-indigo-400" />
+                        <h4 className="text-sm font-black text-white">
+                          [{selectedUserForTimeline.userName}] 최근 행동 타임라인
+                        </h4>
+                      </div>
+                      <button
+                        onClick={() => setSelectedUserForTimeline(null)}
+                        className="p-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="overflow-y-auto space-y-2 flex-1 pr-1 text-xs">
+                      {selectedUserForTimeline.recentActions?.length > 0 ? (
+                        selectedUserForTimeline.recentActions.map((log, idx) => (
+                          <div key={idx} className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-start justify-between gap-3">
+                            <div>
+                              <span className="font-bold text-indigo-300 block">{log.action}</span>
+                              {log.details && <span className="text-[11px] text-slate-400">{log.details}</span>}
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-mono shrink-0">
+                              {new Date(log.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-slate-500">기록된 행동 로그가 없습니다.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

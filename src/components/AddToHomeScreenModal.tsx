@@ -7,11 +7,14 @@ import {
   Share, 
   PlusSquare, 
   Zap, 
-  Trophy,
   CheckCircle2,
-  CalendarCheck
+  CalendarCheck,
+  MoreVertical,
+  Compass,
+  Monitor
 } from 'lucide-react';
 import { sound } from '../services/soundService';
+import { trackUserAction } from '../services/analyticsService';
 
 interface AddToHomeScreenModalProps {
   isOpen: boolean;
@@ -34,18 +37,27 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
   earnedXp = 0,
   onAddedSuccess
 }) => {
-  const [isIOS, setIsIOS] = useState(false);
+  const [deviceType, setDeviceType] = useState<'ios' | 'android' | 'desktop'>('android');
   const [isStandalone, setIsStandalone] = useState(false);
+  const [showManualGuide, setShowManualGuide] = useState(false);
 
   useEffect(() => {
-    // 1. Detect iOS device
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
-    setIsIOS(isIosDevice);
+    if (typeof window === 'undefined') return;
+    const ua = window.navigator.userAgent.toLowerCase();
+    if (/iphone|ipad|ipod/.test(ua)) {
+      setDeviceType('ios');
+    } else if (/android/.test(ua)) {
+      setDeviceType('android');
+    } else {
+      setDeviceType('desktop');
+    }
 
-    // 2. Detect Standalone / Already Added Mode
     const isInStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
     setIsStandalone(!!isInStandalone);
+
+    if (isOpen) {
+      trackUserAction('ADD_TO_HOME_MODAL_VIEW', `Device: ${ua.slice(0, 40)}`);
+    }
   }, [isOpen]);
 
   if (!isOpen || isStandalone) return null;
@@ -58,21 +70,29 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
 
   const handleNativeAddToHome = async () => {
     sound.playReward();
+    trackUserAction('ADD_TO_HOME_CLICK', deferredPrompt ? 'Native Prompt' : 'Manual Guide Triggered');
+
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        sessionStorage.setItem('pwa_prompt_dismissed', 'true');
-        if (onAddedSuccess) onAddedSuccess();
-        onClose();
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          trackUserAction('ADD_TO_HOME_SUCCESS', 'User Accepted Prompt');
+          sessionStorage.setItem('pwa_prompt_dismissed', 'true');
+          if (onAddedSuccess) onAddedSuccess();
+          onClose();
+        }
+      } catch (e) {
+        setShowManualGuide(true);
       }
     } else {
-      alert('브라우저 메뉴(⋮)를 누른 후 [홈 화면에 추가] 또는 [앱으로 열기]를 선택해 주세요!');
+      // If browser security blocks direct prompt, smoothly show the visual guide
+      setShowManualGuide(true);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in zoom-in duration-200">
       <div className="bg-slate-900 border-2 border-indigo-500/60 rounded-[2.5rem] p-6 sm:p-8 max-w-md w-full relative shadow-2xl overflow-hidden text-center">
         
         {/* Ambient Glows */}
@@ -109,7 +129,7 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
           <strong>매일 1초 만에 주소창 없이 쾌적하게</strong> 영어 실력을 뽀갤 수 있습니다!
         </p>
 
-        {/* 🌟 3가지 편리한 특장점 */}
+        {/* 🌟 3가지 특장점 */}
         <div className="grid grid-cols-3 gap-2 mb-5 text-left">
           <div className="p-2.5 rounded-2xl bg-slate-800/80 border border-slate-700 text-center">
             <Zap className="w-4 h-4 text-amber-400 mx-auto mb-1" />
@@ -128,25 +148,58 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
           </div>
         </div>
 
-        {isIOS ? (
+        {/* Interactive Guide by Device */}
+        {deviceType === 'ios' ? (
           /* 🍏 iOS Safari 2-Step Visual Guide */
           <div className="p-4 rounded-2xl bg-slate-800/90 border border-pink-500/40 text-left space-y-2.5 shadow-inner mb-4">
             <span className="text-xs font-black text-pink-300 flex items-center gap-1.5">
-              <span>🍏 아이폰(iOS) 홈 화면 바로가기 추가 방법</span>
+              <span>🍏 아이폰(iOS Safari) 바로가기 추가 2단계</span>
             </span>
             <div className="space-y-2 text-xs text-slate-200">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
                 <span className="w-5 h-5 rounded-full bg-pink-500/30 border border-pink-400 text-[10px] font-black flex items-center justify-center shrink-0">1</span>
-                <span>사파리 하단의 <strong>공유 아이콘 (<Share className="w-3.5 h-3.5 inline text-indigo-300 mx-0.5" />)</strong> 터치</span>
+                <span>사파리 화면 하단 <strong>공유 아이콘 (<Share className="w-3.5 h-3.5 inline text-pink-300 mx-0.5" />)</strong> 터치</span>
               </div>
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
                 <span className="w-5 h-5 rounded-full bg-pink-500/30 border border-pink-400 text-[10px] font-black flex items-center justify-center shrink-0">2</span>
-                <span>메뉴에서 <strong>[홈 화면에 추가 <PlusSquare className="w-3.5 h-3.5 inline text-pink-300 mx-0.5" />]</strong> 터치</span>
+                <span>아래로 스크롤하여 <strong>[홈 화면에 추가 <PlusSquare className="w-3.5 h-3.5 inline text-pink-300 mx-0.5" />]</strong> 터치</span>
+              </div>
+            </div>
+          </div>
+        ) : showManualGuide || !deferredPrompt ? (
+          /* 🤖 Android / PC Visual Guide when prompt is unavailable */
+          <div className="p-4 rounded-2xl bg-slate-800/90 border border-indigo-500/40 text-left space-y-2.5 shadow-inner mb-4">
+            <span className="text-xs font-black text-indigo-300 flex items-center gap-1.5">
+              {deviceType === 'desktop' ? (
+                <>
+                  <Monitor className="w-3.5 h-3.5 text-indigo-300" />
+                  <span>🖥️ PC 브라우저 바로가기 추가 방법</span>
+                </>
+              ) : (
+                <>
+                  <Compass className="w-3.5 h-3.5 text-indigo-300" />
+                  <span>🤖 안드로이드/크롬 바로가기 추가 2단계</span>
+                </>
+              )}
+            </span>
+            <div className="space-y-2 text-xs text-slate-200">
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
+                <span className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400 text-[10px] font-black flex items-center justify-center shrink-0">1</span>
+                <span>
+                  {deviceType === 'desktop' 
+                    ? '상단 주소창 우측의 [앱 설치 ⊕] 아이콘 클릭'
+                    : <>브라우저 우측 상단 <strong>메뉴 (<MoreVertical className="w-3.5 h-3.5 inline text-indigo-300 mx-0.5" />)</strong> 터치</>
+                  }
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
+                <span className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400 text-[10px] font-black flex items-center justify-center shrink-0">2</span>
+                <span><strong>[홈 화면에 추가]</strong> 또는 <strong>[앱으로 추가]</strong> 선택</span>
               </div>
             </div>
           </div>
         ) : (
-          /* 🤖 Android / Chrome One-Click Add Button */
+          /* ⚡ Direct 1-Click Native Add Button */
           <button
             onClick={handleNativeAddToHome}
             className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-black text-sm sm:text-base shadow-xl shadow-purple-500/30 active:scale-95 transition-all flex items-center justify-center gap-2.5 mb-3"

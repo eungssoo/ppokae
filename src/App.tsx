@@ -68,6 +68,7 @@ import {
 } from './services/dbService';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
 import { generateBulkQuestions, generateNativeExpressions } from './services/geminiService';
+import { trackUserAction } from './services/analyticsService';
 import { sound } from './services/soundService';
 
 // Components
@@ -288,6 +289,7 @@ function AppContent() {
       setBookmarkLimit(result.profile.bookmarkLimit || 50);
       setView('menu');
       toast.coin(`환영합니다, ${result.profile.name}님!`, `🪙 ${result.profile.coins} 코인이 충전되었습니다.`);
+      trackUserAction('LOGIN', `PIN Login: ${result.profile.name}`, result.profile);
     } else {
       toast.error('로그인 실패', result.error || 'PIN 번호를 확인해 주세요.');
     }
@@ -302,6 +304,7 @@ function AppContent() {
         setBookmarkLimit(profile.bookmarkLimit || 50);
         setView('menu');
         toast.coin(`구글 로그인 완료! 🎉`, `환영합니다, ${profile.name}님!`);
+        trackUserAction('LOGIN', `Google Redirect: ${profile.name}`, profile);
       }
     });
   }, []);
@@ -333,6 +336,7 @@ function AppContent() {
         setBookmarkLimit(result.profile.bookmarkLimit || 50);
         setView('menu');
         toast.coin(`구글 로그인 성공! 🎉`, `환영합니다, ${result.profile.name}님!`);
+        trackUserAction('LOGIN', `Google OAuth: ${result.profile.name}`, result.profile);
       } else {
         toast.error('구글 로그인 안내', result.error || '구글 인증이 취소되었습니다.');
       }
@@ -1071,6 +1075,7 @@ function AppContent() {
         setIsLoading(false);
         setView('ranking_board');
         toast.coin(`🏆 ${currentCycle.cycleName} 랭킹전 완료!`, `정답 ${correctCount}개 맞춤 ➔ 🪙 +${rewardCoins} 코인 & 🏆 +50 XP 획득!`);
+        trackUserAction('RANKING_PLAY', `${currentCycle.cycleName}: ${score}점 (정답 ${correctCount}개)`, user);
       } else {
         const earnedCoins = correctCount * coinRate;
         if (earnedCoins > 0) {
@@ -1082,6 +1087,7 @@ function AppContent() {
           toast.info('학습 완료! 🎉', '준비된 모든 문제를 풀었습니다.');
         }
         setView(quizMode === 'expression' ? 'expression_select' : quizMode === 'bookmark' ? 'bookmark_view' : 'menu');
+        trackUserAction('SOLVE_COMPLETE', `모드: ${quizMode}, 정답: ${correctCount}/${questionCount}개`, user);
       }
 
       // 📲 퀴즈 1세트 완료 시 홈 화면 바로가기 추가 유도 (PWA standalone 아니며 이번 세션에 닫지 않은 유저 대상)
