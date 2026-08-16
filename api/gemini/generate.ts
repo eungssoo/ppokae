@@ -1,12 +1,26 @@
 export default async function handler(req: any, res: any) {
-  // CORS Headers
+  const origin = req.headers.origin || req.headers.referer || '';
+  const allowedOrigins = [
+    'https://ppokae.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:4173'
+  ];
+
+  // Match allowed origin or default to main domain
+  const isAllowed = allowedOrigins.some(allowed => origin.startsWith(allowed)) || !origin;
+  const allowOriginHeader = isAllowed && origin ? origin : 'https://ppokae.vercel.app';
+
+  // Security & CORS Headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Origin', allowOriginHeader);
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
   res.setHeader(
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -31,7 +45,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { model = 'gemini-3.5-flash-lite', payload } = req.body || {};
+    const { model = 'gemini-2.0-flash', payload } = req.body || {};
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {

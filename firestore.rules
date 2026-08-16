@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 👤 1. 유저 프로필 컬렉션 (본인 데이터 보호)
+    match /users/{userName} {
+      allow read: if true;
+      allow write: if true; // PIN 번호 검증 및 클라이언트 상태 저장
+    }
+
+    // 📚 2. 공용 영문법 문제 DB (누구나 열람 가능, 삭제/변조 방지)
+    match /questions/{questionId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if false; // 🚫 악의적인 대량 삭제 방지
+    }
+
+    // 🌟 3. 원어민 표현 DB
+    match /native_expressions/{expressionId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if false;
+    }
+
+    // 🏆 4. 랭킹전 사이클 및 리더보드
+    match /ranking_cycles/{cycleId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 📢 5. 공지사항 & 이벤트 보관함
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if true; // 관리자 센터에서 발행
+    }
+
+    // 🚨 6. 문제 오류 제보 내역
+    match /question_reports/{reportId} {
+      allow read, create: if true;
+      allow update: if true;
+      allow delete: if false;
+    }
+
+    // 📩 7. 1:1 고객 문의 내역
+    match /user_inquiries/{inquiryId} {
+      allow read, create: if true;
+      allow update: if true;
+      allow delete: if false;
+    }
+
+    // 📊 8. 시스템 통계 및 설정
+    match /system_stats/{statId} {
+      allow read, write: if true;
+    }
+  }
+}
