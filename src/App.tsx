@@ -90,6 +90,7 @@ import { ProfileView } from './components/ProfileView';
 import { AvatarGachaModal } from './components/AvatarGachaModal';
 import { ReportCenterModal } from './components/ReportCenterModal';
 import { AdminCenterModal } from './components/AdminCenterModal';
+import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
 import { ToastProvider, useToast } from './components/ToastContainer';
 import { SystemSettings, PushAnnouncement } from './types';
 
@@ -116,6 +117,16 @@ function AppContent() {
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(DEFAULT_SYSTEM_SETTINGS);
   const [announcementPopup, setAnnouncementPopup] = useState<PushAnnouncement | null>(null);
+
+  // PWA Home Screen Prompt State
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isAddToHomeModalOpen, setIsAddToHomeModalOpen] = useState<boolean>(false);
+  const [quizCompletionStats, setQuizCompletionStats] = useState<{
+    correctCount: number;
+    totalQuestions: number;
+    earnedCoins: number;
+    earnedXp: number;
+  }>({ correctCount: 0, totalQuestions: 10, earnedCoins: 0, earnedXp: 0 });
 
   // Action Confirmation Modal State
   const [actionModalConfig, setActionModalConfig] = useState<ActionModalConfig | null>(null);
@@ -293,6 +304,19 @@ function AppContent() {
         toast.coin(`구글 로그인 완료! 🎉`, `환영합니다, ${profile.name}님!`);
       }
     });
+  }, []);
+
+  // 📲 1-1. PWA Home Screen Prompt Event Listener
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
   // 🔐 1-2. Official Cryptographic Google OAuth Login Handler
@@ -1059,6 +1083,25 @@ function AppContent() {
         }
         setView(quizMode === 'expression' ? 'expression_select' : quizMode === 'bookmark' ? 'bookmark_view' : 'menu');
       }
+
+      // 📲 퀴즈 1세트 완료 시 홈 화면 바로가기 추가 유도 (PWA standalone 아니며 이번 세션에 닫지 않은 유저 대상)
+      try {
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+        const isDismissed = sessionStorage.getItem('pwa_prompt_dismissed') === 'true';
+        if (!isStandalone && !isDismissed) {
+          setQuizCompletionStats({
+            correctCount,
+            totalQuestions: questionCount,
+            earnedCoins: correctCount * coinRate,
+            earnedXp: quizMode === 'daily' ? 50 : 0
+          });
+          setTimeout(() => {
+            setIsAddToHomeModalOpen(true);
+          }, 1200);
+        }
+      } catch (e) {
+        console.warn("PWA prompt check warning:", e);
+      }
     }
   };
 
@@ -1182,6 +1225,7 @@ function AppContent() {
         <LoginView
           onLogin={handleLogin}
           onGoogleLogin={handleGoogleLogin}
+          onOpenInstallModal={() => setIsAddToHomeModalOpen(true)}
           isLoading={isLoading}
         />
       )}
@@ -1207,6 +1251,7 @@ function AppContent() {
           }}
           onStartDailyChallenge={() => handleStartDailyChallenge(false)}
           onOpenGachaModal={() => setIsGachaModalOpen(true)}
+          onOpenInstallModal={() => setIsAddToHomeModalOpen(true)}
           onOpenReportCenter={() => setIsReportCenterOpen(true)}
           onOpenAdminCenter={() => setIsAdminModalOpen(true)}
           onLogout={handleLogout}
@@ -1238,6 +1283,7 @@ function AppContent() {
           onDeleteAccount={handleDeleteAccount}
           onLinkGoogleAccount={handleLinkGoogleAccount}
           onOpenAdminCenter={() => setIsAdminModalOpen(true)}
+          onOpenInstallModal={() => setIsAddToHomeModalOpen(true)}
           onGoAnalytics={() => setView('analytics_view')}
         />
       )}
@@ -1387,6 +1433,17 @@ function AppContent() {
           onBack={() => setView('menu')}
         />
       )}
+
+      {/* 📲 PWA 홈 화면 바로가기 추가 유도 모달 */}
+      <AddToHomeScreenModal
+        isOpen={isAddToHomeModalOpen}
+        onClose={() => setIsAddToHomeModalOpen(false)}
+        deferredPrompt={deferredPrompt}
+        correctCount={quizCompletionStats.correctCount}
+        totalQuestions={quizCompletionStats.totalQuestions}
+        earnedCoins={quizCompletionStats.earnedCoins}
+        earnedXp={quizCompletionStats.earnedXp}
+      />
     </div>
   );
 }

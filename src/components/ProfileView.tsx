@@ -45,6 +45,7 @@ interface ProfileViewProps {
   onDeleteAccount: () => void;
   onLinkGoogleAccount?: () => void;
   onOpenAdminCenter?: () => void;
+  onOpenInstallModal?: () => void;
   onGoAnalytics?: () => void;
 }
 
@@ -78,6 +79,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDeleteAccount,
   onLinkGoogleAccount,
   onOpenAdminCenter,
+  onOpenInstallModal,
   onGoAnalytics,
 }) => {
   const [name, setName] = useState<string>(user.name);
@@ -572,6 +574,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             ))}
           </div>
         </div>
+
+        {/* 📲 홈 화면 바로가기 추가 안내 (PWA) */}
+        {onOpenInstallModal && (
+          <div className="mb-5 p-4 rounded-2xl bg-gradient-to-r from-indigo-950/70 via-purple-950/70 to-slate-900 border border-indigo-500/40 flex items-center justify-between shadow-md">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🪐</span>
+              <div>
+                <span className="text-xs font-black text-white block">홈 화면에 바로가기 추가</span>
+                <span className="text-[11px] text-slate-300">스마트폰 바탕화면에서 1초 만에 바로 복습</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                sound.playStar();
+                onOpenInstallModal();
+              }}
+              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center gap-1 shrink-0"
+            >
+              <span>추가하기</span>
+            </button>
+          </div>
+        )}
 
         {/* 🗑️ Google Play Required Policy: Account Deletion */}
         <div className="pt-3 border-t border-slate-800 text-center">

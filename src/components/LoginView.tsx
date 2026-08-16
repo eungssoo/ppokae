@@ -5,6 +5,7 @@ import { sound } from '../services/soundService';
 interface LoginViewProps {
   onLogin: (name: string, pin: string, starterAvatarId?: string) => void;
   onGoogleLogin?: () => void;
+  onOpenInstallModal?: () => void;
   isLoading: boolean;
 }
 
@@ -18,6 +19,7 @@ const STARTER_AVATARS = [
 export const LoginView: React.FC<LoginViewProps> = ({
   onLogin,
   onGoogleLogin,
+  onOpenInstallModal,
   isLoading,
 }) => {
   const [showPinRegister, setShowPinRegister] = useState(false);
@@ -41,7 +43,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         <div className="absolute -bottom-24 -right-24 w-60 h-60 bg-pink-500/20 rounded-full blur-3xl pointer-events-none" />
 
         {/* Hero Title */}
-        <div className="relative z-10 mb-6">
+        <div className="relative z-10 mb-5">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-3 bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-pink-500/20 text-amber-300 border border-amber-500/40">
             <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-spin" />
             <span>AI English Mastery • PPOKAE</span>
@@ -51,10 +53,32 @@ export const LoginView: React.FC<LoginViewProps> = ({
             뽀개 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-400 font-black">PPOKAE</span>
           </h1>
 
-          <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed">
+          <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed mb-4">
             문법부터 단어, 회화 표현까지 전부 뽀개보자!<br />
             가입 즉시 <strong>🪙 200 코인</strong> & 스타터 아바타 4종 무료 지급!
           </p>
+
+          {/* 📲 PWA 모바일 앱 무료 다운로드 / 설치 퀵 배너 */}
+          {onOpenInstallModal && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playStar();
+                onOpenInstallModal();
+              }}
+              className="w-full py-2.5 px-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-purple-950/70 to-pink-950/80 border border-indigo-500/50 hover:border-pink-400 text-white font-bold text-xs flex items-center justify-between shadow-md transition-all active:scale-95 group"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base animate-bounce">📲</span>
+                <span className="text-slate-200 text-left text-[11px] sm:text-xs">
+                  스마트폰 앱으로 더 편하게! <strong className="text-amber-300 underline underline-offset-2">1초 무료 설치</strong>
+                </span>
+              </div>
+              <span className="text-pink-300 font-black text-[11px] group-hover:translate-x-1 transition-transform shrink-0">
+                다운로드 ➔
+              </span>
+            </button>
+          )}
         </div>
 
         {!showPinRegister ? (

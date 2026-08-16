@@ -18,7 +18,8 @@ import {
   BarChart3,
   User,
   Zap,
-  BookMarked
+  BookMarked,
+  Smartphone
 } from 'lucide-react';
 import { UserProfile, ViewType, CycleInfo } from '../types';
 import { calculateTier, checkIsAdmin } from '../services/dbService';
@@ -32,6 +33,7 @@ interface MainMenuViewProps {
   onNavigate: (view: ViewType) => void;
   onStartDailyChallenge: () => void;
   onOpenGachaModal?: () => void;
+  onOpenInstallModal?: () => void;
   onOpenReportCenter?: () => void;
   onOpenAdminCenter?: () => void;
   onLogout: () => void;
@@ -45,6 +47,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
   onNavigate,
   onStartDailyChallenge,
   onOpenGachaModal,
+  onOpenInstallModal,
   onOpenReportCenter,
   onOpenAdminCenter,
   onLogout,
@@ -110,6 +113,21 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {/* 📲 홈 화면 바로가기 추가 Quick Button */}
+            {onOpenInstallModal && (
+              <button
+                onClick={() => {
+                  sound.playStar();
+                  onOpenInstallModal();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 hover:from-indigo-500/30 hover:to-pink-500/30 border border-indigo-400/40 text-indigo-200 hover:text-white font-bold text-xs shadow-sm active:scale-95 transition-all"
+                title="홈 화면에 바로가기 추가"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-pink-300" />
+                <span className="hidden sm:inline">홈 화면 추가</span>
+              </button>
+            )}
+
             {/* 🎰 아바타 가챠 소환소 Quick Button */}
             {onOpenGachaModal && (
               <button
@@ -216,6 +234,40 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
             <span>{tierInfo.maxXp === Infinity ? '최고 티어 도달 👑' : `${Math.max(0, tierInfo.maxXp - currentXp).toLocaleString()} XP 남음 (${tierInfo.progress}%)`}</span>
           </div>
         </div>
+
+        {/* 📲 홈 화면 바로가기 추가 안내 배너 */}
+        {onOpenInstallModal && (
+          <div className="mb-4">
+            <button
+              onClick={() => {
+                sound.playStar();
+                onOpenInstallModal();
+              }}
+              className="w-full p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-purple-950/80 to-slate-900 border border-indigo-500/50 hover:border-pink-400 text-white flex items-center justify-between shadow-md transition-all active:scale-[0.99] group"
+            >
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center text-lg shadow-md shrink-0">
+                  🪐
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-white">홈 화면에 뽀개 바로가기 추가</span>
+                    <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                      1초 완성
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    스마트폰 바탕화면에서 주소창 없이 1초 만에 바로 복습을 시작하세요!
+                  </p>
+                </div>
+              </div>
+              <span className="px-3 py-1.5 rounded-xl bg-indigo-600 group-hover:bg-indigo-500 text-white font-black text-xs shrink-0 shadow-md flex items-center gap-1">
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>바로가기</span>
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* 🚀 2. Core Study Hub: 문제 풀이 핵심 존 (2x2 그리드 최상단 배치) */}
         <div className="mb-5">
