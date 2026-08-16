@@ -1716,8 +1716,42 @@ export async function getRandomQuestions(difficultyLabel: string): Promise<{ suc
       return { success: false, error: `선택하신 [${difficultyLabel}] 난이도의 문제가 없습니다. [문제 공장]에서 해당 난이도 문제를 생성해주세요.` };
     }
 
-    allQuestions.sort(() => Math.random() - 0.5);
-    const selected = allQuestions.slice(0, 10);
+    // 🎯 1~5형식 문형별 고른 분배 알고리즘 (각 문형당 2문제씩 균등 추출)
+    const formBuckets: Record<number, Question[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+    allQuestions.forEach(q => {
+      const f = sanitizeForm(q.form);
+      if (formBuckets[f]) {
+        formBuckets[f].push(q);
+      } else {
+        formBuckets[1].push(q);
+      }
+    });
+
+    // 각 문형 버킷 셔플
+    for (let f = 1; f <= 5; f++) {
+      formBuckets[f].sort(() => Math.random() - 0.5);
+    }
+
+    const selected: Question[] = [];
+    // 1차: 1~5형식에서 각 2문제씩 균등 추출 (5 x 2 = 10문제)
+    for (let f = 1; f <= 5; f++) {
+      const picked = formBuckets[f].splice(0, 2);
+      selected.push(...picked);
+    }
+
+    // 특정 형식의 문제가 부족하여 10문제가 채워지지 않은 경우 남은 문제에서 보충
+    if (selected.length < 10) {
+      const remaining: Question[] = [];
+      for (let f = 1; f <= 5; f++) {
+        remaining.push(...formBuckets[f]);
+      }
+      remaining.sort(() => Math.random() - 0.5);
+      const needed = 10 - selected.length;
+      selected.push(...remaining.slice(0, needed));
+    }
+
+    // 최종 10문제의 출제 순서를 랜덤하게 섞어 실제 시험처럼 다채롭게 구성
+    selected.sort(() => Math.random() - 0.5);
     return { success: true, data: selected };
   } catch (error: any) {
     console.error("getRandomQuestions Error:", error);
@@ -1750,7 +1784,7 @@ export async function savePersonalQuestionsToFirestore(userName: string, questio
   }
 }
 
-// 5. 개인 맞춤 약점 문제 10문제 추출
+// 5. 개인 맞춤 약점 문제 10문제 추출 (1~5형식 고른 분배 적용)
 export async function getRandomPersonalQuestions(userName: string, difficultyLabel: string): Promise<{ success: boolean; data?: Question[]; error?: string }> {
   try {
     const qQuery = query(
@@ -1791,8 +1825,38 @@ export async function getRandomPersonalQuestions(userName: string, difficultyLab
       return { success: false, error: `선택하신 [${difficultyLabel}] 난이도에 저장된 나만의 약점 문제가 없습니다. [약점 분석/처방]에서 먼저 생성해주세요.` };
     }
 
-    allQuestions.sort(() => Math.random() - 0.5);
-    const selected = allQuestions.slice(0, 10);
+    // 🎯 1~5형식 균등 분배
+    const formBuckets: Record<number, Question[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+    allQuestions.forEach(q => {
+      const f = sanitizeForm(q.form);
+      if (formBuckets[f]) {
+        formBuckets[f].push(q);
+      } else {
+        formBuckets[1].push(q);
+      }
+    });
+
+    for (let f = 1; f <= 5; f++) {
+      formBuckets[f].sort(() => Math.random() - 0.5);
+    }
+
+    const selected: Question[] = [];
+    for (let f = 1; f <= 5; f++) {
+      const picked = formBuckets[f].splice(0, 2);
+      selected.push(...picked);
+    }
+
+    if (selected.length < 10) {
+      const remaining: Question[] = [];
+      for (let f = 1; f <= 5; f++) {
+        remaining.push(...formBuckets[f]);
+      }
+      remaining.sort(() => Math.random() - 0.5);
+      const needed = 10 - selected.length;
+      selected.push(...remaining.slice(0, needed));
+    }
+
+    selected.sort(() => Math.random() - 0.5);
     return { success: true, data: selected };
   } catch (error: any) {
     console.error("getRandomPersonalQuestions Error:", error);
