@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, Coins, Sparkles, X, Check, ArrowRight, ShieldAlert, Trash2 } from 'lucide-react';
 import { sound } from '../services/soundService';
+import { useLanguage } from '../services/i18n';
 
 export interface ActionModalConfig {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
   config,
   userCoins,
 }) => {
+  const { language, t } = useLanguage();
   if (!config || !config.isOpen) return null;
 
   const isDanger = config.type === 'danger' || config.type === 'custom' || config.cost === 0;
@@ -68,7 +70,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
           <div>
             <div className={`inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider ${isDanger ? 'text-rose-400' : 'text-amber-300'}`}>
               {isDanger ? <AlertTriangle className="w-3 h-3 text-rose-400" /> : <Sparkles className="w-3 h-3 text-amber-400" />}
-              <span>{isDanger ? 'Warning & Security' : 'AI Generation & Upgrade'}</span>
+              <span>{isDanger ? (language === 'en' ? 'Notice & Rules' : 'Warning & Security') : (language === 'en' ? 'AI Feature & Upgrade' : 'AI Generation & Upgrade')}</span>
             </div>
             <h3 className="text-xl font-black text-white tracking-tight">
               {config.title}
@@ -85,18 +87,18 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
         {!isDanger && config.cost > 0 && (
           <div className="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 mb-5">
             <div className="flex justify-between items-center mb-2 pb-2 border-b border-slate-800 text-xs">
-              <span className="text-slate-400 font-medium">소모 코인</span>
+              <span className="text-slate-400 font-medium">{language === 'en' ? 'Cost' : '소모 코인'}</span>
               <span className="font-black text-rose-400 flex items-center gap-1 text-sm">
                 <Coins className="w-4 h-4 text-yellow-400" />
-                <span>- {config.cost} 코인</span>
+                <span>- {config.cost} {language === 'en' ? 'Coins' : '코인'}</span>
               </span>
             </div>
 
             <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-400 font-medium">보유 ➔ 사용 후 잔여 코인</span>
+              <span className="text-slate-400 font-medium">{language === 'en' ? 'Remaining After Use' : '보유 ➔ 사용 후 잔여 코인'}</span>
               <span className={`font-black flex items-center gap-1 text-sm ${hasEnoughCoins ? 'text-emerald-400' : 'text-rose-400'}`}>
                 <Coins className="w-4 h-4 text-yellow-400" />
-                <span>{hasEnoughCoins ? `${userCoins} ➔ ${remainingCoins} 코인` : `코인 부족 (${userCoins} / ${config.cost})`}</span>
+                <span>{hasEnoughCoins ? `${userCoins} ➔ ${remainingCoins} ${language === 'en' ? 'Coins' : '코인'}` : (language === 'en' ? `Insufficient Coins (${userCoins} / ${config.cost})` : `코인 부족 (${userCoins} / ${config.cost})`)}</span>
               </span>
             </div>
           </div>
@@ -111,7 +113,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
           }`}>
             <div className={`flex items-center gap-1.5 text-xs font-black mb-2 ${isDanger ? 'text-rose-300' : 'text-amber-300'}`}>
               <ShieldAlert className={`w-3.5 h-3.5 ${isDanger ? 'text-rose-400' : 'text-amber-400'}`} />
-              <span>{isDanger ? '탈퇴 전 필수 확인 사항' : '진행 전 주의사항 & 혜택 안내'}</span>
+              <span>{isDanger ? (language === 'en' ? 'Important Rules & Checklist' : '필수 확인 사항 & 규칙') : (language === 'en' ? 'Guidelines & Details' : '진행 전 주의사항 & 혜택 안내')}</span>
             </div>
             <ul className={`space-y-1 text-[11px] font-medium ${isDanger ? 'text-rose-100/90' : 'text-amber-100/90'}`}>
               {config.notices.map((notice, idx) => (
@@ -128,7 +130,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
         {!isDanger && !hasEnoughCoins && (
           <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-2xl mb-5 flex items-center gap-2.5 text-rose-200 text-xs font-bold">
             <AlertTriangle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-            <span>보유 코인이 부족합니다! (부족분: {config.cost - userCoins} 코인)</span>
+            <span>{language === 'en' ? `Insufficient coins! (Short by ${config.cost - userCoins} Coins)` : `보유 코인이 부족합니다! (부족분: ${config.cost - userCoins} 코인)`}</span>
           </div>
         )}
 
@@ -138,16 +140,16 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
             onClick={handleClose}
             className="flex-1 py-3.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-2xl font-bold text-xs sm:text-sm border border-slate-700 transition-all active:scale-95"
           >
-            취소
+            {language === 'en' ? 'Cancel' : '취소'}
           </button>
 
           {isDanger ? (
             <button
               onClick={handleConfirm}
-              className="flex-[2] py-3.5 px-4 bg-gradient-to-r from-rose-600 to-red-700 hover:from-rose-700 hover:to-red-800 text-white rounded-2xl font-black text-xs sm:text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-1.5"
+              className="flex-[2] py-3.5 px-4 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white rounded-2xl font-black text-xs sm:text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-1.5"
             >
-              <Trash2 className="w-4 h-4" />
-              <span>{config.confirmButtonText || '탈퇴 및 영구 삭제'}</span>
+              {config.type === 'danger' ? <Trash2 className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+              <span>{config.confirmButtonText || (language === 'en' ? 'Confirm' : '확인')}</span>
             </button>
           ) : hasEnoughCoins ? (
             <button
@@ -155,7 +157,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
               className="flex-[2] py-3.5 px-4 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white rounded-2xl font-black text-xs sm:text-sm transition-all shadow-[0_8px_25px_rgba(249,115,22,0.35)] active:scale-95 flex items-center justify-center gap-1.5"
             >
               <Coins className="w-4 h-4 text-yellow-200" />
-              <span>{config.confirmButtonText || `확인 (🪙 ${config.cost} 소모)`}</span>
+              <span>{config.confirmButtonText || (language === 'en' ? `Confirm (🪙 -${config.cost})` : `확인 (🪙 ${config.cost} 소모)`)}</span>
             </button>
           ) : (
             <button
@@ -165,7 +167,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
               }}
               className="flex-[2] py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-2xl font-black text-xs sm:text-sm transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5"
             >
-              <span>퀴즈 풀고 코인 모으기</span>
+              <span>{language === 'en' ? 'Earn Coins in Practice' : '퀴즈 풀고 코인 모으기'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           )}

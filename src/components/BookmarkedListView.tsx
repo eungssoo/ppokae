@@ -3,6 +3,7 @@ import { ArrowLeft, Star, Volume2, Plus, Sparkles, ChevronDown, ChevronUp, Play,
 import { BookmarkItem, Question } from '../types';
 import { sound } from '../services/soundService';
 import { useLanguage } from '../services/i18n';
+import { GrammarSkillVault } from './GrammarSkillVault';
 
 interface BookmarkedListViewProps {
   bookmarks: BookmarkItem[];
@@ -98,82 +99,79 @@ export const BookmarkedListView: React.FC<BookmarkedListViewProps> = ({
 
           <div className="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden mb-3 border border-slate-700">
             <div
-              className="bg-gradient-to-r from-amber-500 to-yellow-400 h-full rounded-full transition-all duration-500"
+              className={`h-full transition-all duration-300 ${
+                usagePercent >= 90
+                  ? 'bg-rose-500'
+                  : usagePercent >= 70
+                  ? 'bg-amber-500'
+                  : 'bg-emerald-500'
+              }`}
               style={{ width: `${usagePercent}%` }}
             />
           </div>
 
-          <div className="flex justify-between items-center">
-            <span className="text-[11px] text-slate-400 font-medium">
-              {language === 'en' ? '💡 Expand +50 slots for 🪙 100 Coins.' : '💡 100 코인으로 보관함을 +50칸 확장할 수 있습니다.'}
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-slate-400">
+              {language === 'en' ? 'Need more space?' : '보관함이 부족하신가요?'}
             </span>
-
             <button
-              onClick={() => {
-                sound.playClick();
-                onExpandLimit();
-              }}
-              className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 hover:text-white rounded-xl text-xs font-black transition-all flex items-center gap-1 active:scale-95 shadow-sm"
+              onClick={onExpandLimit}
+              className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-xl font-bold flex items-center gap-1 transition-all active:scale-95"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{language === 'en' ? '+50 Slots (🪙 100)' : '50칸 확장 (🪙 100)'}</span>
+              <span>{language === 'en' ? 'Expand Limit (🪙 50)' : '보관함 +10칸 확장 (🪙 50)'}</span>
             </button>
           </div>
         </div>
 
-        {/* Bookmarked Questions List */}
+        {/* Bookmarks List */}
         {bookmarks.length === 0 ? (
-          <div className="bg-slate-800/40 rounded-3xl border-2 border-dashed border-slate-700 p-8 sm:p-12 text-center text-slate-400">
-            <span className="text-4xl mb-2 block">⭐</span>
-            <p className="font-extrabold text-base sm:text-lg text-white">
-              {language === 'en' ? 'No bookmarked questions yet!' : '아직 즐겨찾기한 문제가 없습니다!'}
+          <div className="bg-slate-900/60 rounded-3xl p-10 border border-slate-800 text-center text-slate-400">
+            <Star className="w-10 h-10 mx-auto text-slate-600 mb-3" />
+            <p className="font-bold text-base text-white mb-1">
+              {language === 'en' ? 'No bookmarked questions yet.' : '즐겨찾기한 문제가 없습니다.'}
             </p>
-            <p className="mt-1 text-xs text-slate-400 font-medium">
-              {language === 'en'
-                ? 'Click the ⭐ button on any quiz question to save it here.'
-                : '퀴즈나 문제집을 보다가 상단의 ⭐ 버튼을 누르면 언제든 여기에 보관됩니다.'}
+            <p className="text-xs">
+              {language === 'en' ? 'Click the ⭐ star button during quiz to save tricky questions!' : '퀴즈를 풀면서 헷갈리는 문제가 나오면 상단 ⭐ 별표를 눌러 저장해보세요!'}
             </p>
           </div>
         ) : (
-          <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
-            {bookmarks.map((bm, index) => {
+          <div className="space-y-3">
+            {bookmarks.map((bm) => {
               const q = bm.question;
               const isOpen = openId === bm.id;
 
               return (
                 <div
-                  key={bm.id || index}
-                  className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-4 transition-all shadow-sm"
+                  key={bm.id}
+                  className="bg-slate-900/80 rounded-2xl p-4 border border-slate-700/80 shadow-md hover:border-slate-600 transition-all"
                 >
-                  <div className="flex justify-between items-start gap-3">
-                    <div
-                      onClick={() => bm.id && toggleAccordion(bm.id)}
-                      className="flex-1 cursor-pointer"
-                    >
-                      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-black px-2 py-0.5 rounded border border-indigo-500/30">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 text-left">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2.5 py-0.5 rounded-full text-[10px] font-black">
                           {language === 'en' ? `Form ${q.form}` : `${q.form}형식`}
                         </span>
-                        <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                          {language === 'en' ? 'Answer: ' : '정답: '}{q.answer}
+                        <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded-full text-[10px] font-black">
+                          {language === 'en' ? `Answer: ${q.answer}` : `정답: ${q.answer}`}
                         </span>
                       </div>
 
-                      <p className="text-sm sm:text-base font-bold text-white leading-relaxed font-serif">
+                      <p className="font-bold text-white text-sm sm:text-base font-serif mb-1">
                         {q.sentence}
                       </p>
                       {language === 'ko' && (
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-slate-400">
                           {q.translation}
                         </p>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <button
                         onClick={() => playAudio(q.sentence, q.answer)}
                         className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-xl border border-slate-700"
-                        title={language === 'en' ? 'Play audio' : '발음 듣기'}
+                        title={language === 'en' ? 'Listen audio' : '발음 듣기'}
                       >
                         <Volume2 className="w-4 h-4" />
                       </button>
@@ -231,6 +229,9 @@ export const BookmarkedListView: React.FC<BookmarkedListViewProps> = ({
             })}
           </div>
         )}
+
+        {/* 🧠 Grammar Skill Vault (실전 영문법 1초 정답 치트키 & 꿀팁 보관소) */}
+        <GrammarSkillVault />
 
       </div>
     </div>

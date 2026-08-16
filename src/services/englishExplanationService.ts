@@ -13,7 +13,6 @@ const memoryCache = new Map<string, EnglishExplanation>();
 // Helper to generate a stable unique key for a question
 export function getQuestionKey(question: Question): string {
   if (question.id) return `q_${question.id}`;
-  // Generate simple hash from sentence + answer
   const base = `${question.sentence}_${question.answer}`.trim().toLowerCase();
   let hash = 0;
   for (let i = 0; i < base.length; i++) {
@@ -42,13 +41,21 @@ function saveToLocalStorage(key: string, data: EnglishExplanation): void {
 }
 
 // 🛡️ Intelligent Rule-Based Fallback to ensure 100% instant English output
-function generateFallbackEnglishExplanation(question: Question): EnglishExplanation {
+export function generateFallbackEnglishExplanation(question: Question): EnglishExplanation {
   const formNames: Record<number, string> = {
-    1: 'Form 1 (Subject + Intransitive Verb)',
+    1: 'Form 1 (Subject + Complete Intransitive Verb)',
     2: 'Form 2 (Subject + Linking Verb + Subject Complement)',
-    3: 'Form 3 (Subject + Transitive Verb + Direct Object)',
-    4: 'Form 4 (Subject + Transitive Verb + Indirect Object + Direct Object)',
+    3: 'Form 3 (Subject + Complete Transitive Verb + Direct Object)',
+    4: 'Form 4 (Subject + Ditransitive Verb + Indirect Object + Direct Object)',
     5: 'Form 5 (Subject + Transitive Verb + Object + Object Complement)'
+  };
+
+  const formNuance: Record<number, string> = {
+    1: 'Form 1 sentences do not require an object or complement. Adverbial phrases often modify the action.',
+    2: 'Form 2 sentences link the subject to an adjective or noun complement describing the subject state.',
+    3: 'Form 3 sentences express actions directly affecting an object.',
+    4: 'Form 4 sentences involve giving or providing something to a recipient (IO) with a transferred item (DO).',
+    5: 'Form 5 sentences describe an action that causes the object to perform an action or enter a new state.'
   };
 
   const feedbacks: Record<string, string> = {};
@@ -57,16 +64,16 @@ function generateFallbackEnglishExplanation(question: Question): EnglishExplanat
       const text = typeof opt === 'object' ? opt.text : opt;
       const isCorrect = typeof opt === 'object' ? opt.is_correct : text === question.answer;
       if (isCorrect) {
-        feedbacks[text] = `Correct choice! "${text}" perfectly satisfies the grammatical requirement of ${formNames[question.form] || 'the sentence structure'}.`;
+        feedbacks[text] = `Correct choice! "${text}" accurately satisfies the grammatical requirement and syntax of ${formNames[question.form] || 'this sentence'}.`;
       } else {
-        feedbacks[text] = `Incorrect choice. "${text}" does not grammatically fit the required position or tense in this sentence.`;
+        feedbacks[text] = `Incorrect choice. "${text}" does not grammatically match the required position, part of speech, or tense in this sentence.`;
       }
     });
   }
 
   return {
-    chunk_pattern: formNames[question.form] || 'Standard English Sentence Pattern',
-    nuance: `This sentence focuses on mastering the structure of ${formNames[question.form] || 'key English grammar'} in natural context.`,
+    chunk_pattern: formNames[question.form] || 'Key English Sentence Grammar Pattern',
+    nuance: formNuance[question.form] || `Focus on understanding the structural role and native nuance of Form ${question.form} in authentic English context.`,
     option_feedbacks: feedbacks
   };
 }
@@ -112,9 +119,8 @@ export async function getOrFetchEnglishExplanation(
     'gemini-2.0-flash-lite-preview-02-05'
   ];
 
-  const systemPrompt = `You are a world-class English grammar master and ESL test preparer.
-Convert the given Korean grammar quiz explanation into clear, professional, natural English for ESL learners.
-
+  const systemPrompt = `You are an expert English grammar educator.
+Convert the given grammar quiz into clear, 100% English explanations without any Korean words.
 [RULES]:
 1. "chunk_pattern": State the exact grammatical formula and chunk structure in English (e.g. "Subject + Verb + Object + Object Complement (to-infinitive)").
 2. "nuance": Explain the native grammatical nuance, formal/informal context, and why this grammar point is essential.
@@ -124,14 +130,11 @@ Convert the given Korean grammar quiz explanation into clear, professional, natu
 [QUESTION]:
 Sentence: ${question.sentence}
 Correct Answer: ${question.answer}
-Form: ${question.form}형식
-Original Korean Translation: ${question.translation}
-Original Chunk Pattern: ${question.explanation?.chunk_pattern || ''}
-Original Nuance: ${question.explanation?.nuance || ''}
+Form: ${question.form} (Form 1 to 5)
 Options:
-${question.options.map((opt: any) => `- Option: "${typeof opt === 'object' ? opt.text : opt}" | IsCorrect: ${typeof opt === 'object' ? opt.is_correct : opt === question.answer} | Korean Feedback: ${typeof opt === 'object' ? opt.feedback : ''}`).join('\n')}
+${question.options.map((opt: any) => `- Option: "${typeof opt === 'object' ? opt.text : opt}" | IsCorrect: ${typeof opt === 'object' ? opt.is_correct : opt === question.answer}`).join('\n')}
 
-Generate a clean JSON object matching the required schema.`;
+Generate a clean JSON object with "chunk_pattern", "nuance", and "option_feedbacks" (array of {option_text, feedback}). All in pure English.`;
 
   const payload = {
     contents: [{ parts: [{ text: userPrompt }] }],
@@ -177,10 +180,11 @@ Generate a clean JSON object matching the required schema.`;
           });
         }
 
+        const fallback = generateFallbackEnglishExplanation(question);
         const formatted: EnglishExplanation = {
-          chunk_pattern: parsed.chunk_pattern || question.explanation?.chunk_pattern || '',
-          nuance: parsed.nuance || question.explanation?.nuance || '',
-          option_feedbacks: feedbacksMap
+          chunk_pattern: parsed.chunk_pattern || fallback.chunk_pattern,
+          nuance: parsed.nuance || fallback.nuance,
+          option_feedbacks: Object.keys(feedbacksMap).length > 0 ? feedbacksMap : fallback.option_feedbacks
         };
 
         // Cache in memory and localStorage
@@ -202,13 +206,11 @@ Generate a clean JSON object matching the required schema.`;
 
 /**
  * 🚀 Pre-fetch English explanation in the background while user is solving the question.
- * Non-blocking, completely transparent.
  */
 export function prefetchEnglishExplanation(question: Question | null): void {
   if (!question) return;
   const key = getQuestionKey(question);
   if (memoryCache.has(key) || getFromLocalStorage(key)) return;
 
-  // Fire and forget in background
   getOrFetchEnglishExplanation(question).catch(() => {});
 }

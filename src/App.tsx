@@ -95,10 +95,12 @@ import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
 import { InitialProfileSetupModal } from './components/InitialProfileSetupModal';
 import { UserInquiryModal } from './components/UserInquiryModal';
 import { ToastProvider, useToast } from './components/ToastContainer';
+import { useLanguage } from './services/i18n';
 import { SystemSettings } from './types';
 
 function AppContent() {
   const toast = useToast();
+  const { language, t } = useLanguage();
 
   // User Profile
   const [user, setUser] = useState<UserProfile | null>(() => {
@@ -682,19 +684,30 @@ function AppContent() {
 
     const genCost = isAdminUser ? 0 : 50;
 
+    const modalTitle = language === 'en' ? `[${levelInfo.label}] AI Batch 40 Qs` : `[${levelInfo.label}] 40문제 AI 출제`;
+    const modalSub = language === 'en' ? `Gemini AI will synthesize 40 questions at ${levelInfo.label} into the database.` : `Gemini AI가 ${levelInfo.label} 수준의 고품질 영문법 40문제를 생성하여 공용 DB에 즉시 적재합니다.`;
+    const modalBtn = isAdminUser
+      ? (language === 'en' ? 'Generate 40 Qs (Admin Free)' : '40문제 생성 시작 (관리자 무료)')
+      : (language === 'en' ? 'Generate 40 Qs (🪙 50 Coins)' : '40문제 생성 시작 (🪙 50 소모)');
+    const notices = language === 'en' ? [
+      isAdminUser ? '👑 Admin Privileges: Free generation & no cooldown.' : 'Deducts 🪙 50 Coins with a 3-minute cooldown.',
+      'Questions will be stored permanently in the database.',
+      'Automatic validation of 1~5 sentence forms and grammar rules.'
+    ] : [
+      isAdminUser ? '👑 관리자 권한: 코인 소모 및 쿨타임이 완전 면제됩니다.' : '시작 즉시 🪙 50 코인이 차감되며 3분의 생성 쿨타임이 적용됩니다.',
+      '생성된 문제는 공용 DB에 영구 보관되어 모든 학습자가 함께 풀 수 있습니다.',
+      '100% 한국어 상세 해설 및 1~5형식 표준 문형 검증이 자동 적용됩니다.'
+    ];
+
     setActionModalConfig({
       isOpen: true,
       type: 'generate_grammar',
-      title: `[${levelInfo.label}] 40문제 AI 출제`,
-      subtitle: `Gemini AI가 ${levelInfo.label} 수준의 고품질 영문법 40문제를 생성하여 공용 DB에 즉시 적재합니다.`,
+      title: modalTitle,
+      subtitle: modalSub,
       cost: genCost,
       icon: '⚡',
-      confirmButtonText: isAdminUser ? '40문제 생성 시작 (관리자 무료)' : '40문제 생성 시작 (🪙 50 소모)',
-      notices: [
-        isAdminUser ? '👑 관리자 권한: 코인 소모 및 쿨타임이 완전 면제됩니다.' : '시작 즉시 🪙 50 코인이 차감되며 3분의 생성 쿨타임이 적용됩니다.',
-        '생성된 문제는 공용 DB에 영구 보관되어 모든 학습자가 함께 풀 수 있습니다.',
-        '100% 한국어 상세 해설 및 1~5형식 표준 문형 검증이 자동 적용됩니다.'
-      ],
+      confirmButtonText: modalBtn,
+      notices: notices,
       onConfirm: () => {
         setActionModalConfig(null);
         executeGenerateBulk(levelInfo, isWeakness);
@@ -711,7 +724,7 @@ function AppContent() {
   const executeGenerateBulk = async (levelInfo: DifficultyLevel, isWeakness: boolean = false) => {
     if (!user) return;
     setIsLoading(true);
-    setLoadingText('코인 차감 및 AI 문제 출제 준비 중...');
+    setLoadingText(language === 'en' ? 'Deducting coins & synthesizing questions...' : '코인 차감 및 AI 문제 출제 준비 중...');
 
     const isAdminUser = checkIsAdmin(user);
     const genCost = isAdminUser ? 0 : 50;
@@ -719,7 +732,7 @@ function AppContent() {
     const deducted = await deductCoins(user.name, genCost, user);
     if (!deducted) {
       setIsLoading(false);
-      toast.error('코인 부족', '보유 코인이 부족하여 생성할 수 없습니다.');
+      toast.error(language === 'en' ? 'Insufficient Coins' : '코인 부족', language === 'en' ? 'Insufficient coins to generate questions.' : '보유 코인이 부족하여 생성할 수 없습니다.');
       return;
     }
 
@@ -733,7 +746,7 @@ function AppContent() {
     const formSummary = Object.entries(formStats.countsByForm).map(([f, cnt]) => `${f}형식(${cnt}개)`).join(' ');
     console.log(`[DB Form Analysis for ${levelInfo.label}]:`, formSummary);
 
-    setLoadingText(`Gemini AI가 [${levelInfo.label}] 1~5형식 문형 균형을 맞춰 40문제를 생성하고 있습니다...`);
+    setLoadingText(language === 'en' ? `Gemini AI is generating 40 questions balanced across Forms 1-5 for [${levelInfo.label}]...` : `Gemini AI가 [${levelInfo.label}] 1~5형식 문형 균형을 맞춰 40문제를 생성하고 있습니다...`);
 
     let focus = '';
     if (isWeakness && weaknessData.total > 0) {
@@ -745,27 +758,27 @@ function AppContent() {
 
     if (!genResult.success || !genResult.questions) {
       setIsLoading(false);
-      toast.error('문제 생성 실패', genResult.error || '잠시 후 다시 시도해 주세요.');
+      toast.error(language === 'en' ? 'Generation Failed' : '문제 생성 실패', genResult.error || (language === 'en' ? 'Please try again later.' : '잠시 후 다시 시도해 주세요.'));
       return;
     }
 
-    setLoadingText('Firestore 데이터베이스에 저장 중...');
+    setLoadingText(language === 'en' ? 'Saving to database...' : 'Firestore 데이터베이스에 저장 중...');
     try {
       if (isWeakness) {
         await savePersonalQuestionsToFirestore(user.name, genResult.questions, levelInfo.label);
         setIsLoading(false);
-        toast.coin('약점 맞춤 문제 40개 생성 완료! 🎉', '개인 DB에 성공적으로 저장되었습니다.');
+        toast.coin(language === 'en' ? '40 Weakness Questions Ready! 🎉' : '약점 맞춤 문제 40개 생성 완료! 🎉', language === 'en' ? 'Saved to your personal database.' : '개인 DB에 성공적으로 저장되었습니다.');
         setView('menu');
       } else {
         await saveQuestionsToFirestore(genResult.questions, levelInfo.label);
         await loadTotalPublicQuestions();
         setIsLoading(false);
-        toast.coin('공용 문제 40개 생성 완료! 🎉', '공용 DB에 성공적으로 추가되었습니다.');
+        toast.coin(language === 'en' ? '40 Public Questions Ready! 🎉' : '공용 문제 40개 생성 완료! 🎉', language === 'en' ? 'Saved to the public database.' : '공용 DB에 성공적으로 추가되었습니다.');
         setView('menu');
       }
     } catch (e: any) {
       setIsLoading(false);
-      toast.error('저장 오류', e.message);
+      toast.error(language === 'en' ? 'Save Error' : '저장 오류', e.message);
     }
   };
 
@@ -778,8 +791,8 @@ function AppContent() {
       const cd = await checkGenerationCooldown(user);
       if (!cd.canGenerate) {
         toast.warning(
-          '생성 쿨타임 진행 중 ⏱️',
-          `${Math.floor(cd.remainingSeconds / 60)}분 ${cd.remainingSeconds % 60}초 후에 다시 생성할 수 있습니다.`
+          language === 'en' ? 'Cooldown Active ⏱️' : '생성 쿨타임 진행 중 ⏱️',
+          language === 'en' ? `Available in ${Math.floor(cd.remainingSeconds / 60)}m ${cd.remainingSeconds % 60}s.` : `${Math.floor(cd.remainingSeconds / 60)}분 ${cd.remainingSeconds % 60}초 후에 다시 생성할 수 있습니다.`
         );
         return;
       }
@@ -788,19 +801,30 @@ function AppContent() {
     const catName = EXPRESSION_CATEGORIES.find((c: any) => c.id === category)?.title || category;
     const genCost = isAdminUser ? 0 : 50;
 
+    const expTitle = language === 'en' ? `[${catName}] Generate 5 Expressions` : `[${catName}] 새 표현 5개 AI 생성`;
+    const expSub = language === 'en' ? 'Synthesize 5 fresh native expressions without duplicates.' : '이미 배운 표현과 중복되지 않는 현지 원어민 실전 표현 5개를 새롭게 조제합니다.';
+    const expBtn = isAdminUser
+      ? (language === 'en' ? 'Generate 5 Expressions (Admin Free)' : '새 표현 5개 생성 (관리자 무료)')
+      : (language === 'en' ? 'Generate 5 Expressions (🪙 50 Coins)' : '새 표현 5개 생성 (🪙 50 소모)');
+    const expNotices = language === 'en' ? [
+      isAdminUser ? '👑 Admin Privileges: Free generation & no cooldown.' : 'Deducts 🪙 50 Coins with a 3-minute cooldown.',
+      'Duplicate prevention filter applies automatically.',
+      'Includes native TTS pronunciation, A/B dialogues, and 4-choice quizzes.'
+    ] : [
+      isAdminUser ? '👑 관리자 권한: 코인 소모 및 쿨타임이 완전 면제됩니다.' : '시작 즉시 🪙 50 코인이 차감되며 3분의 생성 쿨타임이 적용됩니다.',
+      '기존 DB 표현과의 중복 배제 필터링이 자동 적용됩니다.',
+      '원어민 TTS 발음, A/B 롤플레이 대화문 및 4지선다 퀴즈가 함께 생성됩니다.'
+    ];
+
     setActionModalConfig({
       isOpen: true,
       type: 'generate_expression',
-      title: `[${catName}] 새 표현 5개 AI 생성`,
-      subtitle: `이미 배운 표현과 중복되지 않는 현지 원어민 실전 표현 5개를 새롭게 조제합니다.`,
+      title: expTitle,
+      subtitle: expSub,
       cost: genCost,
       icon: '🌟',
-      confirmButtonText: isAdminUser ? '새 표현 5개 생성 (관리자 무료)' : '새 표현 5개 생성 (🪙 50 소모)',
-      notices: [
-        isAdminUser ? '👑 관리자 권한: 코인 소모 및 쿨타임이 완전 면제됩니다.' : '시작 즉시 🪙 50 코인이 차감되며 3분의 생성 쿨타임이 적용됩니다.',
-        '기존 DB 표현과의 중복 배제 필터링이 자동 적용됩니다.',
-        '원어민 TTS 발음, A/B 롤플레이 대화문 및 4지선다 퀴즈가 함께 생성됩니다.'
-      ],
+      confirmButtonText: expBtn,
+      notices: expNotices,
       onConfirm: () => {
         setActionModalConfig(null);
         executeGenerateExpressions(category);
@@ -907,8 +931,9 @@ function AppContent() {
   const launchRankingQuizSession = async (cycle: CycleInfo) => {
     if (!user) return;
     setIsLoading(true);
-    setLoadingText(`${cycle.cycleName} 공식 10문제를 준비하는 중...`);
-    setSelectedDifficulty(cycle.cycleName);
+    const roundLabel = language === 'en' ? `Round ${cycle.cycleIndex}` : cycle.cycleName;
+    setLoadingText(language === 'en' ? `Preparing official 10 questions for ${roundLabel}...` : `${cycle.cycleName} 공식 10문제를 준비하는 중...`);
+    setSelectedDifficulty(roundLabel);
     setQuizMode('daily');
 
     // 🔒 도전 시작 즉시 시도 횟수 등록 (중도 이탈 시 기권 처리 및 무제한 재시작 방지)
@@ -926,7 +951,7 @@ function AppContent() {
       setEarnedCoinsTotal(0);
       setView('solve');
     } else {
-      toast.error('랭킹전 준비 실패', result.error || '문제가 부족합니다.');
+      toast.error(language === 'en' ? 'Ranking Session Failed' : '랭킹전 준비 실패', result.error || (language === 'en' ? 'Questions unavailable.' : '문제가 부족합니다.'));
       setView('menu');
     }
   };
@@ -936,17 +961,21 @@ function AppContent() {
     const cycle = getCurrentCycleInfo();
     setCurrentCycle(cycle);
 
+    const roundLabel = language === 'en' ? `Round ${cycle.cycleIndex}` : cycle.cycleName;
+
     if (!isRevenge) {
       setIsLoading(true);
-      setLoadingText('응시 기록 확인 중...');
+      setLoadingText(language === 'en' ? 'Checking challenge history...' : '응시 기록 확인 중...');
       const check = await hasUserCompletedCycle(cycle.cycleId, user.name);
       setIsLoading(false);
 
       if (check.completed) {
         if (!check.canRetry) {
           toast.warning(
-            '도전 횟수 완료',
-            `이번 ${cycle.cycleName}의 모든 도전 기회(무료 1회 + 50코인 재도전 1회)를 완료하셨습니다! 실시간 명예의 전당으로 이동합니다.`
+            language === 'en' ? 'Attempts Completed' : '도전 횟수 완료',
+            language === 'en'
+              ? `You have completed all attempts (1 Free + 1 Revenge) for ${roundLabel}! Redirecting to Live Hall of Fame.`
+              : `이번 ${cycle.cycleName}의 모든 도전 기회(무료 1회 + 50코인 재도전 1회)를 완료하셨습니다! 실시간 명예의 전당으로 이동합니다.`
           );
           const ranks = await getCycleRankings(cycle.cycleId);
           setRankingData(ranks);
@@ -961,20 +990,30 @@ function AppContent() {
       }
 
       // 🏆 1회차 무료 도전 전 규칙 및 주의사항 사전 안내 모달
+      const cycleTitle = language === 'en' ? `${roundLabel} Ranking Battle` : `${cycle.cycleName} 랭킹전 도전`;
+      const cycleSub = language === 'en' ? 'Compete for 1st place in today’s Hall of Fame!' : '오늘의 영광스러운 명예의 전당 1위 자리에 도전하세요!';
+      const confirmText = language === 'en' ? '🔥 Start 1st Free Attempt' : '🔥 1회차 무료 도전 시작';
+      const notices = language === 'en' ? [
+        '• Max 2 attempts per round (1st: Free / 2nd: 🪙 50 Coins).',
+        '• 🚨 Exiting or closing the browser midway forfeits your attempt immediately.',
+        '• Live rank is determined by total score out of 10 Qs and time spent.',
+        '• Round rewards: 🥇 1st: 🪙 200, 🥈 2nd: 🪙 120, 🥉 3rd: 🪙 80, 4~10th: 🪙 40, Entry: 🪙 15 Coins.'
+      ] : [
+        '• 회차당 최대 2회까지 도전할 수 있습니다. (1회차: 무료 / 2회차: 🪙 50 코인)',
+        '• 🚨 문제 풀이 도중 나가거나 브라우저를 닫으면 도전 기회가 즉시 소멸(기권 처리)됩니다.',
+        '• 10문제 총점 및 풀이 소요 시간으로 실시간 순위가 결정됩니다.',
+        '• 회차 마감 시 🥇 1위 🪙 200, 🥈 2위 🪙 120, 🥉 3위 🪙 80, 4~10위 🪙 40, 참가 🪙 15 코인이 지급됩니다.'
+      ];
+
       setActionModalConfig({
         isOpen: true,
         type: 'custom',
-        title: `${cycle.cycleName} 랭킹전 도전`,
-        subtitle: '오늘의 영광스러운 명예의 전당 1위 자리에 도전하세요!',
+        title: cycleTitle,
+        subtitle: cycleSub,
         cost: 0,
         icon: '🏆',
-        confirmButtonText: '🔥 1회차 무료 도전 시작',
-        notices: [
-          '• 회차당 최대 2회까지 도전할 수 있습니다. (1회차: 무료 / 2회차: 🪙 50 코인)',
-          '• 🚨 문제 풀이 도중 나가거나 브라우저를 닫으면 도전 기회가 즉시 소멸(기권 처리)됩니다.',
-          '• 10문제 총점 및 풀이 소요 시간으로 실시간 순위가 결정됩니다.',
-          '• 회차 마감 시 🥇 1위 🪙 200, 🥈 2위 🪙 120, 🥉 3위 🪙 80, 4~10위 🪙 40, 참가 🪙 15 코인이 지급됩니다.'
-        ],
+        confirmButtonText: confirmText,
+        notices: notices,
         onConfirm: async () => {
           setActionModalConfig(null);
           await launchRankingQuizSession(cycle);
@@ -993,7 +1032,7 @@ function AppContent() {
     if (!user) return;
     setIsRevengeModalOpen(false);
     setIsLoading(true);
-    setLoadingText('🎟️ 50 코인을 사용하여 리벤지 재도전권을 발급 중...');
+    setLoadingText(language === 'en' ? 'Using 50 Coins for Revenge ticket...' : '🎟️ 50 코인을 사용하여 리벤지 재도전권을 발급 중...');
 
     const success = await deductCoins(user.name, 50);
     if (success) {
@@ -1002,7 +1041,7 @@ function AppContent() {
       handleStartDailyChallenge(true);
     } else {
       setIsLoading(false);
-      toast.error('코인 부족', '코인이 부족합니다! [일반 퀴즈]에서 문제를 풀어보세요.');
+      toast.error(language === 'en' ? 'Insufficient Coins' : '코인 부족', language === 'en' ? 'Insufficient coins! Solve practice quizzes to earn coins.' : '코인이 부족합니다! [일반 퀴즈]에서 문제를 풀어보세요.');
     }
   };
 

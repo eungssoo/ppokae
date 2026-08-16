@@ -22,7 +22,7 @@ import { askAiTutor } from '../services/geminiService';
 import { sound } from '../services/soundService';
 import { getRankingQuestionPoints, getLevelGatingInfo } from '../services/dbService';
 import { useLanguage } from '../services/i18n';
-import { getOrFetchEnglishExplanation, prefetchEnglishExplanation, EnglishExplanation } from '../services/englishExplanationService';
+import { getOrFetchEnglishExplanation, prefetchEnglishExplanation, generateFallbackEnglishExplanation, EnglishExplanation } from '../services/englishExplanationService';
 import { QuestionReportModal } from './QuestionReportModal';
 
 interface QuizViewProps {
@@ -101,12 +101,16 @@ export const QuizView: React.FC<QuizViewProps> = ({
     setEnExplanation(null);
     setExplanationLang(language);
 
-    // 🚀 영어 모드일 경우 백그라운드에서 조용히 영문 해설 사전 프리페치 (체감 지연 0ms)
-    if (language === 'en' && currentQuestion) {
+    // Pre-fetch English explanation instantly
+    if (currentQuestion) {
       prefetchEnglishExplanation(currentQuestion);
+      if (language === 'en') {
+        setEnExplanation(generateFallbackEnglishExplanation(currentQuestion));
+        getOrFetchEnglishExplanation(currentQuestion).then(res => setEnExplanation(res)).catch(() => {});
+      }
     }
 
-    // 🎲 보기 4종 무작위 셔플 (정답이 1번에 고정되는 현상 100% 원천 차단)
+    // Shuffle 4 options
     if (currentQuestion && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
       const shuffled = [...currentQuestion.options].sort(() => Math.random() - 0.5);
       setDisplayedOptions(shuffled);
@@ -115,9 +119,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
     }
   }, [currentQuestion, language]);
 
-  // 제출 시 영어 모드인 경우 영문 해설 로드
+  // Load English explanation when submitted in English mode
   useEffect(() => {
-    if (isSubmitted && explanationLang === 'en' && !enExplanation && currentQuestion) {
+    if (isSubmitted && explanationLang === 'en' && currentQuestion) {
+      if (!enExplanation) {
+        setEnExplanation(generateFallbackEnglishExplanation(currentQuestion));
+      }
       setIsEnLoading(true);
       getOrFetchEnglishExplanation(currentQuestion).then((res) => {
         setEnExplanation(res);
@@ -126,12 +133,15 @@ export const QuizView: React.FC<QuizViewProps> = ({
         setIsEnLoading(false);
       });
     }
-  }, [isSubmitted, explanationLang, currentQuestion, enExplanation]);
+  }, [isSubmitted, explanationLang, currentQuestion]);
 
   const handleToggleExplanationLang = async (targetLang: 'ko' | 'en') => {
     sound.playClick();
     setExplanationLang(targetLang);
-    if (targetLang === 'en' && !enExplanation && currentQuestion) {
+    if (targetLang === 'en' && currentQuestion) {
+      if (!enExplanation) {
+        setEnExplanation(generateFallbackEnglishExplanation(currentQuestion));
+      }
       setIsEnLoading(true);
       const res = await getOrFetchEnglishExplanation(currentQuestion);
       setEnExplanation(res);
@@ -178,25 +188,23 @@ export const QuizView: React.FC<QuizViewProps> = ({
   const handleCheck = useCallback(() => {
     if (!userInput.trim() || isSubmitted) return;
 
-    const result = onCheckAnswer(userInput.trim());
-    setIsCorrect(result.isCorrect);
+    const res = onCheckAnswer(userInput);
     setIsSubmitted(true);
-    setViewingFeedback(userInput.trim());
+    setIsCorrect(res.isCorrect);
+    setViewingFeedback(userInput);
 
-    if (result.isCorrect) {
+    if (res.isCorrect) {
       sound.playCorrect();
       confetti({
-        particleCount: 50,
+        particleCount: 40,
         spread: 60,
-        origin: { y: 0.8 },
-        colors: ['#10b981', '#6366f1', '#f59e0b', '#ec4899']
+        origin: { y: 0.7 }
       });
     } else {
       sound.playIncorrect();
     }
   }, [userInput, isSubmitted, onCheckAnswer]);
 
-  // Handle Next Question
   const handleNext = useCallback(() => {
     sound.playClick();
     onNextQuestion();
@@ -260,10 +268,23 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
   const selectedOptObj = displayedOptions.find(o => getOptText(o) === viewingFeedback) || currentQuestion?.options?.find(o => getOptText(o) === viewingFeedback);
   const selectedOptText = selectedOptObj ? getOptText(selectedOptObj) : '';
-  
-  let feedbackText = typeof selectedOptObj === 'object' ? selectedOptObj.feedback : null;
-  if (explanationLang === 'en' && enExplanation?.option_feedbacks?.[selectedOptText]) {
-    feedbackText = enExplanation.option_feedbacks[selectedOptText];
+  const isSelectedOptCorrect = typeof selectedOptObj === 'object' ? selectedOptObj.is_correct : selectedOptText === currentQuestion?.answer;
+
+  let feedbackText = '';
+  if (explanationLang === 'en') {
+    if (enExplanation?.option_feedbacks?.[selectedOptText]) {
+      feedbackText = enExplanation.option_feedbacks[selectedOptText];
+    } else {
+      feedbackText = isSelectedOptCorrect
+        ? `"${selectedOptText}" is correct! It fits the grammatical structure and role in this Form ${currentQuestion?.form || 3} sentence.`
+        : `"${selectedOptText}" is incorrect. It does not fit the required grammatical role or tense for this blank.`;
+    }
+  } else {
+    feedbackText = typeof selectedOptObj === 'object' && selectedOptObj.feedback 
+      ? selectedOptObj.feedback 
+      : isSelectedOptCorrect
+        ? `정답입니다! "${selectedOptText}"가 이 문장의 ${currentQuestion?.form || 3}형식 문법 구조에 완벽하게 일치합니다.`
+        : `오답입니다. "${selectedOptText}"는 이 문장의 문법적 위치나 시제에 맞지 않습니다.`;
   }
 
   const renderBoldText = (text?: string) => {
@@ -298,54 +319,53 @@ export const QuizView: React.FC<QuizViewProps> = ({
         
         {/* Sticky Top Header */}
         <header className="flex justify-between items-center bg-slate-900/90 backdrop-blur-xl p-3.5 sm:p-4 rounded-2xl border border-slate-800 shadow-xl z-20 sticky top-3">
-          <button
-            onClick={() => {
-              sound.playClick();
-              if (quizMode === 'daily') {
-                setIsExitWarningOpen(true);
-              } else {
-                onExit();
-              }
-            }}
-            className="text-slate-400 font-bold hover:bg-slate-800 hover:text-white px-3.5 py-1.5 rounded-xl transition-all text-xs sm:text-sm"
-          >
-            {t('exit')}
-          </button>
-
-          <div className="flex items-center gap-2.5">
-            {/* 🚨 문제 신고 버튼 */}
+          <div className="flex items-center gap-2">
             <button
               onClick={() => {
                 sound.playClick();
-                setIsReportModalOpen(true);
+                if (quizMode === 'daily') {
+                  setIsExitWarningOpen(true);
+                } else {
+                  onExit();
+                }
               }}
-              className="p-2 rounded-xl border bg-slate-800 text-slate-400 border-slate-700 hover:text-rose-400 hover:border-rose-500/40 transition-all active:scale-95 flex items-center gap-1"
-              title="문제 오류 제보 및 AI 검수 요청"
+              className="text-slate-400 hover:text-white font-bold transition-all px-3 py-1.5 rounded-xl hover:bg-slate-800 text-xs sm:text-sm active:scale-95"
             >
-              <AlertTriangle className="w-4 h-4 text-rose-400" />
-              <span className="text-[11px] font-bold hidden sm:inline text-rose-300">
-                {t('reportQuestion')}
-              </span>
+              {language === 'en' ? '✕ Exit' : '✕ 나가기'}
             </button>
 
-            {/* ⭐ 즐겨찾기 버튼 */}
+            {/* Bookmark Star Button */}
             {onToggleBookmark && (
               <button
                 onClick={() => {
                   sound.playStar();
                   onToggleBookmark(currentQuestion);
                 }}
-                className={`p-2 rounded-xl border transition-all active:scale-95 flex items-center gap-1 ${
+                className={`p-2 rounded-xl transition-all active:scale-90 border ${
                   isBookmarked
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-amber-300'
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
+                    : 'bg-slate-800/80 text-slate-400 hover:text-white border-slate-700'
                 }`}
-                title={isBookmarked ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                title={isBookmarked ? (language === 'en' ? 'Remove Bookmark' : '즐겨찾기 해제') : (language === 'en' ? 'Bookmark Question' : '즐겨찾기에 저장')}
               >
                 <Star className={`w-4 h-4 ${isBookmarked ? 'fill-amber-400 text-amber-400' : ''}`} />
-                <span className="text-[11px] font-bold hidden sm:inline">
-                  {isBookmarked ? t('bookmarked') : t('bookmark')}
-                </span>
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* 🚨 Problem Error Report Button */}
+            {isSubmitted && (
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  setIsReportModalOpen(true);
+                }}
+                className="flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-xl text-xs font-bold transition-all active:scale-95"
+                title={language === 'en' ? 'Report Question' : '문제 오류 제보'}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{language === 'en' ? 'Report' : '오류 제보'}</span>
               </button>
             )}
 
@@ -370,7 +390,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             <button
               onClick={playAudio}
               className="absolute top-4 right-4 flex items-center gap-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/40 px-3 py-1.5 rounded-full transition-all active:scale-95 text-indigo-300 hover:text-white"
-              title="문장 읽어주기 (단축키: Q)"
+              title="Read Aloud (Hotkey: Q)"
             >
               <Volume2 className="w-4 h-4" />
               <span className="text-[10px] font-mono font-bold bg-white/10 px-1 py-0.5 rounded">Q</span>
@@ -448,16 +468,17 @@ export const QuizView: React.FC<QuizViewProps> = ({
                           : 'border-slate-700/80 bg-slate-800/50 hover:border-slate-500 hover:bg-slate-800 text-slate-300'
                       }`}
                     >
-                      <span>{optText}</span>
-                      <span
-                        className={`px-2 py-0.5 text-xs font-mono font-black border rounded ${
-                          isSelected
-                            ? 'bg-indigo-500 text-white border-indigo-400'
-                            : 'bg-slate-700 text-slate-400 border-slate-600'
-                        }`}
-                      >
-                        {idx + 1}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 font-mono text-xs flex items-center justify-center font-bold">
+                          {idx + 1}
+                        </span>
+                        <span className="font-serif">{optText}</span>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        isSelected ? 'border-indigo-400 bg-indigo-500' : 'border-slate-600'
+                      }`}>
+                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
                     </button>
                   );
                 })}
@@ -466,7 +487,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
               {/* Submit Button */}
               <button
                 onClick={handleCheck}
-                disabled={!userInput}
+                disabled={!userInput.trim()}
                 className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white p-4 sm:p-5 rounded-2xl font-black text-lg sm:text-xl disabled:opacity-40 disabled:grayscale transition-all shadow-[0_8px_25px_rgba(99,102,241,0.3)] active:scale-[0.98] flex justify-center items-center gap-2.5"
               >
                 <span>{t('submitAnswer')}</span>
@@ -571,7 +592,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
               <div>
                 <h4 className="font-black mb-3 text-slate-300 flex items-center gap-2 text-xs uppercase tracking-wider">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>{explanationLang === 'en' ? 'Option Analysis' : 'Option Analysis (보기별 상세 해설)'}</span>
+                  <span>{explanationLang === 'en' ? 'Option Analysis (Choice Breakdown)' : 'Option Analysis (보기별 상세 해설)'}</span>
                 </h4>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {displayedOptions.map((opt, idx) => {
@@ -612,12 +633,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 <div className="bg-amber-500/10 p-5 rounded-2xl border border-amber-500/20 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400" />
                   <h4 className="font-black text-amber-300 text-xs uppercase tracking-wider mb-2">
-                    🧩 {explanationLang === 'en' ? 'Grammar Chunk Pattern' : 'Chunk Pattern'}
+                    🧩 {explanationLang === 'en' ? 'Grammar Chunk Pattern' : 'Chunk Pattern (문형 구조)'}
                   </h4>
                   <p className="text-amber-100 text-sm leading-relaxed">
                     {renderBoldText(
                       explanationLang === 'en'
-                        ? (enExplanation?.chunk_pattern || currentQuestion.explanation?.chunk_pattern)
+                        ? (enExplanation?.chunk_pattern || `Form ${currentQuestion.form} Grammar Structure`)
                         : currentQuestion.explanation?.chunk_pattern
                     )}
                   </p>
@@ -626,12 +647,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 <div className="bg-cyan-500/10 p-5 rounded-2xl border border-cyan-500/20 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-cyan-400" />
                   <h4 className="font-black text-cyan-300 text-xs uppercase tracking-wider mb-2">
-                    💡 {explanationLang === 'en' ? 'Native Nuance & Usage' : 'Nuance'}
+                    💡 {explanationLang === 'en' ? 'Native Nuance & Usage' : 'Nuance (원어민 뉘앙스)'}
                   </h4>
                   <p className="text-cyan-100 text-sm leading-relaxed">
                     {renderBoldText(
                       explanationLang === 'en'
-                        ? (enExplanation?.nuance || currentQuestion.explanation?.nuance)
+                        ? (enExplanation?.nuance || `Focus on how Form ${currentQuestion.form} structures convey precise meaning in real-life English.`)
                         : currentQuestion.explanation?.nuance
                     )}
                   </p>
@@ -768,7 +789,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
           onClose={() => setIsReportModalOpen(false)}
           onSuccess={() => {
             setIsReportModalOpen(false);
-            alert('문제 오류 제보가 성공적으로 접수되었습니다! 📋 매일 밤 00시 AI 출제위원의 깐깐한 심사를 거쳐 채택 시 🪙 50 코인이 지급됩니다.');
+            alert(language === 'en' ? 'Question report submitted! You will receive 🪙 50 Coins if approved during audit.' : '문제 오류 제보가 성공적으로 접수되었습니다! 📋 매일 밤 00시 AI 출제위원의 깐깐한 심사를 거쳐 채택 시 🪙 50 코인이 지급됩니다.');
           }}
         />
       )}
@@ -786,27 +807,29 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   Ranking Challenge Warning
                 </span>
                 <h3 className="text-xl font-black text-white">
-                  랭킹전 중도 퇴장 경고
+                  {language === 'en' ? 'Quit Ranking Battle?' : '랭킹전 중도 퇴장 경고'}
                 </h3>
               </div>
             </div>
 
             <p className="text-slate-300 text-sm leading-relaxed mb-4 font-medium">
-              지금 나가시면 이번 회차의 <strong className="text-rose-400 font-black">도전 기회가 소멸(기권 처리)</strong>됩니다!
+              {language === 'en'
+                ? 'Exiting now will forfeit this attempt (marked as withdrawn)!'
+                : '지금 나가시면 이번 회차의 도전 기회가 소멸(기권 처리)됩니다!'}
             </p>
 
             <div className="bg-slate-900/90 rounded-2xl p-4 border border-slate-800 space-y-2 mb-6 text-xs text-slate-400">
               <p className="flex items-start gap-1.5">
                 <span className="text-amber-400 font-bold">•</span>
-                <span>회차당 최대 <strong>2회</strong>만 도전 가능합니다. (1회차: 무료 / 2회차: 🪙 50 코인)</span>
+                <span>{language === 'en' ? 'Max 2 attempts per round (1st: Free / 2nd: 🪙 50 Coins).' : '회차당 최대 2회만 도전 가능합니다. (1회차: 무료 / 2회차: 🪙 50 코인)'}</span>
               </p>
               <p className="flex items-start gap-1.5">
                 <span className="text-rose-400 font-bold">•</span>
-                <span>지금 포기하시면 다시 도전할 때 <strong className="text-amber-300">🪙 50 코인</strong>이 필요하며, 이미 2회 응시한 경우 더 이상 도전할 수 없습니다.</span>
+                <span>{language === 'en' ? 'Retrying requires 🪙 50 Coins. If 2 attempts are reached, you cannot challenge until next round.' : '지금 포기하시면 다시 도전할 때 🪙 50 코인이 필요하며, 이미 2회 응시한 경우 더 이상 도전할 수 없습니다.'}</span>
               </p>
               <p className="flex items-start gap-1.5">
                 <span className="text-indigo-400 font-bold">•</span>
-                <span>현재까지 푼 점수가 이번 도전의 최종 점수로 기록됩니다.</span>
+                <span>{language === 'en' ? 'Your current score up to this point will be finalized.' : '현재까지 푼 점수가 이번 도전의 최종 점수로 기록됩니다.'}</span>
               </p>
             </div>
 
@@ -818,7 +841,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 }}
                 className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-black text-sm shadow-md active:scale-95 transition-all"
               >
-                계속 풀기 (권장)
+                {language === 'en' ? 'Keep Playing (Recommended)' : '계속 풀기 (권장)'}
               </button>
               <button
                 onClick={() => {
@@ -828,7 +851,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                 }}
                 className="w-full py-3.5 px-4 rounded-xl bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-500/40 font-bold text-sm transition-all"
               >
-                기권하고 나가기
+                {language === 'en' ? 'Forfeit & Exit' : '기권하고 나가기'}
               </button>
             </div>
           </div>
