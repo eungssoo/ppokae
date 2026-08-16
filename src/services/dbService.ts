@@ -408,7 +408,7 @@ export async function createOrGetGoogleUserProfile(gUser: User): Promise<{ profi
     const newProfile: UserProfile = {
       name: displayName,
       pin: '000000',
-      coins: 200,
+      coins: 300, // 🪙 기본 200 + 구글 가입 특별 보너스 100 = 총 300 코인 지급!
       bookmarkLimit: 50,
       avatar: '🦁',
       currentAvatarId: 'lion',
@@ -523,7 +523,7 @@ export async function completeInitialGoogleSetup(
         ...oldData,
         name: trimmed,
         pin: oldData.pin || '000000',
-        coins: oldData.coins ?? 200,
+        coins: oldData.coins ?? 300,
         bookmarkLimit: oldData.bookmarkLimit || 50,
         avatar,
         currentAvatarId,
@@ -563,7 +563,7 @@ export async function completeInitialGoogleSetup(
         ...data,
         name: currentName,
         pin: data.pin || '000000',
-        coins: data.coins ?? 200,
+        coins: data.coins ?? 300,
         bookmarkLimit: data.bookmarkLimit || 50,
         avatar,
         currentAvatarId,
@@ -587,7 +587,7 @@ export async function completeInitialGoogleSetup(
   }
 }
 
-// 🔐 1-3. PIN 계정 사용자가 나중에 구글 계정 연동하여 데이터 영구 백업
+// 🔐 1-3. PIN 계정 사용자가 나중에 구글 계정 연동하여 데이터 영구 백업 (+100 구글 연동 보너스 코인 지급)
 export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
   try {
     const provider = new GoogleAuthProvider();
@@ -609,7 +609,9 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
         ...(data.unlockedAvatars || []),
         ...(currentUser.unlockedAvatars || [])
       ]));
-      const maxCoins = Math.max(data.coins ?? 200, currentUser.coins ?? 200);
+      const alreadyGotLinkBonus = !!data.hasLinkedGoogleBonus;
+      const baseCoins = Math.max(data.coins ?? 200, currentUser.coins ?? 200);
+      const maxCoins = alreadyGotLinkBonus ? baseCoins : baseCoins + 100;
       const maxXp = Math.max(data.xp || 0, currentUser.xp || 0);
 
       updatedProfile = {
@@ -642,6 +644,7 @@ export async function linkGoogleAccount(currentUser: UserProfile): Promise<{ suc
         email: gUser.email || null,
         photoURL: gUser.photoURL || null,
         isAdmin,
+        hasLinkedGoogleBonus: true,
         lastLinkedAt: serverTimestamp()
       });
 

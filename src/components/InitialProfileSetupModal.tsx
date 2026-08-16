@@ -142,10 +142,12 @@ export const InitialProfileSetupModal: React.FC<InitialProfileSetupModalProps> =
 
           {/* Bonus Coins Notice */}
           <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex items-center gap-2.5 text-xs text-amber-200">
-            <span className="text-lg">🪙</span>
+            <span className="text-2xl animate-bounce">🪙</span>
             <div>
-              <span className="font-black text-amber-300">신규 가입 축하 보너스</span>
-              <p className="text-[11px] text-amber-200/80">설정 완료 즉시 <strong>200 코인</strong>이 지급됩니다!</p>
+              <span className="font-black text-amber-300">구글 가입 특별 웰컴 보너스</span>
+              <p className="text-[11px] text-amber-200/90">
+                기본 200C + 구글 보너스 100C = 총 <strong className="text-yellow-300 font-black text-xs">🪙 300 코인</strong> 지급!
+              </p>
             </div>
           </div>
 
