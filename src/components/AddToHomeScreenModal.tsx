@@ -166,48 +166,74 @@ export const AddToHomeScreenModal: React.FC<AddToHomeScreenModalProps> = ({
                 <span>아래로 스크롤하여 <strong>[홈 화면에 추가 <PlusSquare className="w-3.5 h-3.5 inline text-pink-300 mx-0.5" />]</strong> 터치</span>
               </div>
             </div>
+            <p className="text-[10px] text-pink-300/80 mt-1">
+              * 에타/카톡 인앱 브라우저에서는 우측 상단 `···` ➔ [Safari로 열기] 후 추가해 주세요!
+            </p>
           </div>
         ) : showManualGuide || !deferredPrompt ? (
           /* 🤖 Android / PC Visual Guide when prompt is unavailable */
-          <div className="p-4 rounded-2xl bg-slate-800/90 border border-indigo-500/40 text-left space-y-2.5 shadow-inner mb-4">
-            <span className="text-xs font-black text-indigo-300 flex items-center gap-1.5">
-              {deviceType === 'desktop' ? (
-                <>
-                  <Monitor className="w-3.5 h-3.5 text-indigo-300" />
-                  <span>🖥️ PC 브라우저 바로가기 추가 방법</span>
-                </>
-              ) : (
-                <>
-                  <Compass className="w-3.5 h-3.5 text-indigo-300" />
-                  <span>🤖 안드로이드/크롬 바로가기 추가 2단계</span>
-                </>
-              )}
-            </span>
-            <div className="space-y-2 text-xs text-slate-200">
-              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
-                <span className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400 text-[10px] font-black flex items-center justify-center shrink-0">1</span>
-                <span>
-                  {deviceType === 'desktop' 
-                    ? '상단 주소창 우측의 [앱 설치 ⊕] 아이콘 클릭'
-                    : <>브라우저 우측 상단 <strong>메뉴 (<MoreVertical className="w-3.5 h-3.5 inline text-indigo-300 mx-0.5" />)</strong> 터치</>
-                  }
-                </span>
-              </div>
-              <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
-                <span className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400 text-[10px] font-black flex items-center justify-center shrink-0">2</span>
-                <span><strong>[홈 화면에 추가]</strong> 또는 <strong>[앱으로 추가]</strong> 선택</span>
+          <div className="space-y-3 mb-4">
+            <div className="p-4 rounded-2xl bg-slate-800/90 border border-indigo-500/40 text-left space-y-2.5 shadow-inner">
+              <span className="text-xs font-black text-indigo-300 flex items-center gap-1.5">
+                {deviceType === 'desktop' ? (
+                  <>
+                    <Monitor className="w-3.5 h-3.5 text-indigo-300" />
+                    <span>🖥️ PC 브라우저 바로가기 추가 방법</span>
+                  </>
+                ) : (
+                  <>
+                    <Compass className="w-3.5 h-3.5 text-indigo-300" />
+                    <span>🤖 안드로이드/크롬 바로가기 추가 2단계</span>
+                  </>
+                )}
+              </span>
+              <div className="space-y-2 text-xs text-slate-200">
+                <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
+                  <span className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400 text-[10px] font-black flex items-center justify-center shrink-0">1</span>
+                  <span>
+                    {deviceType === 'desktop' 
+                      ? '상단 주소창 우측의 [앱 설치 ⊕] 아이콘 클릭'
+                      : <>브라우저 우측 상단 <strong>메뉴 (<MoreVertical className="w-3.5 h-3.5 inline text-indigo-300 mx-0.5" />)</strong> 터치</>
+                    }
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-900/60 border border-slate-700/60">
+                  <span className="w-5 h-5 rounded-full bg-indigo-500/30 border border-indigo-400 text-[10px] font-black flex items-center justify-center shrink-0">2</span>
+                  <span><strong>[홈 화면에 추가]</strong> 또는 <strong>[앱으로 추가]</strong> 선택</span>
+                </div>
               </div>
             </div>
+
+            {/* 📥 Direct APK Download Option */}
+            <a
+              href="https://github.com/eungssoo/ppokae/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-indigo-400 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-98 shadow-sm"
+            >
+              <span>📥 안드로이드 APK 파일 직접 다운로드 (GitHub)</span>
+            </a>
           </div>
         ) : (
           /* ⚡ Direct 1-Click Native Add Button */
-          <button
-            onClick={handleNativeAddToHome}
-            className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-black text-sm sm:text-base shadow-xl shadow-purple-500/30 active:scale-95 transition-all flex items-center justify-center gap-2.5 mb-3"
-          >
-            <PlusCircle className="w-5 h-5 animate-pulse" />
-            <span>✨ 홈 화면에 바로가기 추가 (1초 완성)</span>
-          </button>
+          <div className="space-y-2.5 mb-3">
+            <button
+              onClick={handleNativeAddToHome}
+              className="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600 text-white font-black text-sm sm:text-base shadow-xl shadow-purple-500/30 active:scale-95 transition-all flex items-center justify-center gap-2.5"
+            >
+              <PlusCircle className="w-5 h-5 animate-pulse" />
+              <span>✨ 홈 화면에 바로가기 추가 (1초 완성)</span>
+            </button>
+
+            <a
+              href="https://github.com/eungssoo/ppokae/releases"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white font-medium text-xs flex items-center justify-center gap-1.5 transition-all"
+            >
+              <span>📥 안드로이드 APK 파일 직접 다운로드</span>
+            </a>
+          </div>
         )}
 
         {/* 닫기 버튼 */}
