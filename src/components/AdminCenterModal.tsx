@@ -1775,22 +1775,6 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                           {ghostBatchCount} 명
                         </span>
                       </div>
-                      <div className="grid grid-cols-5 gap-1.5">
-                        {[5, 10, 20, 30, 50].map(cnt => (
-                          <button
-                            key={cnt}
-                            type="button"
-                            onClick={() => setGhostBatchCount(cnt)}
-                            className={`py-1.5 rounded-xl text-xs font-bold transition-all ${
-                              ghostBatchCount === cnt
-                                ? 'bg-amber-400 text-slate-950 font-black shadow-sm'
-                                : 'bg-slate-900 text-slate-300 hover:text-white border border-slate-700'
-                            }`}
-                          >
-                            {cnt}명
-                          </button>
-                        ))}
-                      </div>
                       <input
                         type="range"
                         min={1}

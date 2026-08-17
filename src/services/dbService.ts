@@ -3017,12 +3017,60 @@ export const RANDOM_GHOST_NAMES = [
   'Lucas_Grammar', 'Hannah_Study', 'Daniel_K', 'Grace_Lee', 'Mia_English'
 ];
 
-// 🎭 15-10-1. 랭킹전 단일 고스트 플레이어 주입
+// 🎭 15-10-0. 회차별 허용 시간대 계산기 (시작 5분 후 ~ 현재 시각)
+export function getCycleTimeBounds(cycleId: string): { 
+  startTime: Date; 
+  minAllowedTime: Date; 
+  maxAllowedTime: Date;
+} {
+  const parts = cycleId.split('_cycle');
+  const dateStr = parts[0]; // e.g. "2026-08-17"
+  const cycleIndex = parseInt(parts[1] || '1', 10);
+  
+  const now = new Date();
+  const [year, month, day] = dateStr && dateStr.includes('-')
+    ? dateStr.split('-').map(Number)
+    : [now.getFullYear(), now.getMonth() + 1, now.getDate()];
+
+  let startHour = 0;
+  let endHour = 10;
+  if (cycleIndex === 2) {
+    startHour = 10;
+    endHour = 18;
+  } else if (cycleIndex === 3) {
+    startHour = 18;
+    endHour = 24;
+  }
+
+  // 1. 회차 공식 시작 시각 (00:00, 10:00, 18:00)
+  const startTime = new Date(year, month - 1, day, startHour, 0, 0);
+  
+  // 2. 회차 시작 5분 후 시각 (00:05, 10:05, 18:05)
+  const minAllowedTime = new Date(startTime.getTime() + 5 * 60 * 1000);
+
+  // 3. 회차 공식 종료 시각
+  const endTime = new Date(year, month - 1, day, endHour === 24 ? 23 : endHour, endHour === 24 ? 59 : 0, 59);
+
+  // 4. 현재 진행 중인 회차라면 현재 시각(now)이 상한선, 이미 지난 과거 회차라면 종료 시각(endTime)이 상한선
+  let maxAllowedTime = endTime;
+  if (now.getTime() < endTime.getTime()) {
+    maxAllowedTime = now;
+  }
+
+  // 만약 회차가 방금 시작되어 현재 시각이 시작 5분 이내라면 역전 방지
+  if (maxAllowedTime.getTime() <= minAllowedTime.getTime()) {
+    maxAllowedTime = new Date(minAllowedTime.getTime() + 60 * 1000);
+  }
+
+  return { startTime, minAllowedTime, maxAllowedTime };
+}
+
+// 🎭 15-10-1. 랭킹전 단일 고스트 플레이어 주입 (시작 5분 후 ~ 현재 시각 사이)
 export async function adminInjectGhostRanking(payload: {
   cycleId: string;
   name: string;
   correctCount: number; // 0 ~ 10
-  minutesAgo?: number; // 5 ~ 180분 전
+  minutesAgo?: number; // 분 전
   avatarId?: string; // 아바타 ID (gemini_god, chronos, phoenix, lion 등)
 }): Promise<{ success: boolean; error?: string }> {
   try {
@@ -3038,8 +3086,18 @@ export async function adminInjectGhostRanking(payload: {
     const rankDocId = `${payload.cycleId}_${trimmedName}`;
     const rankRef = doc(db, 'cycle_rankings', rankDocId);
 
-    const minutes = payload.minutesAgo ?? (Math.floor(Math.random() * 80) + 10);
-    const fakeCompletedAt = new Date(Date.now() - minutes * 60 * 1000);
+    // 🕒 회차 시작 5분 후 ~ 현재 시각 사이로 완료 시간 제한
+    const { minAllowedTime, maxAllowedTime } = getCycleTimeBounds(payload.cycleId);
+    let fakeCompletedAt: Date;
+
+    if (typeof payload.minutesAgo === 'number') {
+      const targetTime = new Date(Date.now() - payload.minutesAgo * 60 * 1000);
+      const clampedMs = Math.max(minAllowedTime.getTime(), Math.min(maxAllowedTime.getTime(), targetTime.getTime()));
+      fakeCompletedAt = new Date(clampedMs);
+    } else {
+      const span = maxAllowedTime.getTime() - minAllowedTime.getTime();
+      fakeCompletedAt = new Date(minAllowedTime.getTime() + Math.random() * span);
+    }
 
     const targetAvatar = AVATAR_DATABASE.find(a => a.id === payload.avatarId) || AVATAR_DATABASE.find(a => a.id === 'lion');
     const avatarIcon = targetAvatar?.icon || '🦁';
@@ -3084,7 +3142,7 @@ export async function adminInjectGhostRanking(payload: {
   }
 }
 
-// 🎭 15-10-2. 랭킹전 고스트 플레이어 N명 일괄 자동 투입 (중복 절대 방지 & 시간 및 점수 분산)
+// 🎭 15-10-2. 랭킹전 고스트 플레이어 N명 일괄 자동 투입 (시작 5분 후 ~ 현재 시각 사이 분산)
 export async function adminBatchInjectGhostRankings(payload: {
   cycleId: string;
   count: number;
@@ -3097,8 +3155,6 @@ export async function adminBatchInjectGhostRankings(payload: {
     const { cycleId, count } = payload;
     const minCorrect = Math.max(1, Math.min(10, payload.minCorrect ?? 4));
     const maxCorrect = Math.max(minCorrect, Math.min(10, payload.maxCorrect ?? 10));
-    const minMins = payload.minMinutesAgo ?? 5;
-    const maxMins = payload.maxMinutesAgo ?? 300;
 
     // 1. 현재 랭킹 조회하여 닉네임 중복 완벽 배제
     const existingRankings = await getCycleRankings(cycleId);
@@ -3124,11 +3180,27 @@ export async function adminBatchInjectGhostRankings(payload: {
     const targetCount = Math.min(count, availableNames.length);
     const pointsLadder = [10, 10, 15, 15, 15, 25, 25, 25, 30, 30];
 
-    // 시간 분산 (각 고스트마다 절대 겹치지 않게 배치)
-    const timeStep = (maxMins - minMins) / Math.max(1, targetCount);
-    const usedMinutes = new Set<number>();
-    const nonStarterAvatars = AVATAR_DATABASE.filter(a => a.grade !== 'starter');
+    // 🕒 3. 회차 시작 5분 후 ~ 현재 시각 범위 산출
+    const { minAllowedTime, maxAllowedTime } = getCycleTimeBounds(cycleId);
+    const timeSpanMs = Math.max(60000, maxAllowedTime.getTime() - minAllowedTime.getTime());
 
+    // N명의 고스트에게 시작 5분 후 ~ 현재 시각 사이의 고유한 완료 시각 생성
+    const generatedTimestamps: Date[] = [];
+    const usedMsSet = new Set<number>();
+
+    for (let i = 0; i < targetCount; i++) {
+      let randMs = Math.floor(Math.random() * timeSpanMs);
+      while (usedMsSet.has(randMs)) {
+        randMs = (randMs + 1000) % timeSpanMs;
+      }
+      usedMsSet.add(randMs);
+      generatedTimestamps.push(new Date(minAllowedTime.getTime() + randMs));
+    }
+
+    // 시간 오름차순 정렬 후 고스트들에게 배정
+    generatedTimestamps.sort((a, b) => a.getTime() - b.getTime());
+
+    const nonStarterAvatars = AVATAR_DATABASE.filter(a => a.grade !== 'starter');
     const writePromises = [];
 
     for (let i = 0; i < targetCount; i++) {
@@ -3141,14 +3213,7 @@ export async function adminBatchInjectGhostRankings(payload: {
         score += pointsLadder[c];
       }
 
-      // 시간 계산 (고유한 분 단위)
-      let minutesAgo = Math.round(minMins + i * timeStep + (Math.random() * 4 - 2));
-      while (usedMinutes.has(minutesAgo)) {
-        minutesAgo += 1;
-      }
-      usedMinutes.add(minutesAgo);
-
-      const fakeCompletedAt = new Date(Date.now() - minutesAgo * 60 * 1000);
+      const fakeCompletedAt = generatedTimestamps[i];
 
       // 다양한 등급의 아바타 착용
       const targetAvatar = nonStarterAvatars[Math.floor(Math.random() * nonStarterAvatars.length)] || AVATAR_DATABASE[0];
