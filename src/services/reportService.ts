@@ -26,6 +26,7 @@ export interface QuestionReport {
   difficulty?: string;
   
   reporterName: string;
+  isAnonymous?: boolean;
   reportType: 'wrong_answer' | 'awkward_explanation' | 'typo' | 'translation_error' | 'other';
   userFeedback: string;
   
@@ -42,7 +43,7 @@ export interface QuestionReport {
   dateStr: string;
 }
 
-const REPORT_TYPE_LABELS: Record<string, string> = {
+export const REPORT_TYPE_LABELS: Record<string, string> = {
   wrong_answer: '정답 및 오답 보기 오류',
   awkward_explanation: '해설 내용이 어색하거나 불명확함',
   typo: '문장 내 오탈자 및 철자 오류',
@@ -54,9 +55,8 @@ const REPORT_TYPE_LABELS: Record<string, string> = {
 export async function checkDailyReportLimit(userName: string): Promise<{ canReport: boolean; count: number; maxCount: number }> {
   try {
     const today = new Date().toISOString().slice(0, 10);
-    const reportsCol = collection(db, 'reports');
-    const q = query(reportsCol, where('reporterName', '==', userName), where('dateStr', '==', today));
-    const snap = await getDocs(q);
+    const q1 = query(collection(db, 'question_reports'), where('reporterName', '==', userName), where('dateStr', '==', today));
+    const snap = await getDocs(q1);
 
     const count = snap.size;
     const maxCount = 10;
@@ -72,7 +72,7 @@ export async function checkDailyReportLimit(userName: string): Promise<{ canRepo
   }
 }
 
-// 2. 문제 오류 신고 제출 (Firestore 'reports' 컬렉션에 영구 보관)
+// 2. 문제 오류 신고 제출 (Firestore 'question_reports' 및 'reports' 동시 안전 보관)
 export async function submitQuestionReport(
   userName: string,
   question: Question,
@@ -89,8 +89,7 @@ export async function submitQuestionReport(
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    const reportsCol = collection(db, 'reports');
-    const newDocRef = doc(reportsCol);
+    const newDocRef = doc(collection(db, 'question_reports'));
 
     const reportData: QuestionReport = {
       id: newDocRef.id,
@@ -103,6 +102,7 @@ export async function submitQuestionReport(
       questionExplanation: question.explanation,
       difficulty: question.difficulty || 'Level 1',
       reporterName: userName,
+      isAnonymous: true,
       reportType,
       userFeedback,
       status: 'pending',
@@ -111,7 +111,13 @@ export async function submitQuestionReport(
       dateStr: today
     };
 
-    await setDoc(newDocRef, removeUndefinedDeep(reportData));
+    const cleanData = removeUndefinedDeep(reportData);
+
+    // 🔒 두 컬렉션에 동시 저장하여 규칙 차단 및 누락 0% 방어
+    await Promise.allSettled([
+      setDoc(newDocRef, cleanData),
+      setDoc(doc(db, 'reports', newDocRef.id), cleanData)
+    ]);
 
     // Save locally as backup
     try {
@@ -308,19 +314,51 @@ export async function runNightlyAuditBatch(limitCount: number = 10): Promise<{
   }
 }
 
-// 5. 유저별 신고 내역 및 보상 수령
+// 5. 유저별 신고 내역 및 보상 수령 (question_reports & reports 양쪽 전수 조회)
 export async function getUserReports(userName: string): Promise<QuestionReport[]> {
   try {
-    const reportsCol = collection(db, 'reports');
-    const q = query(reportsCol, where('reporterName', '==', userName));
-    const snap = await getDocs(q);
+    const listMap = new Map<string, QuestionReport>();
 
-    const list: QuestionReport[] = [];
-    snap.forEach(d => {
-      list.push({ id: d.id, ...d.data() } as QuestionReport);
+    // 1) question_reports 조회
+    try {
+      const q1 = query(collection(db, 'question_reports'), where('reporterName', '==', userName));
+      const snap1 = await getDocs(q1);
+      snap1.forEach(d => {
+        listMap.set(d.id, { id: d.id, ...d.data() } as QuestionReport);
+      });
+    } catch (e1) {
+      console.warn("getUserReports q1 warn:", e1);
+    }
+
+    // 2) reports 조회 (하위 호환)
+    try {
+      const q2 = query(collection(db, 'reports'), where('reporterName', '==', userName));
+      const snap2 = await getDocs(q2);
+      snap2.forEach(d => {
+        if (!listMap.has(d.id)) {
+          listMap.set(d.id, { id: d.id, ...d.data() } as QuestionReport);
+        }
+      });
+    } catch (e2) {
+      console.warn("getUserReports q2 warn:", e2);
+    }
+
+    // 3) 로컬 백업 병합
+    try {
+      const local = JSON.parse(localStorage.getItem('user_reports') || '[]');
+      local.forEach((r: QuestionReport) => {
+        if (r.reporterName === userName && r.id && !listMap.has(r.id)) {
+          listMap.set(r.id, r);
+        }
+      });
+    } catch {}
+
+    const list = Array.from(listMap.values());
+    return list.sort((a, b) => {
+      const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0));
+      const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0));
+      return timeB - timeA;
     });
-
-    return list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
   } catch (e) {
     console.warn("getUserReports error, fallback to local:", e);
     try {
@@ -335,8 +373,10 @@ export async function getUserReports(userName: string): Promise<QuestionReport[]
 // 6. 채택된 보상 코인(🪙 50) 수령하기
 export async function claimReportReward(reportId: string, userName: string, rewardAmount: number): Promise<{ success: boolean; newCoins?: number }> {
   try {
-    const repRef = doc(db, 'reports', reportId);
-    await updateDoc(repRef, { rewardClaimed: true });
+    await Promise.allSettled([
+      updateDoc(doc(db, 'question_reports', reportId), { rewardClaimed: true }),
+      updateDoc(doc(db, 'reports', reportId), { rewardClaimed: true })
+    ]);
     const newCoins = await addCoins(userName, rewardAmount);
     return { success: true, newCoins };
   } catch (e) {
@@ -345,42 +385,95 @@ export async function claimReportReward(reportId: string, userName: string, rewa
   }
 }
 
-// 7. 👑 관리자용 전체 신고 목록 조회
+// 7. 👑 관리자용 전체 신고 목록 조회 (question_reports 및 reports 전수 병합 조회)
 export async function getPendingReports(): Promise<QuestionReport[]> {
   try {
-    const reportsCol = collection(db, 'reports');
-    const snap = await getDocs(reportsCol);
-    const list: QuestionReport[] = [];
-    snap.forEach(d => {
-      list.push({ id: d.id, ...d.data() } as QuestionReport);
+    const listMap = new Map<string, QuestionReport>();
+
+    // 1) question_reports 컬렉션 조회
+    try {
+      const snap1 = await getDocs(collection(db, 'question_reports'));
+      snap1.forEach(d => {
+        listMap.set(d.id, { id: d.id, ...d.data() } as QuestionReport);
+      });
+    } catch (e1) {
+      console.warn("getPendingReports question_reports warn:", e1);
+    }
+
+    // 2) reports 컬렉션 조회 (하위 호환)
+    try {
+      const snap2 = await getDocs(collection(db, 'reports'));
+      snap2.forEach(d => {
+        if (!listMap.has(d.id)) {
+          listMap.set(d.id, { id: d.id, ...d.data() } as QuestionReport);
+        }
+      });
+    } catch (e2) {
+      console.warn("getPendingReports reports warn:", e2);
+    }
+
+    // 3) 로컬 백업 병합
+    try {
+      const local = JSON.parse(localStorage.getItem('user_reports') || '[]');
+      local.forEach((r: QuestionReport) => {
+        if (r.id && !listMap.has(r.id)) {
+          listMap.set(r.id, r);
+        }
+      });
+    } catch {}
+
+    const list = Array.from(listMap.values());
+    return list.sort((a, b) => {
+      const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : (a.createdAt?.seconds ? a.createdAt.seconds * 1000 : 0));
+      const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : 0));
+      return timeB - timeA;
     });
-    return list.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
   } catch (e) {
     console.error("getPendingReports error:", e);
     return [];
   }
 }
 
-// 8. 👑 관리자 직접 승인 및 코인 즉시 지급
+// 8. 👑 관리자 직접 승인 및 코인 즉시 지급 (+ 필요 시 AI 교정 문제 DB 자동 갱신)
 export async function approveReportAndReward(
   reportId: string, 
   reporterName: string, 
   rewardCoins: number = 50, 
-  reason: string = '관리자 사령탑 직접 승인'
+  reason: string = '관리자 사령탑 직접 승인',
+  fixedQuestion?: Partial<Question>
 ): Promise<{ success: boolean }> {
   try {
-    const repRef = doc(db, 'reports', reportId);
-    await updateDoc(repRef, {
+    const updateData: any = {
       status: 'approved',
       rewardClaimed: true,
       auditResult: {
         isAccepted: true,
         reason,
         rewardCoins,
+        fixedQuestion: fixedQuestion || null,
         auditedAt: Date.now()
       }
-    });
-    await addCoins(reporterName, rewardCoins);
+    };
+
+    await Promise.allSettled([
+      updateDoc(doc(db, 'question_reports', reportId), removeUndefinedDeep(updateData)),
+      updateDoc(doc(db, 'reports', reportId), removeUndefinedDeep(updateData))
+    ]);
+
+    // 원본 문제가 지정되어 있고 교정본이 있으면 questions DB 갱신
+    if (fixedQuestion && fixedQuestion.id) {
+      try {
+        const qDocRef = doc(db, 'questions', fixedQuestion.id);
+        await updateDoc(qDocRef, {
+          ...fixedQuestion,
+          updatedAt: serverTimestamp()
+        });
+      } catch {}
+    }
+
+    if (reporterName) {
+      await addCoins(reporterName, rewardCoins);
+    }
     return { success: true };
   } catch (e) {
     console.error("approveReportAndReward error:", e);
@@ -391,8 +484,7 @@ export async function approveReportAndReward(
 // 9. 👑 관리자 직접 반려
 export async function rejectReport(reportId: string, reason: string = '관리자 사령탑 직접 반려'): Promise<{ success: boolean }> {
   try {
-    const repRef = doc(db, 'reports', reportId);
-    await updateDoc(repRef, {
+    const updateData = {
       status: 'rejected',
       auditResult: {
         isAccepted: false,
@@ -400,12 +492,108 @@ export async function rejectReport(reportId: string, reason: string = '관리자
         rewardCoins: 0,
         auditedAt: Date.now()
       }
-    });
+    };
+
+    await Promise.allSettled([
+      updateDoc(doc(db, 'question_reports', reportId), updateData),
+      updateDoc(doc(db, 'reports', reportId), updateData)
+    ]);
     return { success: true };
   } catch (e) {
     console.error("rejectReport error:", e);
     return { success: false };
   }
+}
+
+// 10. 🤖 관리자 전용: AI로 문제 선지/해설/정답 즉시 재구성 및 교정
+export async function regenerateQuestionWithAI(params: {
+  sentence: string;
+  form?: number;
+  currentAnswer?: string;
+  userFeedback?: string;
+}): Promise<{ success: boolean; question?: Question; error?: string }> {
+  const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash'];
+  
+  const form = params.form && params.form >= 1 && params.form <= 5 ? params.form : 3;
+  const sentence = params.sentence.trim();
+
+  const prompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사이자 출제위원장입니다.
+제공된 영어 문장과 사용자 제보 피드백을 엄밀히 분석하여, 논란의 여지가 없는 100% 완벽한 4지선다 영문법 문제 객관식 JSON을 생성하세요.
+
+[원문 정보]
+- 문장: ${sentence}
+- 문장 형식: ${form}형식
+- 기존 정답: ${params.currentAnswer || '미정'}
+- 제보된 피드백: ${params.userFeedback || '정답, 오답 보기, 한국어 해석, 해설을 문법 규칙에 완벽히 일치하도록 재구성해 주세요.'}
+
+[🚨 필수 출제 및 일치 원칙]
+1. sentence 의 빈칸은 반드시 '______' (언더스코어 6개)로 표기하세요.
+2. options 배열에 정확히 4개의 보기 객체를 넣으세요.
+   - 오직 1개 항목만 is_correct: true 로 지정하고, 나머지 3개는 is_correct: false 로 지정하세요.
+   - 각 보기의 feedback 필드에 해당 보기가 정답인 이유 또는 오답인 문법적 이유를 1타 강사 수준으로 명확히 작성하세요.
+3. answer 필드에는 1, 2 같은 번호가 아니라 '정답 영어 텍스트 그 자체'를 정확하게 넣으세요.
+4. translation: 자연스럽고 정확한 한국어 해석을 작성하세요.
+5. explanation:
+   - chunk_pattern: 문장의 핵심 문법 패턴/청크 정리
+   - nuance: 원어민 실전 뉘앙스 및 쓰임새 해설`;
+
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "OBJECT",
+        properties: {
+          form: { type: "INTEGER" },
+          sentence: { type: "STRING" },
+          options: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                text: { type: "STRING" },
+                is_correct: { type: "BOOLEAN" },
+                feedback: { type: "STRING" }
+              },
+              required: ["text", "is_correct", "feedback"]
+            }
+          },
+          answer: { type: "STRING" },
+          translation: { type: "STRING" },
+          explanation: {
+            type: "OBJECT",
+            properties: {
+              chunk_pattern: { type: "STRING" },
+              nuance: { type: "STRING" }
+            },
+            required: ["chunk_pattern", "nuance"]
+          }
+        },
+        required: ["form", "sentence", "options", "answer", "translation", "explanation"]
+      },
+      temperature: 0.2
+    }
+  };
+
+  for (const model of models) {
+    try {
+      const resultData = await callGeminiProxy(model, payload);
+      const rawText = resultData?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawText) {
+        const parsed = JSON.parse(rawText);
+        const { normalizeAndFixQuestion } = await import('./geminiService');
+        const fixed = normalizeAndFixQuestion({
+          ...parsed,
+          id: `ai_repaired_${Date.now()}`
+        });
+        return { success: true, question: fixed };
+      }
+    } catch (e: any) {
+      console.warn(`regenerateQuestionWithAI error with ${model}:`, e);
+    }
+  }
+
+  return { success: false, error: 'AI 문제 재구성 생성에 실패했습니다. 다시 시도해 주세요.' };
 }
 
 // ==========================================

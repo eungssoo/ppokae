@@ -59,7 +59,17 @@ import {
   getTodayDateString,
   DEFAULT_SYSTEM_SETTINGS
 } from '../services/dbService';
-import { getPendingReports, approveReportAndReward, rejectReport, QuestionReport, getAllUserInquiries, deleteUserInquiry, UserInquiry } from '../services/reportService';
+import { 
+  getPendingReports, 
+  approveReportAndReward, 
+  rejectReport, 
+  regenerateQuestionWithAI, 
+  QuestionReport, 
+  REPORT_TYPE_LABELS,
+  getAllUserInquiries, 
+  deleteUserInquiry, 
+  UserInquiry 
+} from '../services/reportService';
 import { AVATAR_DATABASE } from '../services/avatarService';
 import { getAllUserAnalytics, UserAnalyticsSummary } from '../services/analyticsService';
 import { sound } from '../services/soundService';
@@ -98,9 +108,11 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   const [announceTargetType, setAnnounceTargetType] = useState<'all' | 'individual'>('all');
   const [targetUserName, setTargetUserName] = useState<string>('');
 
-  // Reports State
+  // Reports State & AI Regeneration
   const [reports, setReports] = useState<QuestionReport[]>([]);
   const [reportFilter, setReportFilter] = useState<'all' | 'pending' | 'resolved'>('all');
+  const [regeneratingReportId, setRegeneratingReportId] = useState<string | null>(null);
+  const [regeneratedQuestionsMap, setRegeneratedQuestionsMap] = useState<Record<string, Question>>({});
 
   // Users State & Super Control
   const [userList, setUserList] = useState<UserProfile[]>([]);
@@ -381,14 +393,47 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
     }
   };
 
-  // 🚨 4. 문제 신고 승인 및 코인 보상 지급
-  const handleApproveReport = async (report: QuestionReport) => {
+  // 🤖 4-0. AI 문제 선지/해설/정답 즉시 재구성 핸들러
+  const handleRegenerateQuestionForReport = async (report: QuestionReport) => {
+    if (!report.id) return;
+    sound.playClick();
+    setRegeneratingReportId(report.id);
+    try {
+      const res = await regenerateQuestionWithAI({
+        sentence: report.questionSentence,
+        form: report.questionForm,
+        currentAnswer: report.questionAnswer,
+        userFeedback: report.userFeedback
+      });
+      if (res.success && res.question) {
+        sound.playStar();
+        setRegeneratedQuestionsMap(prev => ({ ...prev, [report.id!]: res.question! }));
+        onShowToast('🤖 AI 문제 재구성 완료!', '4개 선지, 검증된 정답 및 1타 강사 해설이 새롭게 생성되었습니다.', 'coin');
+      } else {
+        onShowToast('AI 생성 실패', res.error || '문제 재구성에 실패했습니다.', 'error');
+      }
+    } catch (e: any) {
+      onShowToast('오류', e.message, 'error');
+    } finally {
+      setRegeneratingReportId(null);
+    }
+  };
+
+  // 🚨 4. 문제 신고 승인 및 코인 보상 지급 (+ AI 교정본 적용 옵션)
+  const handleApproveReport = async (report: QuestionReport, useAiFixed: boolean = false) => {
     sound.playReward();
     setIsLoading(true);
     try {
-      const res = await approveReportAndReward(report.id || '', report.reporterName, 50, '관리자 사령탑 직접 승인');
+      const fixedQ = useAiFixed && report.id ? regeneratedQuestionsMap[report.id] : undefined;
+      const res = await approveReportAndReward(
+        report.id || '', 
+        report.reporterName, 
+        50, 
+        fixedQ ? '관리자 승인 (AI 정밀 교정안 적용)' : '관리자 사령탑 직접 승인',
+        fixedQ
+      );
       if (res.success) {
-        onShowToast('✓ 신고 승인 완료', `${report.reporterName}님에게 포상금 🪙 50 코인이 자동 지급되었습니다.`, 'coin');
+        onShowToast('✓ 신고 승인 완료', `제보자에게 포상금 🪙 50 코인이 자동 지급되었습니다.`, 'coin');
         const updated = await getPendingReports();
         setReports(updated);
       }
@@ -633,7 +678,11 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
           </button>
 
           <button
-            onClick={() => { sound.playClick(); setActiveTab('reports'); }}
+            onClick={() => { 
+              sound.playClick(); 
+              setActiveTab('reports'); 
+              getPendingReports().then(setReports).catch(() => {});
+            }}
             className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 transition-all whitespace-nowrap ${
               activeTab === 'reports'
                 ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/20'
@@ -1274,15 +1323,25 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                     <span>사용자 문제 오류 신고 & 피드백 관리 센터</span>
                   </h3>
                   <p className="text-xs text-slate-400">
-                    유저들이 접수한 문제 오류 제보를 검토하고, 승인 시 포상금(🪙 50 코인)을 즉시 지급합니다.
+                    유저들이 접수한 문제 오류 제보를 검토하고, AI로 문제 선지/해설을 재구성하거나 승인 시 포상금(🪙 50 코인)을 즉시 지급합니다. (제보자는 100% 익명 보호)
                   </p>
                 </div>
 
                 <button
-                  onClick={loadInitialData}
-                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all"
+                  onClick={async () => {
+                    sound.playClick();
+                    setIsLoading(true);
+                    try {
+                      const updated = await getPendingReports();
+                      setReports(updated);
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  }}
+                  className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all flex items-center gap-1.5 text-xs font-bold"
                 >
-                  <RefreshCw className="w-4 h-4" />
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span>새로고침</span>
                 </button>
               </div>
 
@@ -1291,68 +1350,183 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                   접수된 문제 오류 신고가 없습니다. 시스템이 아주 깨끗합니다! 🎉
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {reports.map(report => (
-                    <div key={report.id} className="p-5 rounded-3xl bg-slate-800/80 border border-slate-700 space-y-3.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase">
-                              {report.reportType}
-                            </span>
-                            <span className="text-xs font-black text-slate-300">
-                              제보자: <strong className="text-white">{report.reporterName}</strong>
-                            </span>
-                            <span className="text-[10px] text-slate-500">{report.dateStr}</span>
+                <div className="space-y-4">
+                  {reports.map(report => {
+                    const aiFixed = report.id ? regeneratedQuestionsMap[report.id] : null;
+                    const isRegenerating = regeneratingReportId === report.id;
+
+                    return (
+                      <div key={report.id} className="p-5 rounded-3xl bg-slate-800/80 border border-slate-700 space-y-4 shadow-lg">
+                        
+                        {/* Header info */}
+                        <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                          <div className="space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black uppercase">
+                                {REPORT_TYPE_LABELS[report.reportType] || report.reportType}
+                              </span>
+                              <span className="text-xs font-black text-slate-300 flex items-center gap-1">
+                                제보자: <strong className="text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/30">익명의 제보자 🕵️</strong>
+                              </span>
+                              <span className="text-[10px] text-slate-500">{report.dateStr}</span>
+                            </div>
+
+                            {/* Question sentence */}
+                            <div className="p-3 bg-slate-900/90 rounded-2xl border border-slate-800 space-y-1">
+                              <div className="flex items-center justify-between text-[11px]">
+                                <span className="text-purple-300 font-bold">문항 #{report.questionForm}형식</span>
+                                <span className="text-emerald-400 font-bold">현재 정답: "{report.questionAnswer}"</span>
+                              </div>
+                              <h4 className="text-sm font-bold text-white font-mono">
+                                "{report.questionSentence}"
+                              </h4>
+                              {report.questionTranslation && (
+                                <p className="text-xs text-slate-400">
+                                  {report.questionTranslation}
+                                </p>
+                              )}
+                            </div>
                           </div>
-                          <h4 className="text-sm font-bold text-white bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 font-mono">
-                            "{report.questionSentence}"
-                          </h4>
-                        </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                          {report.status === 'pending' ? (
-                            <>
-                              <button
-                                onClick={() => handleApproveReport(report)}
-                                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition-all shadow-md active:scale-95 flex items-center gap-1.5"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                                <span>승인 (🪙 50 지급)</span>
-                              </button>
-                              <button
-                                onClick={() => handleRejectReport(report.id || '')}
-                                className="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold transition-all active:scale-95"
-                              >
-                                <span>반려</span>
-                              </button>
-                            </>
-                          ) : (
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-black ${
-                              report.status === 'approved' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-700 text-slate-400'
-                            }`}>
-                              {report.status === 'approved' ? '✓ 승인 완료' : '✕ 반려됨'}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                          {/* Actions */}
+                          <div className="flex flex-wrap items-center gap-2 shrink-0">
+                            {/* 🤖 AI 선지/해설 재구성 버튼 */}
+                            <button
+                              onClick={() => handleRegenerateQuestionForReport(report)}
+                              disabled={isRegenerating}
+                              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-black transition-all shadow-md active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              {isRegenerating ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  <span>AI 선지/해설 재구성 중...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Bot className="w-3.5 h-3.5 text-indigo-200" />
+                                  <span>🤖 AI로 선지/해설/정답 재구성</span>
+                                </>
+                              )}
+                            </button>
 
-                      <div className="p-3 bg-slate-900/60 rounded-2xl text-xs space-y-1">
-                        <span className="text-[11px] font-bold text-slate-400">유저 제출 피드백:</span>
-                        <p className="text-slate-200">{report.userFeedback}</p>
-                      </div>
-
-                      {report.auditResult && (
-                        <div className="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl text-xs space-y-1">
-                          <div className="flex items-center gap-1.5 text-indigo-300 font-bold">
-                            <Bot className="w-3.5 h-3.5" />
-                            <span>AI 1차 심사 소견 ({report.auditResult.isAccepted ? '승인 권고' : '반려 권고'})</span>
+                            {report.status === 'pending' ? (
+                              <>
+                                <button
+                                  onClick={() => handleApproveReport(report, false)}
+                                  disabled={isLoading}
+                                  className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>승인 (🪙 50 지급)</span>
+                                </button>
+                                <button
+                                  onClick={() => handleRejectReport(report.id || '')}
+                                  disabled={isLoading}
+                                  className="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-bold transition-all active:scale-95"
+                                >
+                                  <span>반려</span>
+                                </button>
+                              </>
+                            ) : (
+                              <span className={`px-3 py-1.5 rounded-xl text-xs font-black ${
+                                report.status === 'approved' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-700 text-slate-400'
+                              }`}>
+                                {report.status === 'approved' ? '✓ 승인 완료 (🪙 50 지급됨)' : '✕ 반려됨'}
+                              </span>
+                            )}
                           </div>
-                          <p className="text-slate-300 text-[11px]">{report.auditResult.reason}</p>
                         </div>
-                      )}
-                    </div>
-                  ))}
+
+                        {/* User Feedback */}
+                        <div className="p-3.5 bg-slate-900/60 rounded-2xl text-xs space-y-1 border border-slate-800/80">
+                          <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
+                            <span>💬 익명 제보자의 피드백:</span>
+                          </span>
+                          <p className="text-slate-200 font-medium leading-relaxed">{report.userFeedback}</p>
+                        </div>
+
+                        {/* 🤖 AI 정밀 교정안 카드 (AI Regenerated Preview) */}
+                        {aiFixed && (
+                          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/80 to-purple-950/80 border-2 border-indigo-500/50 shadow-xl space-y-3 animate-in fade-in">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-indigo-500/30">
+                              <div className="flex items-center gap-2">
+                                <span className="px-2.5 py-1 rounded-full bg-indigo-500/30 text-indigo-300 border border-indigo-400/40 text-xs font-black flex items-center gap-1">
+                                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                                  AI 정밀 교정본 (100% 정답-해설 동기화)
+                                </span>
+                                <span className="text-xs font-black text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-lg border border-emerald-500/40">
+                                  정답: {aiFixed.answer}
+                                </span>
+                              </div>
+
+                              <button
+                                onClick={() => handleApproveReport(report, true)}
+                                disabled={isLoading}
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white text-xs font-black shadow-lg shadow-emerald-500/25 active:scale-95 transition-all flex items-center gap-1.5"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>💾 이 AI 교정안으로 DB 적용 및 승인 (🪙 50 지급)</span>
+                              </button>
+                            </div>
+
+                            <div className="p-3 bg-slate-900/90 rounded-xl border border-indigo-500/30 space-y-1">
+                              <p className="text-sm font-bold text-white font-mono">
+                                {aiFixed.sentence}
+                              </p>
+                              <p className="text-xs text-slate-300">
+                                {aiFixed.translation}
+                              </p>
+                            </div>
+
+                            {/* 4 Options Breakdown */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {aiFixed.options.map((opt, oIdx) => (
+                                <div
+                                  key={oIdx}
+                                  className={`p-2.5 rounded-xl border text-xs space-y-1 ${
+                                    opt.is_correct
+                                      ? 'bg-emerald-950/60 border-emerald-500/70 text-emerald-200 shadow-sm'
+                                      : 'bg-slate-900/70 border-slate-800 text-slate-300'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between font-bold">
+                                    <span>{oIdx + 1}. {opt.text}</span>
+                                    <span>{opt.is_correct ? '✅ 정답' : '❌ 오답'}</span>
+                                  </div>
+                                  <p className="text-[11px] text-slate-400 leading-tight">
+                                    {opt.feedback}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Chunk pattern & Nuance */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                              <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-200">
+                                <span className="font-bold text-amber-300 block mb-0.5">🧩 핵심 문형 패턴</span>
+                                <span>{aiFixed.explanation?.chunk_pattern}</span>
+                              </div>
+                              <div className="p-2.5 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-200">
+                                <span className="font-bold text-cyan-300 block mb-0.5">💡 원어민 뉘앙스</span>
+                                <span>{aiFixed.explanation?.nuance}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* AI 1st Audit Summary if existed */}
+                        {report.auditResult && !aiFixed && (
+                          <div className="p-3 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl text-xs space-y-1">
+                            <div className="flex items-center gap-1.5 text-indigo-300 font-bold">
+                              <Bot className="w-3.5 h-3.5" />
+                              <span>AI 1차 심사 소견 ({report.auditResult.isAccepted ? '승인 권고' : '반려 권고'})</span>
+                            </div>
+                            <p className="text-slate-300 text-[11px]">{report.auditResult.reason}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
