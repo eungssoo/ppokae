@@ -182,19 +182,14 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
         </div>
 
         {/* 🏆 1. Top Hero Card: 실시간 랭킹전 (최상단 강조) */}
-        <button
-          onClick={() => {
-            sound.playClick();
-            onStartDailyChallenge();
-          }}
-          className="w-full mb-4 group p-5 sm:p-6 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 rounded-[2rem] transition-all shadow-[0_10px_30px_rgba(249,115,22,0.3)] hover:shadow-[0_15px_40px_rgba(249,115,22,0.45)] hover:-translate-y-0.5 active:scale-[0.99] text-left relative overflow-hidden border border-orange-400/40"
-        >
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
+        <div className="w-full mb-4 p-5 sm:p-6 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 rounded-[2.2rem] shadow-[0_10px_30px_rgba(249,115,22,0.3)] border border-orange-400/40 text-left relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
           
+          {/* Cycle Status & Countdown */}
           {(() => {
             const status = getCycleStatusText(currentCycle, language);
             return (
-              <div className="inline-flex items-center gap-1.5 bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white mb-2.5 border border-white/20">
+              <div className="inline-flex items-center gap-1.5 bg-black/25 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white mb-3 border border-white/20">
                 <Clock className="w-3.5 h-3.5 text-yellow-200" />
                 <span>{status.inProgressText}</span>
                 <span className="bg-rose-500 text-white px-2 py-0.2 rounded-full text-[10px] font-black">
@@ -204,6 +199,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
             );
           })()}
 
+          {/* Title & Desc */}
           <div className="relative z-10 flex justify-between items-center mb-1">
             <div className="flex items-center gap-2">
               <Trophy className="w-6 h-6 text-yellow-200 animate-bounce" />
@@ -214,10 +210,39 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
             <span className="text-2xl filter drop-shadow">🔥</span>
           </div>
           
-          <p className="relative z-10 text-orange-100 font-medium text-xs sm:text-sm leading-relaxed">
+          <p className="relative z-10 text-orange-100 font-medium text-xs sm:text-sm leading-relaxed mb-4">
             {t('rankingHeroDesc')}
           </p>
-        </button>
+
+          {/* ⚔️ Dual Action Buttons inside Ranking Card */}
+          <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+            {/* 1. 랭킹전 풀기 버튼 */}
+            <button
+              onClick={() => {
+                sound.playClick();
+                onStartDailyChallenge();
+              }}
+              className="py-3 px-4 bg-white hover:bg-yellow-200 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group/btn"
+            >
+              <span className="text-base">⚔️</span>
+              <span>{language === 'en' ? 'Start 10 Qs Battle' : '10문제 랭킹전 도전'}</span>
+              <ArrowRight className="w-4 h-4 text-slate-900 group-hover/btn:translate-x-1 transition-transform" />
+            </button>
+
+            {/* 2. 명예의 전당 (순위표) 바로가기 버튼 */}
+            <button
+              onClick={() => {
+                sound.playClick();
+                onNavigate('ranking_board');
+              }}
+              className="py-3 px-4 bg-black/30 hover:bg-black/45 text-yellow-200 hover:text-white font-black text-xs sm:text-sm rounded-2xl border-2 border-yellow-300/60 hover:border-yellow-200 shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 backdrop-blur-md group/btn"
+            >
+              <Crown className="w-4 h-4 text-yellow-300 fill-yellow-300 group-hover/btn:scale-110 transition-transform" />
+              <span>{language === 'en' ? 'Live Hall of Fame 👑' : '실시간 명예의 전당 👑'}</span>
+              <ArrowRight className="w-4 h-4 text-yellow-300 group-hover/btn:translate-x-1 transition-transform" />
+            </button>
+          </div>
+        </div>
 
         {/* 📊 1.5. 나의 실시간 티어 & 성장 대시보드 (Highlight Growth & Tier Progress) */}
         <div 
