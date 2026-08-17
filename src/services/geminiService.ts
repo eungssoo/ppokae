@@ -65,17 +65,17 @@ export function shuffleOptions<T = any>(options: T[]): T[] {
   return arr;
 }
 
-// 🎯 문제 정답 및 4지선다 동기화 보정 헬퍼 (answer가 "1", "A" 등 인덱스로 반환되는 오류 100% 원천 차단)
+// 🎯 문제 정답, 보기 4종 및 해설 100% 동기화 보정 헬퍼 (해설-정답 불일치 및 보기 셔플 오류 100% 원천 차단)
 export function normalizeAndFixQuestion(q: any): Question {
   const rawOptions = Array.isArray(q?.options) ? [...q.options] : [];
   let options = rawOptions.map((opt: any) => {
     if (typeof opt === 'string') {
-      return { text: opt, is_correct: false, feedback: '' };
+      return { text: opt.trim(), is_correct: false, feedback: '' };
     }
     return {
       text: String(opt?.text || opt?.word || opt?.value || opt?.choice || '').trim(),
       is_correct: !!opt?.is_correct,
-      feedback: opt?.feedback || ''
+      feedback: String(opt?.feedback || '').trim()
     };
   });
 
@@ -89,41 +89,52 @@ export function normalizeAndFixQuestion(q: any): Question {
   if (numMatch) {
     const idx = parseInt(numMatch[1], 10) - 1;
     if (options[idx]) {
-      options.forEach((o, i) => { o.is_correct = (i === idx); });
       resolvedAnswer = options[idx].text;
     }
   } else if (letterMatch) {
     const idx = letterMatch[1].toUpperCase().charCodeAt(0) - 65;
     if (options[idx]) {
-      options.forEach((o, i) => { o.is_correct = (i === idx); });
       resolvedAnswer = options[idx].text;
     }
-  } else {
-    // 2. is_correct: true 인 보기가 있는 경우 그 보기의 text를 answer로 확정
-    const correctOpt = options.find(o => o.is_correct === true);
-    if (correctOpt && correctOpt.text) {
-      resolvedAnswer = correctOpt.text;
-    } else if (resolvedAnswer) {
-      // 3. is_correct 가 모두 false 인 경우 answer 텍스트와 일치하는 보기를 is_correct = true 로 지정
-      const matchedOpt = options.find(o => o.text.toLowerCase() === resolvedAnswer.toLowerCase());
-      if (matchedOpt) {
-        options.forEach(o => { o.is_correct = (o === matchedOpt); });
-        resolvedAnswer = matchedOpt.text;
-      } else if (options.length > 0) {
-        options[0].is_correct = true;
-        resolvedAnswer = options[0].text;
-      }
+  }
+
+  // 2. resolvedAnswer가 options 중 하나와 일치하는지 확인
+  let matchedIndex = options.findIndex(o => o.text.toLowerCase() === resolvedAnswer.toLowerCase());
+  
+  // 만약 일치하는 보기가 없으면, is_correct: true 인 보기를 정답으로 채택
+  if (matchedIndex === -1) {
+    const trueIndex = options.findIndex(o => o.is_correct === true);
+    if (trueIndex !== -1) {
+      matchedIndex = trueIndex;
+      resolvedAnswer = options[trueIndex].text;
     } else if (options.length > 0) {
-      options[0].is_correct = true;
+      matchedIndex = 0;
       resolvedAnswer = options[0].text;
     }
   }
 
-  // 4. options 내부의 feedback 도 최소 보장
-  options = options.map(opt => ({
-    ...opt,
-    feedback: opt.feedback || (opt.is_correct ? '정답입니다! 문법 구조에 알맞습니다.' : '오답입니다. 문법적 역할이나 시제에 맞지 않습니다.')
-  }));
+  // 3. 오직 단 1개의 정답 보기만 is_correct: true, 나머지는 100% is_correct: false 로 강제 통일
+  options = options.map((opt, idx) => {
+    const isThisCorrect = idx === matchedIndex;
+    let feedback = opt.feedback;
+
+    // 4. 해설-정답 모순 자동 교정 (정답인데 오답 해설이 들어가 있거나, 오답인데 정답 해설이 들어가 있는 경우 즉시 정정)
+    if (isThisCorrect) {
+      if (!feedback || feedback.startsWith('오답') || feedback.includes('틀린') || feedback.includes('부적절')) {
+        feedback = `정답입니다! "${opt.text}"가 이 문장의 문법 규칙 및 문맥에 완벽하게 일치합니다.`;
+      }
+    } else {
+      if (!feedback || feedback.startsWith('정답') || feedback.includes('올바른') || feedback.includes('맞습니다')) {
+        feedback = `오답입니다. "${opt.text}"는 문법적 역할, 위치 또는 시제에 맞지 않습니다.`;
+      }
+    }
+
+    return {
+      text: opt.text,
+      is_correct: isThisCorrect,
+      feedback
+    };
+  });
 
   return {
     ...q,
@@ -172,11 +183,13 @@ async function generateSingleBatch(
   const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사 및 출제위원장입니다.
 제시된 난이도 규칙에 맞춰 객관식 4지선다 영문법 문제를 정확히 ${batchCount}개 생성하세요.
 
-[🚨 출제 원칙]
-1. [100% 한국어 상세 해설] feedback, chunk_pattern, nuance, translation 모두 자연스럽고 명쾌한 한국어로 작성.
-2. [1~5형식만 허용] form 필드는 1, 2, 3, 4, 5 정수만 허용.
-3. [단 1개의 유일 정답] 명백한 시간/문맥 단서를 부여하여 논란의 여지가 없는 1개 정답 및 3개 오답 출제.
-4. [빈칸 표기 엄격 준수] sentence의 빈칸은 반드시 언더스코어 6개 '______' 로 표기하세요. [blank] 또는 (빈칸) 같은 텍스트를 절대 쓰지 마세요.`;
+[🚨 출제 및 정답-해설 일치 엄격 원칙]
+1. [정답 텍스트 일치]: answer 필드는 1, 2, A 같은 번호가 아니라 반드시 '정답 영어 보기 텍스트 그 자체'를 정확하게 넣으세요.
+2. [단 1개의 정답 플래그]: options 4개 중 오직 1개만 is_correct: true 로 지정하고, 나머지 3개는 is_correct: false 로 지정하세요.
+3. [해설 일치]: options의 is_correct: true 항목의 feedback은 '정답인 문법적 이유'를 설명하고, is_correct: false 항목들은 '오답인 이유'를 명확하게 설명하세요.
+4. [문형 및 뉘앙스]: explanation의 chunk_pattern과 nuance는 반드시 정답을 기준으로 일관되게 작성하세요.
+5. [1~5형식]: form 필드는 1, 2, 3, 4, 5 정수만 허용.
+6. [빈칸 표기]: sentence의 빈칸은 반드시 '______' 로 작성하세요.`;
 
   let userPrompt = `난이도: ${difficultyLabel}\n[기준]\n${matchedRule}\n`;
   if (weaknessFocus) {
@@ -698,9 +711,13 @@ export async function generateRankingCycleQuestions(
 3. 6~8번 (3문제): Level 3 (분사구문, 부정어 도치, 당위성 insist that 동사원형)
 4. 9~10번 (2문제): Level 4 (특수 도치 Hardly had S p.p., 고급 조건 접속사 provided that)
 
-[출제 규칙]
-- form 필드는 반드시 1, 2, 3, 4, 5 정수만 사용
-- 100% 한국어 상세 해설(options feedback, explanation chunk_pattern, nuance, translation)`;
+[출제 및 정답-해설 일치 엄격 규칙]
+1. [정답 텍스트 일치]: answer 필드는 1, 2, A 같은 번호가 아니라 반드시 '정답 영어 보기 텍스트 그 자체'를 정확하게 넣으세요.
+2. [단 1개의 정답 플래그]: options 4개 중 오직 1개만 is_correct: true 로 지정하고, 나머지 3개는 is_correct: false 로 지정하세요.
+3. [해설 일치]: options의 is_correct: true 항목의 feedback은 '정답인 문법적 이유'를 설명하고, is_correct: false 항목들은 '오답인 이유'를 명확하게 설명하세요.
+4. [문형 및 뉘앙스]: explanation의 chunk_pattern과 nuance는 반드시 정답을 기준으로 일관되게 작성하세요.
+5. [1~5형식]: form 필드는 1, 2, 3, 4, 5 정수만 사용.
+6. [100% 한국어 해설]: translation, feedback, chunk_pattern, nuance 모두 100% 자연스러운 한국어로 작성.`;
 
   const userPrompt = `오늘의 랭킹전 회차: ${cycleId} (${cycleName})
 정확히 10개의 문제를 JSON 배열로 반환하세요.`;

@@ -110,14 +110,13 @@ export const QuizView: React.FC<QuizViewProps> = ({
       }
     }
 
-    // Shuffle 4 options
+    // Set 4 options stably from currentQuestion (never re-shuffle on render/language change)
     if (currentQuestion && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) {
-      const shuffled = [...currentQuestion.options].sort(() => Math.random() - 0.5);
-      setDisplayedOptions(shuffled);
+      setDisplayedOptions(currentQuestion.options);
     } else {
       setDisplayedOptions([]);
     }
-  }, [currentQuestion, language]);
+  }, [currentQuestion]);
 
   // Load English explanation when submitted in English mode
   useEffect(() => {
