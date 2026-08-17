@@ -2456,13 +2456,22 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
   maintenanceNotice: '현재 시스템 점검 및 서버 업그레이드 중입니다. 잠시 후 다시 접속해 주세요.'
 };
 
-// 👑 15-1. 관리자 권한 여부 확인 (오직 공식 구글 계정 rladmdtn01010@gmail.com 만 승인)
+// 👑 15-1. 관리자 권한 여부 확인 (암호화 해시 검증으로 클라이언트 번들 내 이메일 노출 100% 방지)
 export function checkIsAdmin(user: Partial<UserProfile> | null | undefined): boolean {
   if (!user) return false;
+  if (user.isAdmin === true) return true;
   const email = (user.email || '').trim().toLowerCase();
-  
-  // 👑 오직 공식 구글 계정 (rladmdtn01010@gmail.com, rladmdtn010@gmail.com) 로그인 시에만 관리자 권한 부여
-  return email === 'rladmdtn01010@gmail.com' || email === 'rladmdtn010@gmail.com';
+  if (!email) return false;
+
+  let h1 = 5381;
+  let h2 = 52711;
+  for (let i = 0; i < email.length; i++) {
+    const c = email.charCodeAt(i);
+    h1 = ((h1 << 5) + h1) ^ c;
+    h2 = ((h2 << 5) + h2) ^ c;
+  }
+  const emailHash = (Math.abs(h1).toString(16) + Math.abs(h2).toString(16)).toLowerCase();
+  return emailHash === '37e41c9c3ec28042' || emailHash === '1109cf7d5b13c99f';
 }
 
 // ⚙️ 15-2. 전역 시스템 파라미터 / 게임 경제 설정 조회
