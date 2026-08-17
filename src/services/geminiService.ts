@@ -2,41 +2,59 @@ import { Question, ExpressionItem } from '../types';
 
 const LEVEL_RULES: Record<string, string> = {
   'Level 1 (입문/초급)': `
-- 대상: 중학 2~3학년 기초 수준 (단문 7~10단어)
-- 문법 범위:
-  1) be동사 및 일반동사의 3인칭 단수 현재 수일치 (he/she/it + -s/-es)
-  2) 명백한 시간 단서가 포함된 과거/현재/미래 시제 (yesterday, last night, every day, tomorrow 등 필수 포함)
+[🎯 Level 1 - 중학교 기초 영문법]
+- 문장 길이: 7~10단어 단순 단문
+- 출제 문법 범위:
+  1) 3인칭 단수 현재 시제 수일치 (He/She/It + verb-s/es)
+  2) 명백한 시제 단서 (yesterday, last night, every morning, tomorrow)
   3) 기본 조동사 (can, must, should + 동사원형)
-  4) 기본 to부정사 및 동명사 목적어 (want to-V, enjoy -ing)
-  5) 1~3형식 기본 문형`,
+  4) 기본 to부정사/동명사 목적어 (want to-V, hope to-V, enjoy -ing, finish -ing)
+  5) 기초 1~3형식 문형
+- 절대 금지: 복잡한 분사구문, 도치, 가정법, 전문 어휘 사용 금지.
+- 예시: "He ______ to the gym every morning before breakfast." (정답: goes)`,
 
   'Level 2 (실력 중급)': `
-- 대상: 고교 1~2학년 수준 (복문 10~15단어)
-- 문법 범위:
-  1) 관계대명사(who, which, that, whose, what) 및 관계부사(where, when, why)
-  2) 5형식 목적격 보어 (사역동사 make/have/let + 원형, 지각동사 see/hear + 원형/-ing, 일반동사 allow/encourage/ask + to-V)
+[🎯 Level 2 - 고교 1~2학년 내신/모의고사 중급]
+- 문장 길이: 11~15단어 복문
+- 출제 문법 범위:
+  1) 관계대명사(who, which, that, whose, what) 및 관계부사(where, when, why)의 격과 쓰임
+  2) 5형식 목적격 보어 (사역동사 make/have/let + 동사원형, 지각동사 see/hear/watch + 동사원형/-ing, 준사역/일반동사 allow/cause/encourage/enable/require + to-V)
   3) 수동태 (be + p.p., 조동사 + be p.p.)
-  4) 현재완료 시제 (since + 과거시점, for + 기간)
+  4) 현재완료 완료/경험/계속/결과 (since + 과거시점, for + 기간)
   5) 접속사 vs 전치사 구별 (although vs despite, because vs because of, while vs during)
-  6) 감정 분사형용사 (interesting vs interested, confusing vs confused)`,
+  6) 감정 분사형용사 (confusing vs confused, exciting vs excited, satisfying vs satisfied)
+- 절대 금지: "yesterday", "every day" 같은 단순 중학 시제 단서 금지.
+- 예시: "The strict school rules do not allow students ______ their smartphones during lectures." (정답: to use)`,
 
   'Level 3 (고득점 도약)': `
-- 대상: 고3 수능 / 모의고사 수준 (긴 복문 14~20단어)
-- 문법 범위:
-  1) 분사구문 (능동 -ing, 수동 p.p., Having p.p., 접속사 생략/유지)
-  2) 가정법 (가정법 과거 If S had/were..., 가정법 과거완료 If S had p.p...., 혼합가정법, without/but for)
-  3) 도치 구문 (부정어 도치 Never/Hardly/Seldom + 조동사 + S + V, Only 부사구 도치)
-  4) 주장/제안/요구/명령 동사 (insist, suggest, demand, require, recommend + that + S + (should) 동사원형)
-  5) 복합관계대명사/부사 (whoever, whomever, whatever, wherever, however)`,
+[🎯 Level 3 - 고3 수능 / 1등급 모의고사 / 고난도 영문법]
+- 문장 길이: 15~22단어의 길고 구조가 복잡한 수능형 복문/혼합문 (절대 10단어 이하 단문 금지!)
+- 출제 문법 범위 (반드시 다음 중 하나를 핵심 출제 포인트로 삼을 것):
+  1) 분사구문 (능동 -ing, 수동 p.p., 완료형 Having p.p., 접속사가 살아있는 분사구문, With + O + O.C. 분사)
+  2) 가정법 (가정법 과거 If S were/did..., 가정법 과거완료 If S had p.p...., 혼합가정법, Without/But for 가정법)
+  3) 도치 구문 (부정어 도치 Never/Hardly/Scarcely/Seldom/Little/No sooner + 조동사 + S + V, Only 부사구 도치)
+  4) 당위성 주장/제안/요구/명령 동사 (insist, suggest, demand, require, recommend, propose + that + S + (should) 동사원형)
+  5) 복합관계대명사/부사 (whoever, whichever, whatever, wherever, however)
+  6) 형용사/부사 비교급 도치 및 특수 구문 (The more..., the more...)
+- 절대 금지: 단순 주어+동사+목적어의 중학 수준 단문 출제 절대 불가! 반드시 수능 지문 수준의 어휘와 복잡한 수식어구(전치사구, 분사구)를 포함할 것.
+- 예시 1: "The senior committee insisted that the safety regulations ______ immediately to prevent future accidents." (정답: be implemented)
+- 예시 2: "Hardly ______ the presentation when the investors began asking critical questions about the budget." (정답: had he finished)
+- 예시 3: "If the government had adopted the economic policy earlier, the current financial crisis ______ avoided." (정답: would have been)`,
 
   'Level 4 (실전 마스터)': `
-- 대상: 토익 850+ / 편입 / 공무원 영어 수준 (전문/학술/비즈니스 16~25단어)
-- 문법 범위:
-  1) 고급 접속사 및 전치사구 (provided that, as long as, in the event that, so that, given that)
-  2) 어휘와 품사 자리가 결합된 구조 분석 문제 (명사/형용사/부사/동사 파생어 자리 채우기)
-  3) 병렬 구조 (not only A but also B, either A or B, neither A nor B)
-  4) 특수 가정법 및 도치 (Had it not been for, Were it not for, Should you have any questions)
-  5) 동명사 및 부정사 관용 표현 (have difficulty -ing, look forward to -ing, be committed to -ing)`
+[🎯 Level 4 - 토익 900+ / 편입 / 공무원 영어 / 전문 비즈니스 & 학술 실전]
+- 문장 길이: 18~28단어의 고난도 전문/학술/비즈니스 실전 문장 (절대 12단어 이하 단문 금지!)
+- 출제 문법 범위 (반드시 다음 중 하나를 핵심 출제 포인트로 삼을 것):
+  1) If 생략 가정법 도치 (Had it not been for, Were it not for, Should you require further assistance)
+  2) 고급 접속사 및 복합 전치사구 (provided that, given that, in the event that, so long as, on condition that)
+  3) 병렬 구조 및 상관 접속사 (not only A but also B, not so much A as B, either A or B, neither A nor B)
+  4) 전치사 to vs to부정사 to 구별 관용구 (look forward to -ing, be committed to -ing, object to -ing, be dedicated to -ing)
+  5) 고난도 파생어 품사 자리 채우기 (명사/형용사/부사/동사 어휘 구조 분석)
+  6) 명사절 접속사 that vs what vs whether vs if의 완벽한 문장 구조 분석
+- 절대 금지: 중/고교 기본 문법 문제 출제 절대 불가. 반드시 토익 Part 5 고난도 및 편입 영문법 수준으로 출제.
+- 예시 1: "______ any technical complications arise during the international merger, our legal team will intervene immediately." (정답: Should)
+- 예시 2: "The executive board expressed their sincere dedication to ______ the highest standards of corporate governance." (정답: upholding)
+- 예시 3: "Had the engineers conducted more thorough stress tests, the structural failure ______ averted." (정답: might have been)`
 };
 
 // Helper: 문장 형식 1~5 정규화
@@ -184,7 +202,14 @@ async function generateSingleBatch(
   }
 
   const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사 및 출제위원장입니다.
-제시된 난이도 규칙에 맞춰 객관식 4지선다 영문법 문제를 정확히 ${batchCount}개 생성하세요.
+제시된 [난이도 기준]을 100% 엄격하게 준수하여 객관식 4지선다 영문법 문제를 정확히 ${batchCount}개 생성하세요.
+
+[🚨 난이도 절대 준수 엄격 규칙]
+- 만약 난이도가 Level 3(고득점 도약) 또는 Level 4(실전 마스터)라면, 절대로 중학교/초급 수준의 단순한 단문(예: "He goes to school.", "I like music.")을 단 1문제도 출제해서는 안 됩니다.
+- Level 3: 반드시 15~22단어 이상의 길고 복잡한 수능/모의고사 지문 수준 복문/혼합문으로 출제하고, [가정법/분사구문/도치/당위성 동사원형/복합관계사]를 빈칸 포인트로 삼으세요.
+- Level 4: 반드시 18~28단어의 고난도 토익/편입/공무원 실전 문장으로 출제하고, [가정법 도치/고급 접속사/품사 자리/to부정사 vs 전치사 to]를 출제하세요.
+- Level 2: 11~15단어의 고교 중급 복문으로 출제하세요.
+- Level 1: 7~10단어의 중학 기초 단문으로 출제하세요.
 
 [🚨 출제 및 정답-해설 일치 엄격 원칙]
 1. [정답 텍스트 일치]: answer 필드는 1, 2, A 같은 번호가 아니라 반드시 '정답 영어 보기 텍스트 그 자체'를 정확하게 넣으세요.

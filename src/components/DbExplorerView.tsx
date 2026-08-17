@@ -206,16 +206,16 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                         return (
                           <div
                             key={q.id || i}
-                            className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all space-y-3 shadow-md"
+                            className="bg-slate-900/90 hover:bg-slate-800/80 p-4 sm:p-5 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md"
                           >
-                            {/* Top info & Actions */}
-                            <div className="flex flex-wrap justify-between items-center gap-2.5">
-                              <div className="flex flex-wrap items-center gap-2">
+                            {/* Left: Number & Form badge & Question with Blank */}
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono font-bold text-slate-400">
+                                  Q{i + 1}.
+                                </span>
                                 <span className="text-xs font-black text-indigo-300 bg-indigo-500/20 px-2.5 py-0.5 rounded-md border border-indigo-500/30">
                                   #{q.form}형식
-                                </span>
-                                <span className="text-xs font-black text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-md border border-emerald-500/40">
-                                  정답: "{q.answer}"
                                 </span>
                                 {q.createdAt && (
                                   <span className="text-[10px] text-slate-500">
@@ -224,128 +224,77 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                                 )}
                               </div>
 
-                              <div className="flex flex-wrap items-center gap-2">
-                                {/* 🎯 누구나 클릭하여 이 문제 바로 풀기 */}
-                                {onSolveQuestion && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      sound.playClick();
-                                      onSolveQuestion(q);
-                                    }}
-                                    className="px-3 py-1.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-600 text-white text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
-                                    title="이 문제를 직접 퀴즈 화면에서 풀어보기"
-                                  >
-                                    <PlayCircle className="w-3.5 h-3.5" />
-                                    <span>{language === 'en' ? 'Solve This' : '이 문제 풀기'}</span>
-                                  </button>
-                                )}
+                              {/* The Sentence with Blank (NO answer spoiler) */}
+                              <div className="font-medium text-sm sm:text-base text-white leading-relaxed font-sans">
+                                {(() => {
+                                  const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
+                                  const parts = q.sentence.split(BLANK_REGEX);
+                                  if (parts.length <= 1) {
+                                    return <span>{q.sentence}</span>;
+                                  }
+                                  return (
+                                    <span>
+                                      {parts.map((part, idx) => (
+                                        <React.Fragment key={idx}>
+                                          {part}
+                                          {idx < parts.length - 1 && (
+                                            <span className="inline-block mx-1.5 px-3 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border-b-2 border-indigo-400 font-mono font-bold text-xs tracking-wider">
+                                              ______
+                                            </span>
+                                          )}
+                                        </React.Fragment>
+                                      ))}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            </div>
 
-                                {/* 🤖 관리자 전용 AI 선지/정답/해설 즉시 재구성 */}
-                                {isAdmin && (
+                            {/* Right: Actions */}
+                            <div className="flex items-center gap-2 sm:self-center shrink-0">
+                              {/* 🎯 풀기 버튼 (모든 유저에게 제공) */}
+                              {onSolveQuestion && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    sound.playClick();
+                                    onSolveQuestion(q);
+                                  }}
+                                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                                  title="이 문제 직접 풀기"
+                                >
+                                  <PlayCircle className="w-4 h-4" />
+                                  <span>{language === 'en' ? 'Solve' : '풀기'}</span>
+                                </button>
+                              )}
+
+                              {/* 👑 관리자 전용: AI 재구성 및 삭제 */}
+                              {isAdmin && (
+                                <>
                                   <button
                                     type="button"
                                     onClick={() => handleRegenerate(q, diff)}
                                     disabled={isRegenerating || isDeleting}
-                                    className="px-3 py-1.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all disabled:opacity-50"
-                                    title="이 문제의 선지/정답/해설을 AI로 즉시 재구성하여 DB에 반영"
+                                    className="p-2 sm:px-3 sm:py-2 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-bold flex items-center gap-1 shadow-sm active:scale-95 transition-all disabled:opacity-50"
+                                    title="이 문제의 선지/정답/해설을 AI로 즉시 재구성"
                                   >
                                     <Bot className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
-                                    <span>{isRegenerating ? '재구성 중...' : 'AI 재구성'}</span>
+                                    <span className="hidden sm:inline">{isRegenerating ? '재구성...' : 'AI 재구성'}</span>
                                   </button>
-                                )}
 
-                                {/* 🗑️ 관리자 전용 단건 즉시 삭제 버튼 */}
-                                {isAdmin && (
                                   <button
                                     type="button"
                                     onClick={() => handleDelete(q, diff)}
                                     disabled={isRegenerating || isDeleting}
-                                    className="px-3 py-1.5 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all disabled:opacity-50"
-                                    title="이 불량/오류 문제를 DB에서 영구 삭제"
+                                    className="p-2 sm:px-3 sm:py-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-bold flex items-center gap-1 shadow-sm active:scale-95 transition-all disabled:opacity-50"
+                                    title="이 문제를 DB에서 영구 삭제"
                                   >
                                     <Trash2 className={`w-3.5 h-3.5 ${isDeleting ? 'animate-spin' : ''}`} />
-                                    <span>{isDeleting ? '삭제 중...' : '삭제'}</span>
+                                    <span className="hidden sm:inline">{isDeleting ? '삭제...' : '삭제'}</span>
                                   </button>
-                                )}
-                              </div>
+                                </>
+                              )}
                             </div>
-
-                            {/* Sentence */}
-                            <div className="font-bold text-base text-white leading-relaxed font-mono bg-slate-950/80 p-3 rounded-xl border border-slate-800/80">
-                              {(() => {
-                                const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
-                                const parts = q.sentence.split(BLANK_REGEX);
-                                if (parts.length <= 1) {
-                                  return <span>{q.sentence} <span className="text-emerald-400 font-black">({q.answer})</span></span>;
-                                }
-                                return (
-                                  <span>
-                                    {parts.map((part, idx) => (
-                                      <React.Fragment key={idx}>
-                                        {part}
-                                        {idx < parts.length - 1 && (
-                                          <span className="inline-block mx-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 font-black font-sans text-sm shadow-sm">
-                                            {q.answer}
-                                          </span>
-                                        )}
-                                      </React.Fragment>
-                                    ))}
-                                  </span>
-                                );
-                              })()}
-                            </div>
-
-                            {/* Translation */}
-                            {q.translation && (
-                              <p className="text-slate-300 font-medium text-xs bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/60">
-                                🇰🇷 {q.translation}
-                              </p>
-                            )}
-
-                            {/* 4 Options Grid */}
-                            {Array.isArray(q.options) && q.options.length > 0 && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                                {q.options.map((opt, oIdx) => (
-                                  <div
-                                    key={oIdx}
-                                    className={`p-2 rounded-xl border text-xs space-y-0.5 ${
-                                      opt.is_correct || opt.text === q.answer
-                                        ? 'bg-emerald-950/40 border-emerald-500/60 text-emerald-200'
-                                        : 'bg-slate-950/40 border-slate-800/80 text-slate-400'
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between font-bold">
-                                      <span>{oIdx + 1}. {opt.text}</span>
-                                      <span>{opt.is_correct || opt.text === q.answer ? '✅ 정답' : '❌'}</span>
-                                    </div>
-                                    {opt.feedback && (
-                                      <p className="text-[10px] text-slate-400 leading-tight">
-                                        {opt.feedback}
-                                      </p>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Pattern / Nuance */}
-                            {(q.explanation?.chunk_pattern || q.explanation?.nuance) && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
-                                {q.explanation?.chunk_pattern && (
-                                  <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-200">
-                                    <span className="font-bold text-amber-300 block">🧩 패턴:</span>
-                                    <span>{q.explanation.chunk_pattern}</span>
-                                  </div>
-                                )}
-                                {q.explanation?.nuance && (
-                                  <div className="p-2 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-200">
-                                    <span className="font-bold text-cyan-300 block">💡 뉘앙스:</span>
-                                    <span>{q.explanation.nuance}</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
                           </div>
                         );
                       })}
