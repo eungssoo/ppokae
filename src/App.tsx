@@ -94,6 +94,7 @@ import { ProfileView } from './components/ProfileView';
 import { AvatarGachaModal } from './components/AvatarGachaModal';
 import { ReportCenterModal } from './components/ReportCenterModal';
 import { AdminCenterModal } from './components/AdminCenterModal';
+import { AdminAuthModal } from './components/AdminAuthModal';
 import { AddToHomeScreenModal } from './components/AddToHomeScreenModal';
 import { InitialProfileSetupModal } from './components/InitialProfileSetupModal';
 import { UserInquiryModal } from './components/UserInquiryModal';
@@ -123,6 +124,7 @@ function AppContent() {
   const [isGachaModalOpen, setIsGachaModalOpen] = useState<boolean>(false);
   const [isReportCenterOpen, setIsReportCenterOpen] = useState<boolean>(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
+  const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState<boolean>(false);
   const [isInitialSetupModalOpen, setIsInitialSetupModalOpen] = useState<boolean>(false);
   const [isUserInquiryModalOpen, setIsUserInquiryModalOpen] = useState<boolean>(false);
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(DEFAULT_SYSTEM_SETTINGS);
@@ -1429,7 +1431,19 @@ function AppContent() {
     ? bookmarks.some(b => (b.sentence || b.question?.sentence || '').trim() === (currentQ.sentence || '').trim()) 
     : false;
 
-  const isAdminUser = checkIsAdmin(user) || window.location.pathname.includes('admin') || window.location.hash.includes('admin');
+  const [isAdminSession, setIsAdminSession] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && sessionStorage.getItem('ppokae_admin_authenticated') === 'true';
+  });
+
+  const isAdminUser = checkIsAdmin(user) || isAdminSession;
+
+  const handleOpenAdminCenter = () => {
+    if (isAdminUser) {
+      setIsAdminModalOpen(true);
+    } else {
+      setIsAdminAuthModalOpen(true);
+    }
+  };
 
   // 🛠️ 전역 긴급 서버 점검 모드 활성화 시 일반 유저 접속 완벽 차단 & 안내 화면 노출
   if (systemSettings.maintenanceMode && !isAdminUser) {
@@ -1470,7 +1484,7 @@ function AppContent() {
             <button
               onClick={() => {
                 sound.playClick();
-                setIsAdminModalOpen(true);
+                handleOpenAdminCenter();
               }}
               className="text-xs text-slate-500 hover:text-slate-400 underline font-bold transition-colors"
             >
@@ -1478,6 +1492,19 @@ function AppContent() {
             </button>
           </div>
         </div>
+
+        {/* 👑 관리자 마스터 보안 인증 모달 */}
+        <AdminAuthModal
+          isOpen={isAdminAuthModalOpen}
+          onClose={() => setIsAdminAuthModalOpen(false)}
+          onSuccess={() => {
+            setIsAdminAuthModalOpen(false);
+            setIsAdminSession(true);
+            setIsAdminModalOpen(true);
+            toast.coin('👑 관리자 인증 성공', '관리자 사령탑에 접속하였습니다.');
+          }}
+          user={user}
+        />
 
         {isAdminModalOpen && (
           <AdminCenterModal
@@ -1519,7 +1546,7 @@ function AppContent() {
         <div className="bg-gradient-to-r from-rose-600 to-pink-600 text-white px-4 py-2.5 text-xs font-black text-center flex flex-wrap items-center justify-center gap-2 sticky top-0 z-50 shadow-lg">
           <span>⚠️ [관리자 알림] 현재 긴급 서버 점검 모드가 켜져 있어 일반 유저의 접속이 전면 차단 중입니다.</span>
           <button
-            onClick={() => { sound.playClick(); setIsAdminModalOpen(true); }}
+            onClick={() => { sound.playClick(); handleOpenAdminCenter(); }}
             className="underline ml-2 bg-black/30 hover:bg-black/50 px-2.5 py-0.5 rounded-lg transition-colors"
           >
             점검 모드 해제 / 설정 변경
@@ -1578,6 +1605,19 @@ function AppContent() {
         />
       )}
 
+      {/* 👑 Master Admin Auth Modal */}
+      <AdminAuthModal
+        isOpen={isAdminAuthModalOpen}
+        onClose={() => setIsAdminAuthModalOpen(false)}
+        onSuccess={() => {
+          setIsAdminAuthModalOpen(false);
+          setIsAdminSession(true);
+          setIsAdminModalOpen(true);
+          toast.coin('👑 관리자 인증 성공', '관리자 사령탑에 접속하였습니다.');
+        }}
+        user={user}
+      />
+
       {/* 👑 Master Admin Command Center Modal */}
       {user && (
         <AdminCenterModal
@@ -1632,7 +1672,7 @@ function AppContent() {
           onOpenInquiryModal={() => setIsUserInquiryModalOpen(true)}
           onOpenInstallModal={() => setIsAddToHomeModalOpen(true)}
           onOpenReportCenter={() => setIsReportCenterOpen(true)}
-          onOpenAdminCenter={() => setIsAdminModalOpen(true)}
+          onOpenAdminCenter={handleOpenAdminCenter}
           onLogout={handleLogout}
         />
       )}
@@ -1661,7 +1701,7 @@ function AppContent() {
           onOpenGachaModal={() => setIsGachaModalOpen(true)}
           onDeleteAccount={handleDeleteAccount}
           onLinkGoogleAccount={handleLinkGoogleAccount}
-          onOpenAdminCenter={() => setIsAdminModalOpen(true)}
+          onOpenAdminCenter={handleOpenAdminCenter}
           onOpenInstallModal={() => setIsAddToHomeModalOpen(true)}
           isStandalone={isAppStandalone}
           onGoAnalytics={() => setView('analytics_view')}
@@ -1768,7 +1808,7 @@ function AppContent() {
           quizMode={quizMode}
           score={score}
           userName={user?.name || '학습자'}
-          isAdmin={checkIsAdmin(user) || window.location.pathname.includes('admin')}
+          isAdmin={isAdminUser}
           isBookmarked={isCurrentQBookmarked}
           onToggleBookmark={handleToggleBookmark}
           onCheckAnswer={handleCheckAnswer}
@@ -1831,7 +1871,7 @@ function AppContent() {
       {view === 'db_view' && (
         <DbExplorerView
           dbData={dbData}
-          isAdmin={checkIsAdmin(user) || window.location.pathname.includes('admin')}
+          isAdmin={isAdminUser}
           onBack={() => setView('menu')}
           onSolveQuestion={(question) => {
             handleSolveSingleQuestion(question);
