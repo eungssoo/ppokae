@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   UserProfile, 
   ViewType, 
@@ -284,6 +284,133 @@ function AppContent() {
       setView('login');
     }
   }, [user?.name]);
+
+  // 📱 모바일 뒤로가기 제스처 / 하드웨어 뒤로가기 버튼 처리 (SPA 이탈 방지 & 네이티브 앱 UX)
+  const lastBackPressTimeRef = useRef<number>(0);
+  const viewRef = useRef<ViewType>(view);
+  const quizModeRef = useRef<QuizMode>(quizMode);
+  const modalsRef = useRef<{
+    isGacha: boolean;
+    isAdmin: boolean;
+    isReport: boolean;
+    isInquiry: boolean;
+    isAddToHome: boolean;
+    isRevenge: boolean;
+    actionModal: boolean;
+    isInitialSetup: boolean;
+  }>({
+    isGacha: isGachaModalOpen,
+    isAdmin: isAdminModalOpen,
+    isReport: isReportCenterOpen,
+    isInquiry: isUserInquiryModalOpen,
+    isAddToHome: isAddToHomeModalOpen,
+    isRevenge: isRevengeModalOpen,
+    actionModal: !!actionModalConfig,
+    isInitialSetup: isInitialSetupModalOpen,
+  });
+
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+
+  useEffect(() => {
+    quizModeRef.current = quizMode;
+  }, [quizMode]);
+
+  useEffect(() => {
+    modalsRef.current = {
+      isGacha: isGachaModalOpen,
+      isAdmin: isAdminModalOpen,
+      isReport: isReportCenterOpen,
+      isInquiry: isUserInquiryModalOpen,
+      isAddToHome: isAddToHomeModalOpen,
+      isRevenge: isRevengeModalOpen,
+      actionModal: !!actionModalConfig,
+      isInitialSetup: isInitialSetupModalOpen,
+    };
+  }, [
+    isGachaModalOpen,
+    isAdminModalOpen,
+    isReportCenterOpen,
+    isUserInquiryModalOpen,
+    isAddToHomeModalOpen,
+    isRevengeModalOpen,
+    actionModalConfig,
+    isInitialSetupModalOpen,
+  ]);
+
+  // 🔄 화면 전환 시 브라우저 히스토리 pushState 동기화
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const currentState = window.history.state;
+    if (!currentState || currentState.view !== view) {
+      window.history.pushState({ view, timestamp: Date.now() }, '');
+    }
+  }, [view]);
+
+  // 🛡️ 브라우저 popstate (모바일 뒤로가기) 인터셉터
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!window.history.state) {
+      window.history.replaceState({ view: 'menu', root: true, timestamp: Date.now() }, '');
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      const modals = modalsRef.current;
+
+      // 1. 팝업 모달이 열려 있는 경우: 모달만 닫고 화면 유지
+      if (modals.isGacha || modals.isAdmin || modals.isReport || modals.isInquiry || modals.isAddToHome || modals.isRevenge || modals.actionModal) {
+        setIsGachaModalOpen(false);
+        setIsAdminModalOpen(false);
+        setIsReportCenterOpen(false);
+        setIsUserInquiryModalOpen(false);
+        setIsAddToHomeModalOpen(false);
+        setIsRevengeModalOpen(false);
+        setActionModalConfig(null);
+        window.history.pushState({ view: viewRef.current, timestamp: Date.now() }, '');
+        return;
+      }
+
+      const currentV = viewRef.current;
+      const currentMode = quizModeRef.current;
+
+      // 2. 하위 서브 페이지(퀴즈 풀기, 보관소, 랭킹판 등)에 있는 경우: 홈(메인 메뉴) 또는 상위 뷰로 부드럽게 복귀
+      if (currentV !== 'menu' && currentV !== 'login') {
+        if (currentV === 'expression_study') {
+          setView('expression_select');
+        } else if (currentV === 'solve') {
+          setView(currentMode === 'expression' ? 'expression_select' : currentMode === 'bookmark' ? 'bookmark_view' : 'menu');
+        } else {
+          setView('menu');
+        }
+        window.history.pushState({ view: 'menu', timestamp: Date.now() }, '');
+        return;
+      }
+
+      // 3. 메인 홈 화면('menu')에서 뒤로가기를 누른 경우: 2회 연속 터치 시에만 종료 (더블 탭 종료 안내)
+      if (currentV === 'menu') {
+        const now = Date.now();
+        if (now - lastBackPressTimeRef.current < 2000) {
+          // 2초 내 재터치 시 자연스럽게 브라우저 종료/이탈 허용
+          return;
+        }
+
+        lastBackPressTimeRef.current = now;
+        toast.info(
+          language === 'en' ? 'Exit App' : '앱 종료',
+          language === 'en' ? 'Press back once more to exit the app.' : '뒤로가기 버튼을 한 번 더 누르면 앱을 종료합니다.'
+        );
+        // 이탈을 방지하기 위해 히스토리 스테이트 재주입
+        window.history.pushState({ view: 'menu', root: true, timestamp: now }, '');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [language]);
 
   // Simulated progress timer when loading
   useEffect(() => {
