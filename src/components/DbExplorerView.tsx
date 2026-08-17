@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { ArrowLeft, BookOpen, ChevronDown, Trash2, Sparkles, Check, X, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronDown, Trash2, Sparkles, Check, X, ShieldAlert, Bot, PlayCircle } from 'lucide-react';
 import { Question } from '../types';
 import { useLanguage } from '../services/i18n';
 import { sound } from '../services/soundService';
+import { regenerateQuestionWithAI } from '../services/reportService';
+import { adminUpdateQuestionEverywhere } from '../services/dbService';
 
 interface DbExplorerViewProps {
   dbData: Record<string, Question[]>;
   isAdmin?: boolean;
   onBack: () => void;
+  onSolveQuestion?: (question: Question) => void;
   onDeleteQuestion?: (question: Question, difficulty: string) => Promise<any> | void;
 }
 
@@ -15,18 +18,56 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
   dbData: initialDbData,
   isAdmin = false,
   onBack,
+  onSolveQuestion,
   onDeleteQuestion
 }) => {
   const { language, t } = useLanguage();
   const [dbData, setDbData] = useState<Record<string, Question[]>>(initialDbData);
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
   const toggleSection = (diff: string) => {
     setOpenSections(prev => ({
       ...prev,
       [diff]: !prev[diff]
     }));
+  };
+
+  const handleRegenerate = async (q: Question, diff: string) => {
+    const qKey = q.id || q.sentence;
+    sound.playClick();
+    setRegeneratingId(qKey);
+    try {
+      const res = await regenerateQuestionWithAI({
+        sentence: q.sentence,
+        form: q.form,
+        currentAnswer: q.answer
+      });
+      if (res.success && res.question) {
+        sound.playStar();
+        const fixedQ: Question = {
+          ...res.question,
+          difficulty: q.difficulty || diff,
+          level: q.level || diff
+        };
+        await adminUpdateQuestionEverywhere(fixedQ, q.sentence);
+        setDbData(prev => {
+          const nextList = (prev[diff] || []).map(item => (item.id && q.id ? item.id === q.id : item.sentence === q.sentence) ? fixedQ : item);
+          return {
+            ...prev,
+            [diff]: nextList
+          };
+        });
+        alert('🤖 AI 문제 재구성 및 DB 반영이 완료되었습니다!');
+      } else {
+        alert(`재구성 실패: ${res.error || 'AI 응답 오류'}`);
+      }
+    } catch (e: any) {
+      alert(`오류: ${e.message}`);
+    } finally {
+      setRegeneratingId(null);
+    }
   };
 
   const handleDelete = async (q: Question, diff: string) => {
@@ -160,14 +201,15 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                       {questions.map((q, i) => {
                         const qKey = q.id || q.sentence;
                         const isDeleting = deletingId === qKey;
+                        const isRegenerating = regeneratingId === qKey;
 
                         return (
                           <div
                             key={q.id || i}
                             className="bg-slate-900/90 p-5 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all space-y-3 shadow-md"
                           >
-                            {/* Top info & Delete action */}
-                            <div className="flex justify-between items-start gap-3">
+                            {/* Top info & Actions */}
+                            <div className="flex flex-wrap justify-between items-center gap-2.5">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-xs font-black text-indigo-300 bg-indigo-500/20 px-2.5 py-0.5 rounded-md border border-indigo-500/30">
                                   #{q.form}형식
@@ -182,19 +224,51 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                                 )}
                               </div>
 
-                              {/* 🗑️ 관리자 전용 단건 즉시 삭제 버튼 */}
-                              {isAdmin && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleDelete(q, diff)}
-                                  disabled={isDeleting}
-                                  className="px-3 py-1.5 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all disabled:opacity-50"
-                                  title="이 불량/오류 문제를 DB에서 영구 삭제"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                  <span>{isDeleting ? '삭제 중...' : '문제 즉시 삭제'}</span>
-                                </button>
-                              )}
+                              <div className="flex flex-wrap items-center gap-2">
+                                {/* 🎯 누구나 클릭하여 이 문제 바로 풀기 */}
+                                {onSolveQuestion && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      sound.playClick();
+                                      onSolveQuestion(q);
+                                    }}
+                                    className="px-3 py-1.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-600 text-white text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+                                    title="이 문제를 직접 퀴즈 화면에서 풀어보기"
+                                  >
+                                    <PlayCircle className="w-3.5 h-3.5" />
+                                    <span>{language === 'en' ? 'Solve This' : '이 문제 풀기'}</span>
+                                  </button>
+                                )}
+
+                                {/* 🤖 관리자 전용 AI 선지/정답/해설 즉시 재구성 */}
+                                {isAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRegenerate(q, diff)}
+                                    disabled={isRegenerating || isDeleting}
+                                    className="px-3 py-1.5 rounded-xl bg-indigo-600/80 hover:bg-indigo-600 text-white text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all disabled:opacity-50"
+                                    title="이 문제의 선지/정답/해설을 AI로 즉시 재구성하여 DB에 반영"
+                                  >
+                                    <Bot className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
+                                    <span>{isRegenerating ? '재구성 중...' : 'AI 재구성'}</span>
+                                  </button>
+                                )}
+
+                                {/* 🗑️ 관리자 전용 단건 즉시 삭제 버튼 */}
+                                {isAdmin && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDelete(q, diff)}
+                                    disabled={isRegenerating || isDeleting}
+                                    className="px-3 py-1.5 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-black flex items-center gap-1.5 shadow-sm active:scale-95 transition-all disabled:opacity-50"
+                                    title="이 불량/오류 문제를 DB에서 영구 삭제"
+                                  >
+                                    <Trash2 className={`w-3.5 h-3.5 ${isDeleting ? 'animate-spin' : ''}`} />
+                                    <span>{isDeleting ? '삭제 중...' : '삭제'}</span>
+                                  </button>
+                                )}
+                              </div>
                             </div>
 
                             {/* Sentence */}

@@ -173,11 +173,14 @@ async function generateSingleBatch(
   const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash'];
   
   let matchedRule = LEVEL_RULES['Level 1 (입문/초급)'];
-  for (const [key, rule] of Object.entries(LEVEL_RULES)) {
-    if (difficultyLabel.includes(key.split(' ')[0])) {
-      matchedRule = rule;
-      break;
-    }
+  if (difficultyLabel.includes('Level 4') || difficultyLabel.includes('4단계') || difficultyLabel.includes('실전') || difficultyLabel.includes('Mastery')) {
+    matchedRule = LEVEL_RULES['Level 4 (실전 마스터)'];
+  } else if (difficultyLabel.includes('Level 3') || difficultyLabel.includes('3단계') || difficultyLabel.includes('고득점') || difficultyLabel.includes('Advanced')) {
+    matchedRule = LEVEL_RULES['Level 3 (고득점 도약)'];
+  } else if (difficultyLabel.includes('Level 2') || difficultyLabel.includes('2단계') || difficultyLabel.includes('중급') || difficultyLabel.includes('Intermediate')) {
+    matchedRule = LEVEL_RULES['Level 2 (실력 중급)'];
+  } else {
+    matchedRule = LEVEL_RULES['Level 1 (입문/초급)'];
   }
 
   const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사 및 출제위원장입니다.
@@ -255,6 +258,8 @@ async function generateSingleBatch(
             const normalized = normalizeAndFixQuestion(q);
             return {
               ...normalized,
+              difficulty: difficultyLabel,
+              level: difficultyLabel,
               options: shuffleOptions(normalized.options)
             };
           });

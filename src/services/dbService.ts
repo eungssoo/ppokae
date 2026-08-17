@@ -1514,8 +1514,8 @@ export function cleanQuestionForStorage(q: any): any {
           meaning: c?.meaning || ''
         }))
       : [],
-    difficulty: normalized.difficulty || normalized.level || 'Level 1',
-    level: normalized.level || normalized.difficulty || 'Level 1'
+    difficulty: q?.difficulty || normalized.difficulty || q?.level || normalized.level || 'Level 1 (입문/초급)',
+    level: q?.level || normalized.level || q?.difficulty || normalized.difficulty || 'Level 1 (입문/초급)'
   });
 }
 
@@ -1765,12 +1765,19 @@ export async function getRandomQuestions(difficultyLabel: string): Promise<{ suc
     const allQuestions: Question[] = [];
     snapshot.forEach(docSnap => {
       const d = docSnap.data();
-      const matches = 
-        d.difficulty === difficultyLabel ||
-        (difficultyLabel.includes('Level 1') && (d.difficulty?.includes('Level 1') || d.difficulty?.includes('초급'))) ||
-        (difficultyLabel.includes('Level 2') && (d.difficulty?.includes('Level 2') || d.difficulty?.includes('중급'))) ||
-        (difficultyLabel.includes('Level 3') && (d.difficulty?.includes('Level 3') || d.difficulty?.includes('고득점'))) ||
-        (difficultyLabel.includes('Level 4') && (d.difficulty?.includes('Level 4') || d.difficulty?.includes('실전')));
+      const dDiff = String(d.difficulty || d.level || '');
+      const targetLvl = difficultyLabel.includes('Level 4') || difficultyLabel.includes('실전') || difficultyLabel.includes('Mastery') ? 4
+        : difficultyLabel.includes('Level 3') || difficultyLabel.includes('고득점') || difficultyLabel.includes('Advanced') ? 3
+        : difficultyLabel.includes('Level 2') || difficultyLabel.includes('중급') || difficultyLabel.includes('Intermediate') ? 2
+        : 1;
+
+      const docLvl = dDiff.includes('Level 4') || dDiff.includes('실전') || dDiff.includes('Mastery') ? 4
+        : dDiff.includes('Level 3') || dDiff.includes('고득점') || dDiff.includes('Advanced') ? 3
+        : dDiff.includes('Level 2') || dDiff.includes('중급') || dDiff.includes('Intermediate') ? 2
+        : dDiff.includes('Level 1') || dDiff.includes('초급') || dDiff.includes('Beginner') ? 1
+        : 1;
+
+      const matches = docLvl === targetLvl;
 
       if (matches) {
         allQuestions.push({

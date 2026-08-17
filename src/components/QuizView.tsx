@@ -14,13 +14,16 @@ import {
   ChevronUp,
   Star,
   AlertTriangle,
-  Globe
+  Globe,
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Question, Option, QuizMode } from '../types';
 import { askAiTutor } from '../services/geminiService';
 import { sound } from '../services/soundService';
-import { getRankingQuestionPoints, getLevelGatingInfo } from '../services/dbService';
+import { getRankingQuestionPoints, getLevelGatingInfo, adminDeleteSingleQuestion, adminUpdateQuestionEverywhere } from '../services/dbService';
+import { regenerateQuestionWithAI } from '../services/reportService';
 import { useLanguage } from '../services/i18n';
 import { getOrFetchEnglishExplanation, prefetchEnglishExplanation, generateFallbackEnglishExplanation, EnglishExplanation } from '../services/englishExplanationService';
 import { QuestionReportModal } from './QuestionReportModal';
@@ -32,26 +35,39 @@ interface QuizViewProps {
   quizMode: QuizMode;
   score: number;
   userName?: string;
+  isAdmin?: boolean;
   isBookmarked?: boolean;
   onToggleBookmark?: (question: Question) => void;
   onCheckAnswer: (userInput: string) => { isCorrect: boolean };
   onNextQuestion: () => void;
   onExit: () => void;
+  onAdminUpdateQuestion?: (fixedQuestion: Question) => void;
+  onAdminDeleteQuestion?: (question: Question) => Promise<boolean> | void;
 }
 
 export const QuizView: React.FC<QuizViewProps> = ({
-  currentQuestion,
+  currentQuestion: propQuestion,
   questionIndex,
   totalQuestions,
   quizMode,
   score,
   userName = '학습자',
+  isAdmin = false,
   isBookmarked = false,
   onToggleBookmark,
   onCheckAnswer,
   onNextQuestion,
   onExit,
+  onAdminUpdateQuestion,
+  onAdminDeleteQuestion,
 }) => {
+  const [currentQuestion, setCurrentQuestion] = useState<Question>(propQuestion);
+  const [isAiRegenerating, setIsAiRegenerating] = useState<boolean>(false);
+  const [isAiDeleting, setIsAiDeleting] = useState<boolean>(false);
+
+  useEffect(() => {
+    setCurrentQuestion(propQuestion);
+  }, [propQuestion]);
   const [userInput, setUserInput] = useState<string>('');
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [isCorrect, setIsCorrect] = useState<boolean>(false);
@@ -232,6 +248,67 @@ export const QuizView: React.FC<QuizViewProps> = ({
     }
   };
 
+  // 👑 관리자: 이 문제의 선지/정답/해설 AI 즉시 재구성
+  const handleAdminRegenerateQuestion = async () => {
+    if (!currentQuestion) return;
+    sound.playClick();
+    setIsAiRegenerating(true);
+    try {
+      const res = await regenerateQuestionWithAI({
+        sentence: currentQuestion.sentence,
+        form: currentQuestion.form,
+        currentAnswer: currentQuestion.answer
+      });
+      if (res.success && res.question) {
+        sound.playStar();
+        const fixed = {
+          ...res.question,
+          difficulty: currentQuestion.difficulty || currentQuestion.level,
+          level: currentQuestion.level || currentQuestion.difficulty
+        };
+        await adminUpdateQuestionEverywhere(fixed, currentQuestion.sentence);
+        setCurrentQuestion(fixed);
+        if (onAdminUpdateQuestion) {
+          onAdminUpdateQuestion(fixed);
+        }
+        alert('🤖 [관리자] AI 문제 재구성 및 DB 반영이 완료되었습니다!');
+      } else {
+        alert(`재구성 실패: ${res.error || 'AI 응답이 올바르지 않습니다.'}`);
+      }
+    } catch (e: any) {
+      alert(`오류: ${e.message}`);
+    } finally {
+      setIsAiRegenerating(false);
+    }
+  };
+
+  // 👑 관리자: 이 불량 문제 DB에서 즉시 영구 삭제 & 건너뛰기
+  const handleAdminDeleteCurrentQuestion = async () => {
+    if (!currentQuestion) return;
+    if (!window.confirm(`⚠️ [관리자 권한]\n이 문제("${currentQuestion.sentence}")를 DB에서 영구 삭제하고 다음으로 이동하시겠습니까?`)) {
+      return;
+    }
+    sound.playClick();
+    setIsAiDeleting(true);
+    try {
+      if (onAdminDeleteQuestion) {
+        await onAdminDeleteQuestion(currentQuestion);
+      } else {
+        await adminDeleteSingleQuestion(currentQuestion.id, currentQuestion.sentence);
+      }
+      alert('🗑️ 문제가 DB에서 영구 삭제되었습니다.');
+      if (questionIndex >= totalQuestions) {
+        onExit();
+      } else {
+        onNextQuestion();
+      }
+    } catch (e: any) {
+      alert(`삭제 실패: ${e.message}`);
+    } finally {
+      setIsAiDeleting(false);
+    }
+  };
+
   // Keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -382,6 +459,38 @@ export const QuizView: React.FC<QuizViewProps> = ({
         {/* Main Quiz Card */}
         <div className="glass-card rounded-[2.5rem] p-5 sm:p-8 md:p-10 border border-slate-800 shadow-2xl relative">
           
+          {/* 👑 관리자 전용 퀵 툴바 (AI 재구성 & 문제 즉시 삭제) */}
+          {isAdmin && (
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4 bg-slate-900/80 border border-indigo-500/30 p-2.5 rounded-2xl shadow-inner">
+              <div className="flex items-center gap-1.5 text-xs font-black text-indigo-300">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                <span>👑 관리자 사령탑 퀵 컨트롤</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAdminRegenerateQuestion}
+                  disabled={isAiRegenerating || isAiDeleting}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all disabled:opacity-50"
+                  title="이 문제의 선지 4개, 정답, 해설을 AI로 즉시 재구성하여 DB에 전역 반영"
+                >
+                  <Bot className={`w-3.5 h-3.5 ${isAiRegenerating ? 'animate-spin' : ''}`} />
+                  <span>{isAiRegenerating ? 'AI 재구성 중...' : '🤖 AI 문제 재구성'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAdminDeleteCurrentQuestion}
+                  disabled={isAiRegenerating || isAiDeleting}
+                  className="px-3 py-1.5 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-md active:scale-95 transition-all disabled:opacity-50"
+                  title="이 불량 문제를 DB에서 영구 삭제하고 건너뛰기"
+                >
+                  <Trash2 className={`w-3.5 h-3.5 ${isAiDeleting ? 'animate-spin' : ''}`} />
+                  <span>{isAiDeleting ? '삭제 중...' : '🗑️ 문제 즉시 삭제'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Question Sentence Box */}
           <div className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 p-6 sm:p-10 rounded-[2rem] text-center text-white relative mb-6 sm:mb-8 border border-slate-700/80 shadow-inner">
             

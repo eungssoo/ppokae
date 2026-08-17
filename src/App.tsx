@@ -1034,6 +1034,20 @@ function AppContent() {
     }
   };
 
+  // 4-1. Start Single Question Quiz from Public DB Explorer
+  const handleSolveSingleQuestion = (question: Question) => {
+    sound.playClick();
+    setSelectedDifficulty(question.difficulty || question.level || 'Level 1');
+    setQuizMode('normal');
+    setCurrentQ(question);
+    setQuestionQueue([]);
+    setQuestionCount(1);
+    setScore(0);
+    setCorrectCount(0);
+    setEarnedCoinsTotal(0);
+    setView('solve');
+  };
+
   // 5. Start Personal Weakness Quiz
   const handleStartPersonalQuiz = async (levelInfo: DifficultyLevel) => {
     if (!user) return;
@@ -1754,11 +1768,25 @@ function AppContent() {
           quizMode={quizMode}
           score={score}
           userName={user?.name || '학습자'}
+          isAdmin={checkIsAdmin(user) || window.location.pathname.includes('admin')}
           isBookmarked={isCurrentQBookmarked}
           onToggleBookmark={handleToggleBookmark}
           onCheckAnswer={handleCheckAnswer}
           onNextQuestion={handleNextQuestion}
           onExit={() => setView(quizMode === 'expression' ? 'expression_select' : quizMode === 'bookmark' ? 'bookmark_view' : 'menu')}
+          onAdminUpdateQuestion={(fixedQ) => {
+            setCurrentQ(fixedQ);
+            toast.coin('🤖 AI 문제 재구성 완료', '문제 선지와 해설이 성공적으로 교정 및 DB에 반영되었습니다.');
+          }}
+          onAdminDeleteQuestion={async (q) => {
+            const success = await adminDeleteSingleQuestion(q.id, q.sentence);
+            if (success) {
+              toast.info('🗑️ 문제 삭제 완료', '해당 문제가 DB에서 영구 삭제되었습니다.');
+              loadTotalPublicQuestions();
+              return true;
+            }
+            return false;
+          }}
         />
       )}
 
@@ -1805,6 +1833,9 @@ function AppContent() {
           dbData={dbData}
           isAdmin={checkIsAdmin(user) || window.location.pathname.includes('admin')}
           onBack={() => setView('menu')}
+          onSolveQuestion={(question) => {
+            handleSolveSingleQuestion(question);
+          }}
           onDeleteQuestion={async (question) => {
             const success = await adminDeleteSingleQuestion(question.id, question.sentence);
             if (success) {
