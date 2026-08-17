@@ -179,7 +179,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
     if (!currentQuestion || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
 
-    const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
+    const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\[\s*___+\s*\]|\bblank\b|\bBlank\b|\bBLANK\b|[\(\[]\s*[\w\s\-']+(?:\s*\/\s*[\w\s\-']+)+\s*[\)\]])/gi;
     const sentenceToRead = isSubmitted
       ? currentQuestion.sentence.replace(BLANK_REGEX, currentQuestion.answer)
       : currentQuestion.sentence.replace(BLANK_REGEX, ' , ');
@@ -506,24 +506,46 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
             {/* Sentence with Blank */}
             <p className="text-xl sm:text-2xl md:text-3xl mt-4 sm:mt-6 leading-relaxed font-serif tracking-wide">
-              {currentQuestion.sentence.split(/(?:_{2,}|\[blank\]|\(blank\)|<blank>|\[빈칸\]|\(빈칸\)|\(_{1,}\)|\[_{1,}\]|\[___+\])/gi).map((part, i, arr) => (
-                <React.Fragment key={i}>
-                  {part}
-                  {i < arr.length - 1 && (
-                    <span
-                      className={`inline-block mx-1.5 px-2 font-black border-b-[3px] transition-all ${
-                        isSubmitted
-                          ? isCorrect
-                            ? 'text-emerald-400 border-emerald-400 bg-emerald-500/10 rounded-t'
-                            : 'text-rose-400 border-rose-400 bg-rose-500/10 rounded-t'
-                          : 'text-indigo-300 border-indigo-400/70 bg-indigo-500/10 rounded-t'
-                      }`}
-                    >
-                      {userInput || '________'}
-                    </span>
-                  )}
-                </React.Fragment>
-              ))}
+              {(() => {
+                const BLANK_SPLIT_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\(\s*_{1,}\s*\)|\[\s*_{1,}\s*\]|\[\s*___+\s*\]|\bblank\b|\bBlank\b|\bBLANK\b|[\(\[]\s*[\w\s\-']+(?:\s*\/\s*[\w\s\-']+)+\s*[\)\]])/gi;
+                let s = currentQuestion.sentence || '';
+                let parts = s.split(BLANK_SPLIT_REGEX);
+
+                // If no blank pattern matched, but answer is in the sentence, split by answer
+                if (parts.length <= 1 && currentQuestion.answer) {
+                  const escaped = currentQuestion.answer.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                  if (escaped && escaped.length >= 2) {
+                    parts = s.split(new RegExp(`\\b${escaped}\\b`, 'i'));
+                  }
+                }
+
+                if (parts.length <= 1) {
+                  return <span>{currentQuestion.sentence}</span>;
+                }
+
+                return (
+                  <span>
+                    {parts.map((part, i) => (
+                      <React.Fragment key={i}>
+                        {part}
+                        {i < parts.length - 1 && (
+                          <span
+                            className={`inline-block mx-1.5 px-3 py-0.5 font-black border-b-[3px] transition-all rounded-t ${
+                              isSubmitted
+                                ? isCorrect
+                                  ? 'text-emerald-400 border-emerald-400 bg-emerald-500/10'
+                                  : 'text-rose-400 border-rose-400 bg-rose-500/10'
+                                : 'text-indigo-300 border-indigo-400/70 bg-indigo-500/10'
+                            }`}
+                          >
+                            {userInput || '________'}
+                          </span>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </span>
+                );
+              })()}
             </p>
 
             <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">

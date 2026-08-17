@@ -66,10 +66,27 @@ export function sanitizeForm(form: any): number {
   return 3;
 }
 
-// 🔤 빈칸 표기 표준화 헬퍼 ([blank], (blank), [빈칸], ___ 등을 ______ 로 통일)
-export function normalizeSentenceBlank(sentence: string): string {
+// 🔤 빈칸 표기 표준화 헬퍼 ([blank], (blank), (is / are), [is/are], ___ 등을 ______ 로 완벽 통일)
+export function normalizeSentenceBlank(sentence: string, answerText?: string): string {
   if (!sentence || typeof sentence !== 'string') return '';
-  return sentence.replace(/(?:_{2,}|\[blank\]|\(blank\)|<blank>|\[빈칸\]|\(빈칸\)|\(_{1,}\)|\[_{1,}\]|\[___+\])/gi, '______');
+  let s = sentence;
+
+  // 1. (is / are), (want / wants), [is / are / were] 등 괄호 안에 슬래시(/)로 보기가 들어간 구문을 ______ 로 치환
+  s = s.replace(/[\(\[]\s*[\w\s\-']+(?:\s*\/\s*[\w\s\-']+)+\s*[\)\]]/gi, '______');
+
+  // 2. [blank], (blank), <blank>, [빈칸], (빈칸), (___), [___], __ 등을 ______ 로 통일
+  s = s.replace(/(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\(\s*_{1,}\s*\)|\[\s*_{1,}\s*\]|\[\s*___+\s*\]|\bblank\b|\bBlank\b|\bBLANK\b)/gi, '______');
+
+  // 3. 만약 여전히 빈칸이 없는 경우, 정답 단어가 문장에 온전하게 들어가 있다면 정답 단어 자리를 ______ 로 치환
+  if (!s.includes('______') && answerText && typeof answerText === 'string') {
+    const trimmedAns = answerText.trim();
+    if (trimmedAns && trimmedAns.length >= 2) {
+      const escaped = trimmedAns.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      s = s.replace(new RegExp(`\\b${escaped}\\b`, 'i'), '______');
+    }
+  }
+
+  return s;
 }
 
 // 🎲 4지선다 보기 랜덤 셔플 헬퍼 (정답 1번 편중 100% 원천 차단)
@@ -157,7 +174,7 @@ export function normalizeAndFixQuestion(q: any): Question {
   return {
     ...q,
     form: sanitizeForm(q?.form),
-    sentence: normalizeSentenceBlank(q?.sentence || ''),
+    sentence: normalizeSentenceBlank(q?.sentence || '', resolvedAnswer),
     options,
     answer: resolvedAnswer,
     translation: q?.translation || '',
@@ -757,12 +774,13 @@ export async function generateRankingCycleQuestions(
 4. 9~10번 (2문제): Level 4 (특수 도치 Hardly had S p.p., 고급 조건 접속사 provided that)
 
 [출제 및 정답-해설 일치 엄격 규칙]
-1. [정답 텍스트 일치]: answer 필드는 1, 2, A 같은 번호가 아니라 반드시 '정답 영어 보기 텍스트 그 자체'를 정확하게 넣으세요.
-2. [단 1개의 정답 플래그]: options 4개 중 오직 1개만 is_correct: true 로 지정하고, 나머지 3개는 is_correct: false 로 지정하세요.
-3. [해설 일치]: options의 is_correct: true 항목의 feedback은 '정답인 문법적 이유'를 설명하고, is_correct: false 항목들은 '오답인 이유'를 명확하게 설명하세요.
-4. [문형 및 뉘앙스]: explanation의 chunk_pattern과 nuance는 반드시 정답을 기준으로 일관되게 작성하세요.
-5. [1~5형식]: form 필드는 1, 2, 3, 4, 5 정수만 사용.
-6. [100% 한국어 해설]: translation, feedback, chunk_pattern, nuance 모두 100% 자연스러운 한국어로 작성.`;
+1. [빈칸 절대 표기]: sentence의 빈칸은 절대로 '(is / are)', '[is / are]' 처럼 보기를 괄호 안에 나열해서 쓰지 말고, 100% 반드시 '______' (밑줄 6개)로만 작성하세요.
+2. [정답 텍스트 일치]: answer 필드는 1, 2, A 같은 번호가 아니라 반드시 '정답 영어 보기 텍스트 그 자체'를 정확하게 넣으세요.
+3. [단 1개의 정답 플래그]: options 4개 중 오직 1개만 is_correct: true 로 지정하고, 나머지 3개는 is_correct: false 로 지정하세요.
+4. [해설 일치]: options의 is_correct: true 항목의 feedback은 '정답인 문법적 이유'를 설명하고, is_correct: false 항목들은 '오답인 이유'를 명확하게 설명하세요.
+5. [문형 및 뉘앙스]: explanation의 chunk_pattern과 nuance는 반드시 정답을 기준으로 일관되게 작성하세요.
+6. [1~5형식]: form 필드는 1, 2, 3, 4, 5 정수만 사용.
+7. [100% 한국어 해설]: translation, feedback, chunk_pattern, nuance 모두 100% 자연스러운 한국어로 작성.`;
 
   const userPrompt = `오늘의 랭킹전 회차: ${cycleId} (${cycleName})
 정확히 10개의 문제를 JSON 배열로 반환하세요.`;

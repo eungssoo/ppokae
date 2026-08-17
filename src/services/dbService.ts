@@ -1974,9 +1974,17 @@ export async function getOrCreateCycleQuestions(cycleInfo: CycleInfo): Promise<{
       const rawList = cycleSnap.data().questions || [];
       const qList = rawList.map((q: any) => normalizeAndFixQuestion(q));
       if (qList.length >= 10) {
-        // 🛡️ 기존 DB에 저장된 문제 중 answer가 "1", "A" 등 인덱스 번호로 잘못 들어가 있던 경우 즉시 백그라운드 자동 치유 & 동기화
-        const hasCorrupted = rawList.some((q: any) => /^[(\[]?([1-4A-Da-d])[)\]번]?$/.test(String(q?.answer || '').trim()));
-        if (hasCorrupted) {
+        // 🛡️ 기존 DB에 저장된 문제 중 answer가 인덱스 번호이거나 문장에 (is / are) 등 보기가 그대로 노출되어 있던 경우 즉시 백그라운드 자동 치유 & Firestore 동기화
+        const needsHealing = rawList.some((q: any) => {
+          const ans = String(q?.answer || '').trim();
+          const sent = String(q?.sentence || '').trim();
+          const isNumAnswer = /^[(\[]?([1-4A-Da-d])[)\]번]?$/.test(ans);
+          const hasChoiceInSentence = /[\(\[]\s*[\w\s\-']+(?:\s*\/\s*[\w\s\-']+)+\s*[\)\]]/i.test(sent);
+          const lacksBlank = !sent.includes('______');
+          return isNumAnswer || hasChoiceInSentence || lacksBlank;
+        });
+
+        if (needsHealing) {
           setDoc(cycleRef, { questions: qList }, { merge: true }).catch(() => {});
         }
         return { success: true, data: qList };
