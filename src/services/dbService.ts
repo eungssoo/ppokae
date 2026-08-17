@@ -2830,6 +2830,11 @@ export async function getAllUsersList(): Promise<UserProfile[]> {
 
     snap.forEach(d => {
       const data = d.data();
+      // 🚫 고스트 데이터는 실제 회원 목록에서 100% 제외
+      if (data.isGhost) {
+        deleteDoc(d.ref).catch(() => {}); // 자동 청소
+        return;
+      }
       const canonicalName = (data.name || d.id).trim();
       if (!canonicalName) return;
 
@@ -3122,20 +3127,6 @@ export async function adminInjectGhostRanking(payload: {
 
     await setDoc(rankRef, docData);
 
-    // 🌟 고스트 유저의 users 프로필도 함께 생성/동기화하여 랭킹 보드 실시간 조회 시 완벽 반영
-    try {
-      const userRef = doc(db, 'users', trimmedName);
-      await setDoc(userRef, {
-        name: trimmedName,
-        avatar: avatarIcon,
-        currentAvatarId: targetAvatar?.id || 'lion',
-        xp: score * 10 + 50,
-        tier: calculateTier(score * 10 + 50).tier,
-        isGhost: true,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-    } catch {}
-
     return { success: true };
   } catch (e: any) {
     console.error("adminInjectGhostRanking Error:", e);
@@ -3143,7 +3134,7 @@ export async function adminInjectGhostRanking(payload: {
   }
 }
 
-// 🎭 15-10-2. 랭킹전 고스트 플레이어 N명 일괄 자동 투입 (시작 5분 후 ~ 현재 시각 사이 분산)
+// 🎭 15-10-2. 랭킹전 고스트 플레이어 N명 일괄 자동 투입 (오직 cycle_rankings 컬렉션에만 안전하게 투입)
 export async function adminBatchInjectGhostRankings(payload: {
   cycleId: string;
   count: number;
@@ -3237,18 +3228,6 @@ export async function adminBatchInjectGhostRankings(payload: {
       });
 
       writePromises.push(setDoc(rankRef, docData));
-
-      // users 프로필도 함께 생성
-      const userRef = doc(db, 'users', name);
-      writePromises.push(setDoc(userRef, {
-        name,
-        avatar: targetAvatar.icon,
-        currentAvatarId: targetAvatar.id,
-        xp: score * 10 + 50,
-        tier: calculateTier(score * 10 + 50).tier,
-        isGhost: true,
-        updatedAt: serverTimestamp()
-      }, { merge: true }));
     }
 
     await Promise.all(writePromises);
@@ -3259,7 +3238,7 @@ export async function adminBatchInjectGhostRankings(payload: {
   }
 }
 
-// 🧹 15-10-3. 해당 차전 고스트 랭커 데이터 전체 일괄 삭제
+// 🧹 15-10-3. 해당 차전 고스트 랭커 데이터 및 users 잔재 일괄 청소
 export async function adminClearGhostRankings(cycleId: string): Promise<{ success: boolean; deletedCount: number; error?: string }> {
   try {
     const q = query(collection(db, 'cycle_rankings'), where('cycleId', '==', cycleId));
@@ -3274,6 +3253,13 @@ export async function adminClearGhostRankings(cycleId: string): Promise<{ succes
         count++;
       }
     }
+
+    // 🧹 혹시 users 컬렉션에 남아있던 고스트 문서들도 완전 청소
+    try {
+      const usersGhostQuery = query(collection(db, 'users'), where('isGhost', '==', true));
+      const userGhostSnap = await getDocs(usersGhostQuery);
+      userGhostSnap.forEach(d => deletePromises.push(deleteDoc(d.ref)));
+    } catch {}
 
     await Promise.all(deletePromises);
     return { success: true, deletedCount: count };
