@@ -113,6 +113,49 @@ export function getCurrentCycleInfo(): CycleInfo {
   };
 }
 
+// 🌐 랭킹전 차전 및 잔여 시간 다국어 포맷터 (한국어 / 영어)
+export function getCycleStatusText(cycle: CycleInfo, language: 'ko' | 'en' = 'ko'): {
+  roundLabel: string;
+  timeRange: string;
+  inProgressText: string;
+  remainingText: string;
+} {
+  const roundLabel = language === 'en' ? `Round ${cycle.cycleIndex}` : `${cycle.cycleIndex}차전`;
+  const timeRange = `${cycle.startTimeStr} ~ ${cycle.endTimeStr}`;
+  const inProgressText = language === 'en' 
+    ? `${roundLabel} (${timeRange}) In Progress`
+    : `현재 ${roundLabel} (${timeRange}) 진행 중`;
+
+  const rHours = Math.floor(cycle.remainingMinutes / 60);
+  const rMins = cycle.remainingMinutes % 60;
+  
+  let remainingText = '';
+  if (language === 'en') {
+    if (rHours > 0 && rMins > 0) {
+      remainingText = `${rHours}h ${rMins}m left`;
+    } else if (rHours > 0) {
+      remainingText = `${rHours}h left`;
+    } else {
+      remainingText = `${rMins}m left`;
+    }
+  } else {
+    if (rHours > 0 && rMins > 0) {
+      remainingText = `${rHours}시간 ${rMins}분 남음`;
+    } else if (rHours > 0) {
+      remainingText = `${rHours}시간 남음`;
+    } else {
+      remainingText = `${rMins}분 남음`;
+    }
+  }
+
+  return {
+    roundLabel,
+    timeRange,
+    inProgressText,
+    remainingText
+  };
+}
+
 export interface TierStats {
   lvl1Correct?: number;
   lvl2Correct?: number;

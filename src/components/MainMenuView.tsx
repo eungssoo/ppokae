@@ -25,7 +25,7 @@ import {
   Globe
 } from 'lucide-react';
 import { UserProfile, ViewType, CycleInfo } from '../types';
-import { calculateTier, checkIsAdmin } from '../services/dbService';
+import { calculateTier, checkIsAdmin, getCycleStatusText } from '../services/dbService';
 import { sound } from '../services/soundService';
 import { useLanguage } from '../services/i18n';
 
@@ -191,17 +191,18 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 group-hover:scale-125 transition-transform duration-700 pointer-events-none" />
           
-          <div className="inline-flex items-center gap-1.5 bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white mb-2.5 border border-white/20">
-            <Clock className="w-3.5 h-3.5 text-yellow-200" />
-            <span>
-              {language === 'en'
-                ? `Round ${currentCycle.cycleName.replace(/[^0-9]/g, '') || '1'} in progress`
-                : `현재 ${currentCycle.cycleName} 진행 중`}
-            </span>
-            <span className="bg-rose-500 text-white px-2 py-0.2 rounded-full text-[10px] font-black">
-              {currentCycle.remainingTimeFormatted}
-            </span>
-          </div>
+          {(() => {
+            const status = getCycleStatusText(currentCycle, language);
+            return (
+              <div className="inline-flex items-center gap-1.5 bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white mb-2.5 border border-white/20">
+                <Clock className="w-3.5 h-3.5 text-yellow-200" />
+                <span>{status.inProgressText}</span>
+                <span className="bg-rose-500 text-white px-2 py-0.2 rounded-full text-[10px] font-black">
+                  {status.remainingText}
+                </span>
+              </div>
+            );
+          })()}
 
           <div className="relative z-10 flex justify-between items-center mb-1">
             <div className="flex items-center gap-2">

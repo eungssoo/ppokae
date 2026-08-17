@@ -1235,16 +1235,19 @@ function AppContent() {
         setSelectedCycleTab(currentCycle.cycleIndex);
         setIsLoading(false);
         setView('ranking_board');
-        toast.coin(`🏆 ${currentCycle.cycleName} 랭킹전 완료!`, `정답 ${correctCount}개 맞춤 ➔ 🪙 +${rewardCoins} 코인 & 🏆 +50 XP 획득!`);
+        const roundTitle = language === 'en' ? `Round ${currentCycle.cycleIndex}` : currentCycle.cycleName;
+        const toastTitle = language === 'en' ? `🏆 ${roundTitle} Ranking Complete!` : `🏆 ${currentCycle.cycleName} 랭킹전 완료!`;
+        const toastMsg = language === 'en' ? `Correct: ${correctCount} Qs ➔ 🪙 +${rewardCoins} Coins & 🏆 +50 XP earned!` : `정답 ${correctCount}개 맞춤 ➔ 🪙 +${rewardCoins} 코인 & 🏆 +50 XP 획득!`;
+        toast.coin(toastTitle, toastMsg);
         trackUserAction('RANKING_PLAY', `${currentCycle.cycleName}: ${score}점 (정답 ${correctCount}개)`, user);
       } else {
         if (rewardCoins > 0) {
           await addCoins(user.name, rewardCoins);
           await refreshUserData(user.name);
-          toast.coin('학습 완료! 🎉', `정답 ${correctCount}개 맞춤 ➔ 🪙 +${rewardCoins} 코인 획득!`);
+          toast.coin(language === 'en' ? 'Practice Complete! 🎉' : '학습 완료! 🎉', language === 'en' ? `Correct: ${correctCount} Qs ➔ 🪙 +${rewardCoins} Coins earned!` : `정답 ${correctCount}개 맞춤 ➔ 🪙 +${rewardCoins} 코인 획득!`);
         } else {
           await refreshUserData(user.name);
-          toast.info('학습 완료! 🎉', '준비된 모든 문제를 풀었습니다.');
+          toast.info(language === 'en' ? 'Practice Complete! 🎉' : '학습 완료! 🎉', language === 'en' ? 'Completed all questions in session.' : '준비된 모든 문제를 풀었습니다.');
         }
         setView(quizMode === 'expression' ? 'expression_select' : quizMode === 'bookmark' ? 'bookmark_view' : 'menu');
         trackUserAction('SOLVE_COMPLETE', `모드: ${quizMode}, 정답: ${correctCount}/${questionCount}개`, user);
