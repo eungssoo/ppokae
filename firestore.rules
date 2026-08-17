@@ -2,54 +2,56 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 👤 1. 유저 프로필 컬렉션 (본인 데이터 보호)
+    // 👤 1. 유저 프로필 컬렉션
     match /users/{userName} {
-      allow read: if true;
-      allow write: if true; // PIN 번호 검증 및 클라이언트 상태 저장
+      allow read, write: if true;
     }
 
-    // 📚 2. 공용 영문법 문제 DB (누구나 열람 가능, 삭제/변조 방지)
+    // 📚 2. 공용 영문법 문제 DB
     match /questions/{questionId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if false; // 🚫 악의적인 대량 삭제 방지
+      allow read, write: if true;
     }
 
     // 🌟 3. 원어민 표현 DB
     match /native_expressions/{expressionId} {
-      allow read: if true;
-      allow create, update: if true;
-      allow delete: if false;
+      allow read, write: if true;
     }
 
-    // 🏆 4. 랭킹전 사이클 및 리더보드
+    // 🏆 4. 랭킹전 사이클 문제 및 실시간 랭킹판
+    match /cycle_challenges/{cycleId} {
+      allow read, write: if true;
+    }
+    match /cycle_rankings/{rankingId} {
+      allow read, write: if true;
+    }
     match /ranking_cycles/{cycleId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if true;
     }
 
     // 📢 5. 공지사항 & 이벤트 보관함
     match /announcements/{announcementId} {
-      allow read: if true;
-      allow write: if true; // 관리자 센터에서 발행
+      allow read, write: if true;
     }
 
     // 🚨 6. 문제 오류 제보 내역 (question_reports & reports 동시 지원)
     match /question_reports/{reportId} {
-      allow read, create, update, delete: if true;
+      allow read, write: if true;
     }
     match /reports/{reportId} {
-      allow read, create, update, delete: if true;
+      allow read, write: if true;
     }
 
     // 📩 7. 1:1 고객 문의 내역
     match /user_inquiries/{inquiryId} {
-      allow read, create: if true;
-      allow update: if true;
-      allow delete: if false;
+      allow read, write: if true;
     }
 
-    // 📊 8. 시스템 통계 및 설정
+    // 📝 8. 오답 노트 보관함
+    match /weaknesses/{weaknessId} {
+      allow read, write: if true;
+    }
+
+    // 📊 9. 시스템 통계 및 설정
     match /system_stats/{statId} {
       allow read, write: if true;
     }

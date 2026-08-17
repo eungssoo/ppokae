@@ -51,6 +51,7 @@ import {
   adminDeleteUserDirect,
   adminBulkImportQuestions,
   adminExportAllQuestions,
+  adminPurgeAndResetAllQuestionsAndCycles,
   adminInjectGhostRanking,
   adminBatchInjectGhostRankings,
   adminClearGhostRankings,
@@ -582,6 +583,33 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
     }
   };
 
+  // 💥 9. 문제 및 랭킹 회차 데이터 전면 삭제 & 클린 리셋 핸들러
+  const handlePurgeAllQuestions = async () => {
+    if (!window.confirm("⚠️ 경고: Firestore의 모든 문제(questions), 랭킹 회차(cycle_challenges), 오류 제보(reports) 및 로컬 캐시를 완전히 영구 삭제하고 클린 리셋하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.")) {
+      return;
+    }
+    sound.playClick();
+    setIsLoading(true);
+    try {
+      const res = await adminPurgeAndResetAllQuestionsAndCycles();
+      if (res.success) {
+        onShowToast(
+          '💥 전면 초기화 완료!', 
+          `문제 ${res.deletedQuestions}개, 랭킹 회차 ${res.deletedCycles}개, 제보 ${res.deletedReports}개가 완전히 삭제 및 초기화되었습니다.`, 
+          'coin'
+        );
+        const updatedReports = await getPendingReports();
+        setReports(updatedReports);
+      } else {
+        onShowToast('초기화 실패', res.error || '오류가 발생했습니다.', 'error');
+      }
+    } catch (e: any) {
+      onShowToast('오류', e.message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const filteredUsers = userList.filter(u => 
     u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
     (u.email && u.email.toLowerCase().includes(userSearchTerm.toLowerCase()))
@@ -1036,6 +1064,35 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                   >
                     <Upload className="w-4 h-4 text-cyan-300" />
                     <span>📤 문제 JSON 일괄 대량 등록</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 💥 Danger Zone: 문제 및 랭킹 회차 데이터 전면 완전 삭제 & 클린 리셋 */}
+              <div className="p-6 rounded-3xl bg-rose-950/40 border-2 border-rose-500/50 shadow-xl space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black tracking-wider uppercase">
+                        DANGER ZONE (초강력 리셋)
+                      </span>
+                      <h4 className="text-sm sm:text-base font-black text-white">
+                        💥 문제 & 랭킹 회차 데이터 전면 삭제
+                      </h4>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
+                      기존에 생성되어 누적된 모든 이전 문제(questions), 랭킹전 회차(cycle_challenges), 오류 제보(reports) 및 로컬 캐시를 100% 완전 영구 삭제하고 청정 초기 상태로 클린 리셋합니다.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handlePurgeAllQuestions}
+                    disabled={isLoading}
+                    className="px-5 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs sm:text-sm font-black shadow-lg shadow-rose-600/30 active:scale-95 transition-all flex items-center gap-2 shrink-0 disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>💥 문제/회차 전면 완전 삭제</span>
                   </button>
                 </div>
               </div>

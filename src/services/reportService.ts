@@ -12,7 +12,7 @@ import {
 import { db } from '../config/firebase';
 import { Question, UserProfile } from '../types';
 import { callGeminiProxy } from './geminiService';
-import { addCoins, removeUndefinedDeep } from './dbService';
+import { addCoins, removeUndefinedDeep, adminUpdateQuestionEverywhere } from './dbService';
 
 export interface QuestionReport {
   id?: string;
@@ -460,15 +460,9 @@ export async function approveReportAndReward(
       updateDoc(doc(db, 'reports', reportId), removeUndefinedDeep(updateData))
     ]);
 
-    // 원본 문제가 지정되어 있고 교정본이 있으면 questions DB 갱신
-    if (fixedQuestion && fixedQuestion.id) {
-      try {
-        const qDocRef = doc(db, 'questions', fixedQuestion.id);
-        await updateDoc(qDocRef, {
-          ...fixedQuestion,
-          updatedAt: serverTimestamp()
-        });
-      } catch {}
+    // 교정본이 있으면 questions DB 및 cycle_challenges 회차 DB에 전역 동시 반영!
+    if (fixedQuestion) {
+      await adminUpdateQuestionEverywhere(fixedQuestion as Question);
     }
 
     if (reporterName) {

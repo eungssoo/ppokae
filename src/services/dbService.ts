@@ -3438,3 +3438,152 @@ export function getLevelGatingInfo(level: number | string): LevelGatingInfo {
     targetDesc: '토익/편입/공무원 실전 기출 수준의 고난도 문장'
   };
 }
+
+// 💥 15-11. 전면 초기화: 모든 문제 및 랭킹 회차 데이터 영구 삭제 & 클린 리셋
+export async function adminPurgeAndResetAllQuestionsAndCycles(): Promise<{
+  success: boolean;
+  deletedQuestions: number;
+  deletedCycles: number;
+  deletedReports: number;
+  error?: string;
+}> {
+  try {
+    let deletedQuestions = 0;
+    let deletedCycles = 0;
+    let deletedReports = 0;
+
+    // 1. Delete all questions in 'questions'
+    try {
+      const qSnap = await getDocs(collection(db, 'questions'));
+      const qDeletes = qSnap.docs.map(d => deleteDoc(d.ref));
+      await Promise.all(qDeletes);
+      deletedQuestions = qSnap.size;
+    } catch (e) {
+      console.warn("Purge questions warn:", e);
+    }
+
+    // 2. Delete all cycle documents in 'cycle_challenges'
+    try {
+      const cSnap = await getDocs(collection(db, 'cycle_challenges'));
+      const cDeletes = cSnap.docs.map(d => deleteDoc(d.ref));
+      await Promise.all(cDeletes);
+      deletedCycles = cSnap.size;
+    } catch (e) {
+      console.warn("Purge cycle_challenges warn:", e);
+    }
+
+    // 3. Delete all reports in 'question_reports' & 'reports'
+    try {
+      const repSnap1 = await getDocs(collection(db, 'question_reports'));
+      const repDeletes1 = repSnap1.docs.map(d => deleteDoc(d.ref));
+      await Promise.all(repDeletes1);
+      deletedReports += repSnap1.size;
+    } catch {}
+    try {
+      const repSnap2 = await getDocs(collection(db, 'reports'));
+      const repDeletes2 = repSnap2.docs.map(d => deleteDoc(d.ref));
+      await Promise.all(repDeletes2);
+      deletedReports += repSnap2.size;
+    } catch {}
+
+    // 4. Clear client-side question caches in localStorage
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (
+          k.includes('quiz_queue') || 
+          k.includes('user_reports') || 
+          k.includes('cached_questions') || 
+          k.includes('ai_grammar_cached') ||
+          k.includes('ppokae_en_exp_') ||
+          k.includes('ranking_cycle_cache')
+        )) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    } catch {}
+
+    return {
+      success: true,
+      deletedQuestions,
+      deletedCycles,
+      deletedReports
+    };
+  } catch (error: any) {
+    console.error("adminPurgeAndResetAllQuestionsAndCycles Error:", error);
+    return {
+      success: false,
+      deletedQuestions: 0,
+      deletedCycles: 0,
+      deletedReports: 0,
+      error: error.message || '전면 초기화 중 오류가 발생했습니다.'
+    };
+  }
+}
+
+// 🔄 15-12. 문제 교정 시 questions DB, cycle_challenges 회차 DB, 제보 DB 전역 즉시 반영
+export async function adminUpdateQuestionEverywhere(
+  fixedQuestion: Question,
+  originalSentence?: string
+): Promise<{ success: boolean; updatedCycles: number }> {
+  try {
+    const cleaned = cleanQuestionForStorage(fixedQuestion);
+    let updatedCycles = 0;
+
+    // 1. questions 컬렉션에 업데이트/삽입
+    if (cleaned.id) {
+      try {
+        const qRef = doc(db, 'questions', cleaned.id);
+        await setDoc(qRef, { ...cleaned, updatedAt: serverTimestamp() }, { merge: true });
+      } catch (e) {
+        console.warn("Update questions doc warn:", e);
+      }
+    }
+
+    // 2. cycle_challenges 컬렉션 전체를 스캔하여 해당 문제가 포함된 회차의 문제 배열 교정
+    try {
+      const cyclesSnap = await getDocs(collection(db, 'cycle_challenges'));
+      const updatePromises = [];
+
+      for (const cycleDoc of cyclesSnap.docs) {
+        const data = cycleDoc.data();
+        const questionsList: Question[] = data.questions || [];
+        let modified = false;
+
+        const targetOrig = (originalSentence || '').trim().toLowerCase();
+        const targetSent = (cleaned.sentence || '').trim().toLowerCase();
+        const targetId = cleaned.id;
+
+        const newList = questionsList.map(q => {
+          const qSent = (q.sentence || '').trim().toLowerCase();
+          if ((targetId && q.id === targetId) || (targetOrig && qSent === targetOrig) || (targetSent && qSent === targetSent)) {
+            modified = true;
+            return {
+              ...cleaned,
+              id: q.id || cleaned.id
+            };
+          }
+          return q;
+        });
+
+        if (modified) {
+          updatePromises.push(updateDoc(cycleDoc.ref, { questions: newList, updatedAt: serverTimestamp() }));
+          updatedCycles++;
+        }
+      }
+
+      if (updatePromises.length > 0) {
+        await Promise.all(updatePromises);
+      }
+    } catch (e) {
+      console.warn("Update cycle_challenges warn:", e);
+    }
+
+    return { success: true, updatedCycles };
+  } catch (error: any) {
+    console.error("adminUpdateQuestionEverywhere Error:", error);
+    return { success: false, updatedCycles: 0 };
+  }
+}
