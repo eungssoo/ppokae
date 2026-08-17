@@ -1477,12 +1477,23 @@ export async function isQuestionBookmarked(userName: string, sentence: string): 
 }
 
 // 🔤 모든 형태의 빈칸 감지 정규식 (언더스코어, [blank], [Blank], (blank), <blank>, [빈칸], 단독 blank 단어 등)
-export const BLANK_PATTERN = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
+export const BLANK_PATTERN = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b|[\(\[]\s*[\w\s\-']+(?:\s*\/\s*[\w\s\-']+)+\s*[\)\]])/gi;
 
-// 🔤 빈칸 표기 표준화 헬퍼 (모든 비정형 빈칸을 ______ 로 통일)
-export function normalizeSentenceBlank(sentence: string): string {
+// 🔤 빈칸 표기 표준화 헬퍼 (모든 비정형 빈칸 및 (is / are) 구문을 ______ 로 통일)
+export function normalizeSentenceBlank(sentence: string, answerText?: string): string {
   if (!sentence || typeof sentence !== 'string') return '';
-  return sentence.replace(BLANK_PATTERN, '______');
+  let s = sentence.replace(BLANK_PATTERN, '______');
+
+  // 만약 여전히 빈칸이 없는 경우, 정답 단어가 문장에 온전하게 들어가 있다면 정답 단어 자리를 ______ 로 치환
+  if (!s.includes('______') && answerText && typeof answerText === 'string') {
+    const trimmedAns = answerText.trim();
+    if (trimmedAns && trimmedAns.length >= 2) {
+      const escaped = trimmedAns.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      s = s.replace(new RegExp(`\\b${escaped}\\b`, 'i'), '______');
+    }
+  }
+
+  return s;
 }
 
 // 🔤 문장에 정답을 깔끔하게 채워 넣는 헬퍼 (문제집, 북마크, 오답노트용)
@@ -2321,10 +2332,15 @@ export async function getAllSavedQuestions(): Promise<Record<string, Question[]>
         dateStr = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
       }
 
+      const cleanSentence = normalizeSentenceBlank(d.sentence, d.answer);
+      if (d.sentence !== cleanSentence) {
+        updateDoc(docSnap.ref, { sentence: cleanSentence }).catch(() => {});
+      }
+
       grouped[normDiff].push({
         id: docSnap.id,
         form: sanitizeForm(d.form),
-        sentence: d.sentence,
+        sentence: cleanSentence,
         options: d.options,
         answer: d.answer,
         translation: d.translation,

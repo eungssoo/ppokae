@@ -227,8 +227,18 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                               {/* The Sentence with Blank (NO answer spoiler) */}
                               <div className="font-medium text-sm sm:text-base text-white leading-relaxed font-sans">
                                 {(() => {
-                                  const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
-                                  const parts = q.sentence.split(BLANK_REGEX);
+                                  const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\(\s*_{1,}\s*\)|\[\s*_{1,}\s*\]|\[\s*___+\s*\]|\bblank\b|\bBlank\b|\bBLANK\b|[\(\[]\s*[\w\s\-']+(?:\s*\/\s*[\w\s\-']+)+\s*[\)\]])/gi;
+                                  let s = q.sentence || '';
+                                  let parts = s.split(BLANK_REGEX);
+
+                                  // If no blank pattern matched, but answer is in the sentence, split by answer
+                                  if (parts.length <= 1 && q.answer) {
+                                    const escaped = q.answer.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                    if (escaped && escaped.length >= 2) {
+                                      parts = s.split(new RegExp(`\\b${escaped}\\b`, 'i'));
+                                    }
+                                  }
+
                                   if (parts.length <= 1) {
                                     return <span>{q.sentence}</span>;
                                   }
