@@ -27,6 +27,11 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
+  // ⚡ 실시간 Firestore 업데이트 감지 시 화면 자동 동기화
+  React.useEffect(() => {
+    setDbData(initialDbData);
+  }, [initialDbData]);
+
   const toggleSection = (diff: string) => {
     setOpenSections(prev => ({
       ...prev,

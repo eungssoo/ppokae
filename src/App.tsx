@@ -33,6 +33,7 @@ import {
   saveAndGetCycleRankings, 
   getCycleRankings, 
   getAllSavedQuestions,
+  subscribeToPublicQuestions,
   getCurrentCycleInfo,
   getTodayDateString,
   addCoins,
@@ -432,7 +433,7 @@ function AppContent() {
     return () => clearInterval(timer);
   }, [isLoading]);
 
-  // Load question counts
+  // ⚡ Load question counts & Real-time Live Subscription
   const loadTotalPublicQuestions = async () => {
     try {
       const allQ = await getAllSavedQuestions();
@@ -445,6 +446,23 @@ function AppContent() {
       console.error(e);
     }
   };
+
+  // ⚡ 공용 DB 문제 실시간 0초 동기화 (누군가 문제를 생성하거나 수정/삭제하면 즉시 전 기기 실시간 반영)
+  useEffect(() => {
+    const unsubscribe = subscribeToPublicQuestions((grouped, count) => {
+      setDbData(grouped);
+      setTotalPublicQuestions(count);
+      const counts: Record<string, number> = {};
+      Object.keys(grouped).forEach(k => {
+        counts[k] = grouped[k].length;
+      });
+      setQuestionCounts(counts);
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
 
   // 1. PIN Login / Account Creation Handler
   const handleLogin = async (name: string, pin: string, starterAvatarId?: string) => {
@@ -1261,13 +1279,16 @@ function AppContent() {
     setView('ranking_board');
   };
 
-  // 9. View All DB
+  // 9. View All DB (실시간 데이터로 0초 즉각 오픈)
   const handleViewDB = async () => {
-    setIsLoading(true);
-    setLoadingText('공용 문제집을 불러오는 중...');
-    const data = await getAllSavedQuestions();
-    setDbData(data);
-    setIsLoading(false);
+    sound.playClick();
+    if (!dbData || Object.keys(dbData).length === 0) {
+      setIsLoading(true);
+      setLoadingText('공용 문제집을 불러오는 중...');
+      const data = await getAllSavedQuestions();
+      setDbData(data);
+      setIsLoading(false);
+    }
     setView('db_view');
   };
 

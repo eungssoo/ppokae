@@ -2372,6 +2372,74 @@ export async function getAllSavedQuestions(): Promise<Record<string, Question[]>
   }
 }
 
+// 12-1. ⚡ 실시간 공용 DB 문제 구독 (누군가 문제를 생성/수정/삭제했을 때 0초 즉각 동기화)
+export function subscribeToPublicQuestions(
+  callback: (grouped: Record<string, Question[]>, totalCount: number) => void
+): () => void {
+  try {
+    const qRef = collection(db, 'questions');
+    const unsubscribe = onSnapshot(qRef, (snapshot) => {
+      const grouped: Record<string, Question[]> = {
+        'Level 1 (입문/초급)': [],
+        'Level 2 (실력 중급)': [],
+        'Level 3 (고득점 도약)': [],
+        'Level 4 (실전 마스터)': []
+      };
+
+      let count = 0;
+      snapshot.forEach(docSnap => {
+        const d = docSnap.data();
+        const normDiff = normalizeDifficultyLabel(d.difficulty);
+        if (!grouped[normDiff]) grouped[normDiff] = [];
+
+        let dateStr = "";
+        if (d.createdAt && typeof d.createdAt.toDate === 'function') {
+          const dt = d.createdAt.toDate();
+          dateStr = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+        }
+
+        const cleanSentence = normalizeSentenceBlank(d.sentence, d.answer);
+
+        grouped[normDiff].push({
+          id: docSnap.id,
+          form: sanitizeForm(d.form),
+          sentence: cleanSentence,
+          options: d.options,
+          answer: d.answer,
+          translation: d.translation,
+          explanation: d.explanation,
+          difficulty: normDiff,
+          createdAt: dateStr
+        });
+        count++;
+      });
+
+      const cleaned: Record<string, Question[]> = {};
+      const LEVEL_ORDER = [
+        'Level 1 (입문/초급)',
+        'Level 2 (실력 중급)',
+        'Level 3 (고득점 도약)',
+        'Level 4 (실전 마스터)'
+      ];
+
+      for (const key of LEVEL_ORDER) {
+        if (grouped[key] && grouped[key].length > 0) {
+          cleaned[key] = grouped[key];
+        }
+      }
+
+      callback(cleaned, count);
+    }, (error) => {
+      console.warn("subscribeToPublicQuestions Error:", error);
+    });
+
+    return unsubscribe;
+  } catch (err) {
+    console.warn("subscribeToPublicQuestions failed to attach listener:", err);
+    return () => {};
+  }
+}
+
 // 📊 12-1. 난이도별 저장된 문제 수 집계
 export async function getQuestionCountsByLevel(): Promise<Record<string, number>> {
   try {
