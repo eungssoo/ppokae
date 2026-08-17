@@ -272,6 +272,11 @@ async function generateSingleBatch(
     }
   };
 
+  const isLvl4 = difficultyLabel.includes('Level 4') || difficultyLabel.includes('4단계') || difficultyLabel.includes('실전') || difficultyLabel.includes('Mastery');
+  const isLvl3 = difficultyLabel.includes('Level 3') || difficultyLabel.includes('3단계') || difficultyLabel.includes('고득점') || difficultyLabel.includes('Advanced');
+  const isLvl2 = difficultyLabel.includes('Level 2') || difficultyLabel.includes('2단계') || difficultyLabel.includes('중급') || difficultyLabel.includes('Intermediate');
+  const isLvl1 = !isLvl4 && !isLvl3 && !isLvl2;
+
   for (const model of models) {
     try {
       const resultData = await callGeminiProxy(model, payload);
@@ -279,7 +284,17 @@ async function generateSingleBatch(
       if (rawText) {
         const parsed: Question[] = JSON.parse(rawText);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map(q => {
+          const validated = parsed.filter(q => {
+            const words = (q.sentence || '').trim().split(/\s+/).length;
+            if (isLvl4 && words < 15) return false;
+            if (isLvl3 && words < 13) return false;
+            if (isLvl1 && words > 13) return false;
+            return true;
+          });
+
+          const targetList = validated.length >= Math.floor(batchCount * 0.5) ? validated : parsed;
+
+          return targetList.map(q => {
             const normalized = normalizeAndFixQuestion(q);
             return {
               ...normalized,

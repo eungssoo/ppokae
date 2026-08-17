@@ -32,7 +32,7 @@ import {
   SystemSettings,
   PushAnnouncement
 } from '../types';
-import { sanitizeForm, generateRankingCycleQuestions, shuffleOptions, normalizeAndFixQuestion } from './geminiService';
+import { sanitizeForm, generateRankingCycleQuestions, generateBulkQuestions, shuffleOptions, normalizeAndFixQuestion } from './geminiService';
 import { STARTER_AVATAR_IDS, performGachaDraw, AVATAR_DATABASE, generateRandomNickname } from './avatarService';
 
 export function getTodayDateString(): string {
@@ -1754,47 +1754,66 @@ export async function saveQuestionsToFirestore(questions: Question[], difficulty
   }
 }
 
-// 3. 공용 DB에서 난이도별 10문제 추출
+// 3. 공용 DB에서 난이도별 10문제 추출 (엄격한 난이도 & 길이 필터링 + 부족 시 AI 실시간 자동 생성 보충)
 export async function getRandomQuestions(difficultyLabel: string): Promise<{ success: boolean; data?: Question[]; error?: string }> {
   try {
+    const targetLvl = difficultyLabel.includes('Level 4') || difficultyLabel.includes('4단계') || difficultyLabel.includes('실전') || difficultyLabel.includes('Mastery') ? 4
+      : difficultyLabel.includes('Level 3') || difficultyLabel.includes('3단계') || difficultyLabel.includes('고득점') || difficultyLabel.includes('Advanced') ? 3
+      : difficultyLabel.includes('Level 2') || difficultyLabel.includes('2단계') || difficultyLabel.includes('중급') || difficultyLabel.includes('Intermediate') ? 2
+      : 1;
+
     const snapshot = await getDocs(collection(db, 'questions'));
-    if (snapshot.empty) {
-      return { success: false, error: "공용 DB에 저장된 문제가 없습니다. [문제 공장]에서 문제를 생성해주세요." };
-    }
-
     const allQuestions: Question[] = [];
-    snapshot.forEach(docSnap => {
-      const d = docSnap.data();
-      const dDiff = String(d.difficulty || d.level || '');
-      const targetLvl = difficultyLabel.includes('Level 4') || difficultyLabel.includes('실전') || difficultyLabel.includes('Mastery') ? 4
-        : difficultyLabel.includes('Level 3') || difficultyLabel.includes('고득점') || difficultyLabel.includes('Advanced') ? 3
-        : difficultyLabel.includes('Level 2') || difficultyLabel.includes('중급') || difficultyLabel.includes('Intermediate') ? 2
-        : 1;
 
-      const docLvl = dDiff.includes('Level 4') || dDiff.includes('실전') || dDiff.includes('Mastery') ? 4
-        : dDiff.includes('Level 3') || dDiff.includes('고득점') || dDiff.includes('Advanced') ? 3
-        : dDiff.includes('Level 2') || dDiff.includes('중급') || dDiff.includes('Intermediate') ? 2
-        : dDiff.includes('Level 1') || dDiff.includes('초급') || dDiff.includes('Beginner') ? 1
-        : 1;
+    if (!snapshot.empty) {
+      snapshot.forEach(docSnap => {
+        const d = docSnap.data();
+        const dDiff = String(d.difficulty || d.level || '');
+        const docLvl = dDiff.includes('Level 4') || dDiff.includes('4단계') || dDiff.includes('실전') || dDiff.includes('Mastery') ? 4
+          : dDiff.includes('Level 3') || dDiff.includes('3단계') || dDiff.includes('고득점') || dDiff.includes('Advanced') ? 3
+          : dDiff.includes('Level 2') || dDiff.includes('2단계') || dDiff.includes('중급') || dDiff.includes('Intermediate') ? 2
+          : dDiff.includes('Level 1') || dDiff.includes('1단계') || dDiff.includes('초급') || dDiff.includes('Beginner') ? 1
+          : 1;
 
-      const matches = docLvl === targetLvl;
+        if (docLvl !== targetLvl) return;
 
-      if (matches) {
+        // 🛡️ 문장 단어 수 기반 엄격한 품질/난이도 필터링 (과거 잘못 생성된 단문 유입 원천 차단)
+        const wordCount = (d.sentence || '').trim().split(/\s+/).length;
+        if (targetLvl === 4 && wordCount < 15) return; // Level 4는 15단어 이상 실전 토익/공무원급
+        if (targetLvl === 3 && wordCount < 13) return; // Level 3는 13단어 이상 수능 복문급
+        if (targetLvl === 1 && wordCount > 13) return; // Level 1은 13단어 이하 기초 단문
+
         allQuestions.push({
           id: docSnap.id,
           form: sanitizeForm(d.form),
           sentence: d.sentence,
-          options: [...(d.options || [])].sort(() => Math.random() - 0.5),
+          options: shuffleOptions(d.options || []),
           answer: d.answer,
           translation: d.translation,
           explanation: d.explanation,
-          components: d.components
+          components: d.components,
+          difficulty: d.difficulty
         });
+      });
+    }
+
+    // 🚀 DB에 유효한 고품질 문제가 10개 미만인 경우: Gemini AI를 실시간 호출하여 정확한 난이도의 10문제를 즉시 생성
+    if (allQuestions.length < 10) {
+      console.log(`[getRandomQuestions]: DB contains ${allQuestions.length} valid questions for [${difficultyLabel}]. Calling Gemini AI for 10 fresh questions...`);
+      try {
+        const aiResult = await generateBulkQuestions(difficultyLabel, '', 10);
+        if (aiResult.success && aiResult.questions && aiResult.questions.length >= 5) {
+          // 백그라운드로 공용 DB에도 저장하여 누적
+          saveQuestionsToFirestore(aiResult.questions, difficultyLabel).catch(() => {});
+          return { success: true, data: aiResult.questions.slice(0, 10) };
+        }
+      } catch (e) {
+        console.warn("Auto AI question generation fallback failed:", e);
       }
-    });
+    }
 
     if (allQuestions.length === 0) {
-      return { success: false, error: `선택하신 [${difficultyLabel}] 난이도의 문제가 없습니다. [문제 공장]에서 해당 난이도 문제를 생성해주세요.` };
+      return { success: false, error: `선택하신 [${difficultyLabel}] 난이도의 유효한 문제가 부족합니다. [문제 공장]에서 새 문제를 생성해 주세요.` };
     }
 
     // 🎯 1~5형식 문형별 고른 분배 알고리즘 (각 문형당 2문제씩 균등 추출)
