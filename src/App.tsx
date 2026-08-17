@@ -56,6 +56,7 @@ import {
   equipUserAvatar,
   checkGoogleRedirectResult,
   getSystemSettings,
+  subscribeToSystemSettings,
   DEFAULT_SYSTEM_SETTINGS,
   checkIsAdmin,
   calculateCycleReward,
@@ -63,7 +64,8 @@ import {
   getUserProfileData,
   calculateTier,
   getQuestionFormStatsByLevel,
-  getRankingQuestionPoints
+  getRankingQuestionPoints,
+  adminDeleteSingleQuestion
 } from './services/dbService';
 import { auth } from './config/firebase';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
@@ -268,8 +270,8 @@ function AppContent() {
 
   // Sync user view & counts & load global system settings
   useEffect(() => {
-    // ⚙️ Load live system settings
-    getSystemSettings().then(setSystemSettings);
+    // ⚙️ Real-time subscription to system settings (Maintenance mode, costs, etc.)
+    const unsub = subscribeToSystemSettings(setSystemSettings);
 
     if (user) {
       setView('menu');
@@ -283,6 +285,8 @@ function AppContent() {
     } else {
       setView('login');
     }
+
+    return () => unsub();
   }, [user?.name]);
 
   // 📱 모바일 뒤로가기 제스처 / 하드웨어 뒤로가기 버튼 처리 (SPA 이탈 방지 & 네이티브 앱 UX)
@@ -1411,8 +1415,104 @@ function AppContent() {
     ? bookmarks.some(b => (b.sentence || b.question?.sentence || '').trim() === (currentQ.sentence || '').trim()) 
     : false;
 
+  const isAdminUser = checkIsAdmin(user) || window.location.pathname.includes('admin') || window.location.hash.includes('admin');
+
+  // 🛠️ 전역 긴급 서버 점검 모드 활성화 시 일반 유저 접속 완벽 차단 & 안내 화면 노출
+  if (systemSettings.maintenanceMode && !isAdminUser) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden selection:bg-rose-500 selection:text-white">
+        {/* Ambient glow */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-rose-600/15 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="max-w-md w-full p-8 rounded-3xl bg-slate-900/95 border-2 border-rose-500/40 shadow-2xl backdrop-blur-xl text-center space-y-6 animate-in zoom-in-95 duration-300 relative z-10">
+          <div className="w-20 h-20 mx-auto rounded-3xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-4xl shadow-lg shadow-rose-500/30 animate-pulse">
+            🛠️
+          </div>
+
+          <div className="space-y-2">
+            <span className="px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black tracking-widest uppercase">
+              SYSTEM MAINTENANCE
+            </span>
+            <h1 className="text-2xl font-black text-white">
+              긴급 서버 점검 중
+            </h1>
+          </div>
+
+          <p className="text-sm text-slate-300 leading-relaxed font-medium bg-slate-950/70 p-4 rounded-2xl border border-slate-800/80">
+            {systemSettings.maintenanceNotice || '현재 시스템 점검 및 서버 업그레이드 중입니다. 잠시 후 다시 접속해 주세요.'}
+          </p>
+
+          <div className="pt-2 flex flex-col gap-3">
+            <button
+              onClick={() => {
+                sound.playClick();
+                window.location.reload();
+              }}
+              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-black text-sm shadow-lg shadow-rose-500/25 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              <span>🔄 점검 상태 새로고침</span>
+            </button>
+
+            <button
+              onClick={() => {
+                sound.playClick();
+                setIsAdminModalOpen(true);
+              }}
+              className="text-xs text-slate-500 hover:text-slate-400 underline font-bold transition-colors"
+            >
+              관리자 인증 로그인
+            </button>
+          </div>
+        </div>
+
+        {isAdminModalOpen && (
+          <AdminCenterModal
+            isOpen={isAdminModalOpen}
+            onClose={() => setIsAdminModalOpen(false)}
+            user={user || {
+              name: 'Admin',
+              pin: '0000',
+              coins: 999999,
+              xp: 9999,
+              tier: 'Master',
+              avatar: '🦁',
+              currentAvatarId: 'lion',
+              unlockedAvatars: ['lion'],
+              bookmarkLimit: 100,
+              isAdmin: true,
+              hasCompletedInitialSetup: true,
+              createdAt: Date.now()
+            }}
+            onUserUpdate={(updated) => {
+              setUser(updated);
+              localStorage.setItem('ai_grammar_user', JSON.stringify(updated));
+            }}
+            onShowToast={(title, msg, type) => {
+              if (type === 'coin') toast.coin(title, msg);
+              else if (type === 'error') toast.error(title, msg);
+              else toast.info(title, msg);
+            }}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 selection:bg-indigo-500 selection:text-white">
+      {/* ⚠️ 관리자에게만 보이는 점검 모드 활성화 알림 바 */}
+      {systemSettings.maintenanceMode && (
+        <div className="bg-gradient-to-r from-rose-600 to-pink-600 text-white px-4 py-2.5 text-xs font-black text-center flex flex-wrap items-center justify-center gap-2 sticky top-0 z-50 shadow-lg">
+          <span>⚠️ [관리자 알림] 현재 긴급 서버 점검 모드가 켜져 있어 일반 유저의 접속이 전면 차단 중입니다.</span>
+          <button
+            onClick={() => { sound.playClick(); setIsAdminModalOpen(true); }}
+            className="underline ml-2 bg-black/30 hover:bg-black/50 px-2.5 py-0.5 rounded-lg transition-colors"
+          >
+            점검 모드 해제 / 설정 변경
+          </button>
+        </div>
+      )}
+
       {isLoading && <LoadingOverlay text={loadingText} progress={progress} />}
 
       {/* Action Confirmation Modal */}
@@ -1703,7 +1803,17 @@ function AppContent() {
       {view === 'db_view' && (
         <DbExplorerView
           dbData={dbData}
+          isAdmin={checkIsAdmin(user) || window.location.pathname.includes('admin')}
           onBack={() => setView('menu')}
+          onDeleteQuestion={async (question) => {
+            const success = await adminDeleteSingleQuestion(question.id, question.sentence);
+            if (success) {
+              toast.info('🗑️ 문제 삭제 완료', '선택하신 문제가 공용 문제집 및 회차 DB에서 영구 삭제되었습니다.');
+              loadTotalPublicQuestions();
+            } else {
+              toast.error('삭제 실패', '문제 삭제 중 오류가 발생했습니다.');
+            }
+          }}
         />
       )}
 

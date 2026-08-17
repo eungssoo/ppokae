@@ -55,5 +55,8 @@ service cloud.firestore {
     match /system_stats/{statId} {
       allow read, write: if true;
     }
+    match /system_configs/{configId} {
+      allow read, write: if true;
+    }
   }
 }

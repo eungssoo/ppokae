@@ -293,7 +293,7 @@ export async function generateBulkQuestions(
       ]);
 
       const merged = batches.flat();
-      if (merged.length >= 10) {
+      if (merged.length > 0) {
         return { success: true, questions: merged };
       }
     } else if (count > 10) {

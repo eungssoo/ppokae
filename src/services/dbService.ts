@@ -13,7 +13,8 @@ import {
   increment,
   deleteDoc,
   arrayUnion,
-  runTransaction
+  runTransaction,
+  onSnapshot
 } from 'firebase/firestore';
 import { db, auth } from '../config/firebase';
 import { signInAnonymously, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, User } from 'firebase/auth';
@@ -1306,16 +1307,37 @@ export async function getUserProfileData(userName: string): Promise<Partial<User
   }
 }
 
-// 🪙 코인 차감 (관리자는 무제한 무료 패스)
+// 🪙 코인 차감 (관리자는 무제한 무료 패스, 신규 유저 스타터 코인 200 지원)
 export async function deductCoins(userName: string, amount: number, userObj?: Partial<UserProfile> | null): Promise<boolean> {
   try {
+    if (amount <= 0) return true;
     if (userObj && checkIsAdmin(userObj)) return true;
 
     const userRef = doc(db, 'users', userName);
     const snap = await getDoc(userRef);
+
     if (!snap.exists()) {
-      if (userObj && checkIsAdmin(userObj)) return true;
-      return false;
+      // 🚀 Firestore 문서가 아직 생성되지 않은 유저인 경우 (스타터 코인 200 기반 차감 & 즉시 DB 생성)
+      const localCoins = typeof userObj?.coins === 'number' ? userObj.coins : 200;
+      if (localCoins < amount) return false;
+
+      const remaining = localCoins - amount;
+      await setDoc(userRef, removeUndefinedDeep({
+        ...userObj,
+        name: userName,
+        coins: remaining,
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp()
+      }), { merge: true });
+
+      try {
+        if (userObj) {
+          userObj.coins = remaining;
+          localStorage.setItem('ai_grammar_user', JSON.stringify({ ...userObj, coins: remaining }));
+        }
+      } catch {}
+
+      return true;
     }
 
     const data = snap.data();
@@ -1323,16 +1345,36 @@ export async function deductCoins(userName: string, amount: number, userObj?: Pa
       return true;
     }
 
-    const current = data.coins ?? 0;
-    if (current < amount) return false;
+    const currentCoins = typeof data.coins === 'number' 
+      ? data.coins 
+      : (typeof userObj?.coins === 'number' ? userObj.coins : 200);
 
+    if (currentCoins < amount) return false;
+
+    const newCoins = currentCoins - amount;
     await setDoc(userRef, {
-      coins: increment(-amount),
+      coins: newCoins,
       updatedAt: serverTimestamp()
     }, { merge: true });
+
+    try {
+      if (userObj) {
+        userObj.coins = newCoins;
+        localStorage.setItem('ai_grammar_user', JSON.stringify({ ...userObj, coins: newCoins }));
+      }
+    } catch {}
+
     return true;
   } catch (e) {
     console.error("deductCoins error:", e);
+    // 네트워크 일시 오류 시 로컬 코인이 충분하면 차감 후 진행 허용
+    if (userObj && typeof userObj.coins === 'number' && userObj.coins >= amount) {
+      userObj.coins -= amount;
+      try {
+        localStorage.setItem('ai_grammar_user', JSON.stringify(userObj));
+      } catch {}
+      return true;
+    }
     return false;
   }
 }
@@ -2499,6 +2541,29 @@ export async function updateSystemSettings(updates: Partial<SystemSettings>): Pr
   }
 }
 
+// ⚙️ 15-3-1. 전역 시스템 설정 실시간 리스너 (점검 모드 등 즉시 반응)
+export function subscribeToSystemSettings(callback: (settings: SystemSettings) => void): () => void {
+  try {
+    const docRef = doc(db, 'system_configs', 'global_settings');
+    const unsubscribe = onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        callback({
+          ...DEFAULT_SYSTEM_SETTINGS,
+          ...snap.data()
+        });
+      } else {
+        callback(DEFAULT_SYSTEM_SETTINGS);
+      }
+    }, (error) => {
+      console.warn("subscribeToSystemSettings warn:", error);
+    });
+    return unsubscribe;
+  } catch (e) {
+    console.warn("subscribeToSystemSettings error:", e);
+    return () => {};
+  }
+}
+
 // ⚡ 15-4. 관리자 갓 모드 (God Mode) 활성화: 코인 999,999 + 전 아바타 24종 올 언락 + 마스터 티어
 export async function grantAdminGodMode(userName: string): Promise<{ success: boolean; profile?: UserProfile; error?: string }> {
   try {
@@ -3585,5 +3650,55 @@ export async function adminUpdateQuestionEverywhere(
   } catch (error: any) {
     console.error("adminUpdateQuestionEverywhere Error:", error);
     return { success: false, updatedCycles: 0 };
+  }
+}
+
+// 🗑️ 15-13. 관리자 전용: 공용 문제집 내 특정 불량/오류 문제 단건 즉시 영구 삭제
+export async function adminDeleteSingleQuestion(questionId?: string, sentence?: string): Promise<boolean> {
+  try {
+    // 1. questionId가 있으면 직접 삭제
+    if (questionId) {
+      try {
+        await deleteDoc(doc(db, 'questions', questionId));
+      } catch (e) {
+        console.warn("deleteDoc by id warn:", e);
+      }
+    }
+
+    // 2. sentence 기반으로 questions 컬렉션 일치 도큐먼트 전수 검색 후 삭제
+    if (sentence) {
+      const targetSent = sentence.trim().toLowerCase();
+      const snap = await getDocs(collection(db, 'questions'));
+      const toDelete = snap.docs.filter(d => {
+        const dSent = (d.data().sentence || '').trim().toLowerCase();
+        return dSent === targetSent || (questionId && d.id === questionId);
+      });
+      if (toDelete.length > 0) {
+        await Promise.all(toDelete.map(d => deleteDoc(d.ref)));
+      }
+
+      // 3. cycle_challenges 회차 DB 내에서도 해당 문제 제거/치유
+      try {
+        const cyclesSnap = await getDocs(collection(db, 'cycle_challenges'));
+        for (const cycleDoc of cyclesSnap.docs) {
+          const data = cycleDoc.data();
+          const qList: Question[] = data.questions || [];
+          const filtered = qList.filter(q => {
+            const qSent = (q.sentence || '').trim().toLowerCase();
+            return qSent !== targetSent && (!questionId || q.id !== questionId);
+          });
+          if (filtered.length !== qList.length) {
+            await updateDoc(cycleDoc.ref, { questions: filtered, updatedAt: serverTimestamp() });
+          }
+        }
+      } catch (e) {
+        console.warn("cycle_challenges purge warn:", e);
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error("adminDeleteSingleQuestion Error:", error);
+    return false;
   }
 }
