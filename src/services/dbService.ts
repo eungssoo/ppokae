@@ -31,7 +31,7 @@ import {
   SystemSettings,
   PushAnnouncement
 } from '../types';
-import { sanitizeForm, generateRankingCycleQuestions, shuffleOptions } from './geminiService';
+import { sanitizeForm, generateRankingCycleQuestions, shuffleOptions, normalizeAndFixQuestion } from './geminiService';
 import { STARTER_AVATAR_IDS, performGachaDraw, AVATAR_DATABASE, generateRandomNickname } from './avatarService';
 
 export function getTodayDateString(): string {
@@ -1453,38 +1453,27 @@ export function fillSentenceAnswer(sentence: string, answer: string): string {
   return sentence;
 }
 
-// Helper: Firestore 안전 저장을 위한 Question 객체 정제 (undefined 100% 제거)
+// Helper: Firestore 안전 저장을 위한 Question 객체 정제 (정답 일치화 및 undefined 100% 제거)
 export function cleanQuestionForStorage(q: any): any {
-  const rawSentence = q?.sentence || '';
-  const normalizedSentence = normalizeSentenceBlank(rawSentence);
+  const normalized = normalizeAndFixQuestion(q);
 
   return removeUndefinedDeep({
-    form: sanitizeForm(q?.form),
-    sentence: normalizedSentence,
-    options: Array.isArray(q?.options)
-      ? shuffleOptions(q.options.map((opt: any) => {
-          if (typeof opt === 'string') return opt;
-          return {
-            text: opt?.text || '',
-            is_correct: !!opt?.is_correct,
-            feedback: opt?.feedback || ''
-          };
-        }))
-      : [],
-    answer: q?.answer || '',
-    translation: q?.translation || '',
-    explanation: {
-      chunk_pattern: q?.explanation?.chunk_pattern || '핵심 문형 정리',
-      nuance: q?.explanation?.nuance || '자연스러운 뉘앙스 해설'
-    },
-    components: Array.isArray(q?.components)
-      ? q.components.map((c: any) => ({
+    id: normalized.id,
+    form: normalized.form,
+    sentence: normalized.sentence,
+    options: shuffleOptions(normalized.options),
+    answer: normalized.answer,
+    translation: normalized.translation,
+    explanation: normalized.explanation,
+    components: Array.isArray(normalized.components)
+      ? normalized.components.map((c: any) => ({
           chunk: c?.chunk || '',
           role: c?.role || '수식어',
           meaning: c?.meaning || ''
         }))
       : [],
-    difficulty: q?.difficulty || 'Level 1'
+    difficulty: normalized.difficulty || normalized.level || 'Level 1',
+    level: normalized.level || normalized.difficulty || 'Level 1'
   });
 }
 
@@ -1914,11 +1903,14 @@ export async function getOrCreateCycleQuestions(cycleInfo: CycleInfo): Promise<{
     const cycleSnap = await getDoc(cycleRef);
 
     if (cycleSnap.exists()) {
-      const qList = (cycleSnap.data().questions || []).map((q: any) => ({
-        ...q,
-        form: sanitizeForm(q.form)
-      }));
+      const rawList = cycleSnap.data().questions || [];
+      const qList = rawList.map((q: any) => normalizeAndFixQuestion(q));
       if (qList.length >= 10) {
+        // 🛡️ 기존 DB에 저장된 문제 중 answer가 "1", "A" 등 인덱스 번호로 잘못 들어가 있던 경우 즉시 백그라운드 자동 치유 & 동기화
+        const hasCorrupted = rawList.some((q: any) => /^[(\[]?([1-4A-Da-d])[)\]번]?$/.test(String(q?.answer || '').trim()));
+        if (hasCorrupted) {
+          setDoc(cycleRef, { questions: qList }, { merge: true }).catch(() => {});
+        }
         return { success: true, data: qList };
       }
     }

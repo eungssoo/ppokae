@@ -1276,7 +1276,31 @@ function AppContent() {
   // 12. Check Answer in Quiz & Record Analytics (실시간 경험치 누적 및 티어 난이도 연동)
   const handleCheckAnswer = (userInput: string) => {
     if (!currentQ || !user) return { isCorrect: false };
-    const isCorrect = userInput.trim() === currentQ.answer;
+
+    const userAns = userInput.trim().toLowerCase();
+    const correctAns = (currentQ.answer || '').trim().toLowerCase();
+
+    // 1. Direct text comparison
+    let isCorrect = userAns === correctAns;
+
+    // 2. Options is_correct validation (Primary ground truth)
+    if (!isCorrect && Array.isArray(currentQ.options)) {
+      const selectedOpt = currentQ.options.find(opt => {
+        const optText = (typeof opt === 'string' ? opt : opt?.text || '').trim().toLowerCase();
+        return optText === userAns;
+      });
+      if (selectedOpt && typeof selectedOpt === 'object' && selectedOpt.is_correct === true) {
+        isCorrect = true;
+      }
+
+      const trueCorrectOpt = currentQ.options.find(opt => typeof opt === 'object' && opt.is_correct === true);
+      if (trueCorrectOpt && typeof trueCorrectOpt === 'object') {
+        const trueText = (trueCorrectOpt.text || '').trim().toLowerCase();
+        if (trueText && trueText === userAns) {
+          isCorrect = true;
+        }
+      }
+    }
 
     // 문제 난이도 레벨 추출 (1 ~ 4)
     let questionLevel = 1;

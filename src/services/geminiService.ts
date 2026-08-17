@@ -65,6 +65,77 @@ export function shuffleOptions<T = any>(options: T[]): T[] {
   return arr;
 }
 
+// 🎯 문제 정답 및 4지선다 동기화 보정 헬퍼 (answer가 "1", "A" 등 인덱스로 반환되는 오류 100% 원천 차단)
+export function normalizeAndFixQuestion(q: any): Question {
+  const rawOptions = Array.isArray(q?.options) ? [...q.options] : [];
+  let options = rawOptions.map((opt: any) => {
+    if (typeof opt === 'string') {
+      return { text: opt, is_correct: false, feedback: '' };
+    }
+    return {
+      text: String(opt?.text || opt?.word || opt?.value || opt?.choice || '').trim(),
+      is_correct: !!opt?.is_correct,
+      feedback: opt?.feedback || ''
+    };
+  });
+
+  let rawAnswer = String(q?.answer || '').trim();
+  let resolvedAnswer = rawAnswer;
+
+  // 1. answer가 "1", "2", "3", "4", "1번", "(1)", "A", "B", "C", "D" 등 번호/기호인 경우
+  const numMatch = rawAnswer.match(/^[(\[]?([1-4])[)\]번]?$/);
+  const letterMatch = rawAnswer.match(/^[(\[]?([A-Da-d])[)\]]?$/);
+
+  if (numMatch) {
+    const idx = parseInt(numMatch[1], 10) - 1;
+    if (options[idx]) {
+      options.forEach((o, i) => { o.is_correct = (i === idx); });
+      resolvedAnswer = options[idx].text;
+    }
+  } else if (letterMatch) {
+    const idx = letterMatch[1].toUpperCase().charCodeAt(0) - 65;
+    if (options[idx]) {
+      options.forEach((o, i) => { o.is_correct = (i === idx); });
+      resolvedAnswer = options[idx].text;
+    }
+  } else {
+    // 2. is_correct: true 인 보기가 있는 경우 그 보기의 text를 answer로 확정
+    const correctOpt = options.find(o => o.is_correct === true);
+    if (correctOpt && correctOpt.text) {
+      resolvedAnswer = correctOpt.text;
+    } else if (resolvedAnswer) {
+      // 3. is_correct 가 모두 false 인 경우 answer 텍스트와 일치하는 보기를 is_correct = true 로 지정
+      const matchedOpt = options.find(o => o.text.toLowerCase() === resolvedAnswer.toLowerCase());
+      if (matchedOpt) {
+        options.forEach(o => { o.is_correct = (o === matchedOpt); });
+        resolvedAnswer = matchedOpt.text;
+      } else if (options.length > 0) {
+        options[0].is_correct = true;
+        resolvedAnswer = options[0].text;
+      }
+    } else if (options.length > 0) {
+      options[0].is_correct = true;
+      resolvedAnswer = options[0].text;
+    }
+  }
+
+  // 4. options 내부의 feedback 도 최소 보장
+  options = options.map(opt => ({
+    ...opt,
+    feedback: opt.feedback || (opt.is_correct ? '정답입니다! 문법 구조에 알맞습니다.' : '오답입니다. 문법적 역할이나 시제에 맞지 않습니다.')
+  }));
+
+  return {
+    ...q,
+    form: sanitizeForm(q?.form),
+    sentence: normalizeSentenceBlank(q?.sentence || ''),
+    options,
+    answer: resolvedAnswer,
+    translation: q?.translation || '',
+    explanation: q?.explanation || { chunk_pattern: '핵심 문형 정리', nuance: '자연스러운 뉘앙스 해설' }
+  };
+}
+
 // 🔒 보안 프록시 호출 헬퍼 (API Key 브라우저 노출 100% 차단)
 export async function callGeminiProxy(model: string, payload: any): Promise<any> {
   const response = await fetch('/api/gemini/generate', {
@@ -167,12 +238,13 @@ async function generateSingleBatch(
       if (rawText) {
         const parsed: Question[] = JSON.parse(rawText);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map(q => ({
-            ...q,
-            sentence: normalizeSentenceBlank(q.sentence),
-            form: sanitizeForm(q.form),
-            options: shuffleOptions(q.options)
-          }));
+          return parsed.map(q => {
+            const normalized = normalizeAndFixQuestion(q);
+            return {
+              ...normalized,
+              options: shuffleOptions(normalized.options)
+            };
+          });
         }
       }
     } catch (e: any) {
@@ -684,16 +756,15 @@ export async function generateRankingCycleQuestions(
       if (rawText) {
         const parsed = JSON.parse(rawText);
         if (Array.isArray(parsed) && parsed.length >= 10) {
-          const formatted: Question[] = parsed.slice(0, 10).map((q: any, i: number) => ({
-            id: `ranking_${cycleId}_q${i + 1}`,
-            form: sanitizeForm(q.form),
-            sentence: q.sentence,
-            options: shuffleOptions(q.options),
-            answer: q.answer,
-            translation: q.translation,
-            explanation: q.explanation,
-            level: i < 2 ? 'Level 1' : i < 5 ? 'Level 2' : i < 8 ? 'Level 3' : 'Level 4'
-          }));
+          const formatted: Question[] = parsed.slice(0, 10).map((q: any, i: number) => {
+            const normalized = normalizeAndFixQuestion(q);
+            return {
+              ...normalized,
+              id: `ranking_${cycleId}_q${i + 1}`,
+              options: shuffleOptions(normalized.options),
+              level: i < 2 ? 'Level 1' : i < 5 ? 'Level 2' : i < 8 ? 'Level 3' : 'Level 4'
+            };
+          });
           return { success: true, questions: formatted };
         }
       }
@@ -705,11 +776,14 @@ export async function generateRankingCycleQuestions(
 
   // 🛡️ AI 호출 실패 시 비상 보증 10문제 마스터 팩 즉시 공급
   console.log("Using MASTER_RANKING_FALLBACK_PACK for ranking cycle...");
-  const fallbackWithCycleId = MASTER_RANKING_FALLBACK_PACK.map((q, i) => ({
-    ...q,
-    id: `ranking_${cycleId}_q${i + 1}`,
-    options: shuffleOptions(q.options)
-  }));
+  const fallbackWithCycleId = MASTER_RANKING_FALLBACK_PACK.map((q, i) => {
+    const normalized = normalizeAndFixQuestion(q);
+    return {
+      ...normalized,
+      id: `ranking_${cycleId}_q${i + 1}`,
+      options: shuffleOptions(normalized.options)
+    };
+  });
 
   return { 
     success: true, 

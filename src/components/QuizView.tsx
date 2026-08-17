@@ -526,7 +526,15 @@ export const QuizView: React.FC<QuizViewProps> = ({
                     <p className="font-medium text-slate-300 text-sm mt-1">
                       {t('correctAnswerIs')}{' '}
                       <strong className="bg-slate-800 text-emerald-400 px-2.5 py-0.5 rounded border border-slate-700 font-black">
-                        {currentQuestion.answer}
+                        {(() => {
+                          const correctOpt = Array.isArray(currentQuestion?.options)
+                            ? currentQuestion.options.find((o: any) => typeof o === 'object' && o.is_correct === true)
+                            : null;
+                          if (correctOpt && typeof correctOpt === 'object' && correctOpt.text) {
+                            return correctOpt.text;
+                          }
+                          return currentQuestion.answer;
+                        })()}
                       </strong>
                     </p>
                   )}
