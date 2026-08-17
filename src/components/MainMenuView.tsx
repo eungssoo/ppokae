@@ -28,7 +28,6 @@ import { UserProfile, ViewType, CycleInfo } from '../types';
 import { calculateTier, checkIsAdmin } from '../services/dbService';
 import { sound } from '../services/soundService';
 import { useLanguage } from '../services/i18n';
-import { GrammarSkillVault } from './GrammarSkillVault';
 
 interface MainMenuViewProps {
   user: UserProfile;
@@ -409,8 +408,45 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           </div>
         </div>
 
-        {/* 🧠 시험장 1초 킬러 문법 보관소 (Grammar Pro Skill & Hacks Vault) */}
-        <GrammarSkillVault />
+        {/* 🧠 시험장 1초 킬러 문법 보관소 바로가기 카드 */}
+        <div className="mb-6">
+          <button
+            onClick={() => {
+              sound.playClick();
+              onNavigate('grammar_skill_vault');
+            }}
+            className="w-full group p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-indigo-500/15 hover:from-amber-500/25 hover:to-indigo-500/25 border-2 border-amber-500/40 hover:border-amber-400 rounded-3xl transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99] text-left flex items-center justify-between gap-3 relative overflow-hidden"
+          >
+            {/* Ambient Glow */}
+            <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+
+            <div className="flex items-center gap-3.5 relative z-10 flex-1">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-xl sm:text-2xl shadow-md flex-shrink-0 group-hover:scale-105 transition-transform">
+                🧠
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                  <h3 className="text-sm sm:text-base font-black text-white group-hover:text-amber-200 transition-colors">
+                    {language === 'en' ? 'Grammar Pro Skill & Hacks Vault 🧠' : '시험장 1초 킬러 문법 보관소 🧠'}
+                  </h3>
+                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black px-2 py-0.2 rounded-full">
+                    {language === 'en' ? '12 Master Formulas' : '12대 필살 공식'}
+                  </span>
+                </div>
+                <p className="text-slate-300 text-xs font-medium line-clamp-1">
+                  {language === 'en'
+                    ? 'Click to view full cheat sheet: slot rules, sensory verbs, that vs what, and participle keys ➔'
+                    : '관사 뒤 명사 자리, 감각동사 형용사 보어, 분사 판별 등 1초 정답 치트키 12선 바로보기 ➔'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-shrink-0 relative z-10 flex items-center gap-1 text-xs font-black text-amber-300 bg-slate-900/80 px-3 py-2 rounded-2xl border border-amber-500/40 group-hover:bg-amber-500 group-hover:text-slate-950 transition-all">
+              <span className="hidden sm:inline">{language === 'en' ? 'Open Vault' : '보관소 열기'}</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </button>
+        </div>
 
         {/* 📊 3. Analytics & Utility Hub: 학습 분석 & 도구 (하단 보조 메뉴) */}
         <div>

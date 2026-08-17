@@ -85,6 +85,7 @@ import { RevengeModal } from './components/RevengeModal';
 import { ExpressionSelectView, EXPRESSION_CATEGORIES } from './components/ExpressionSelectView';
 import { ExpressionStudyView } from './components/ExpressionStudyView';
 import { BookmarkedListView } from './components/BookmarkedListView';
+import { GrammarSkillVaultView } from './components/GrammarSkillVaultView';
 import { ActionConfirmModal, ActionModalConfig } from './components/ActionConfirmModal';
 import { AnalyticsDashboardView } from './components/AnalyticsDashboardView';
 import { ProfileView } from './components/ProfileView';
@@ -1441,6 +1442,13 @@ function AppContent() {
             setCorrectCount(0);
             setView('solve');
           }}
+        />
+      )}
+
+      {/* 🧠 4.5. Grammar Skill Vault View (시험장 1초 킬러 문법 보관소 전용 화면) */}
+      {view === 'grammar_skill_vault' && (
+        <GrammarSkillVaultView
+          onBack={() => setView('menu')}
         />
       )}
 

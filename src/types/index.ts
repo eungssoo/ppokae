@@ -13,7 +13,8 @@ export type ViewType =
   | 'expression_study'
   | 'bookmark_view'
   | 'analytics_view'
-  | 'profile_view';
+  | 'profile_view'
+  | 'grammar_skill_vault';
 
 export type QuizMode = 'normal' | 'personal' | 'daily' | 'expression' | 'bookmark';
 
