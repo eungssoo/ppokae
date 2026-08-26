@@ -158,7 +158,7 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
         )}
 
         {/* Cycle Tabs (1차전, 2차전, 3차전) */}
-        <div className="grid grid-cols-3 gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 mb-3">
+        <div className="grid grid-cols-3 gap-2 bg-slate-100 dark:bg-slate-900/80 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 mb-3">
           {CYCLES.map((c) => {
             const isSelected = selectedCycleIndex === c.index;
             const isCurrent = currentCycle.cycleIndex === c.index;
@@ -174,7 +174,7 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
                 className={`py-2.5 px-2 rounded-xl text-center transition-all ${
                   isSelected
                     ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black shadow-md'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center justify-center gap-1">
@@ -182,7 +182,7 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
                   {isCurrent ? (
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   ) : isEnded ? (
-                    <span className="text-[9px] text-amber-300 font-bold">{language === 'en' ? 'Ended' : '종료'}</span>
+                    <span className="text-[9px] text-amber-700 dark:text-amber-300 font-bold">{language === 'en' ? 'Ended' : '종료'}</span>
                   ) : null}
                 </div>
                 <div className="text-[10px] opacity-80 mt-0.5">{c.time}</div>
@@ -192,51 +192,51 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
         </div>
 
         {/* 🏆 회차별 차등 순위 보상표 */}
-        <div className="bg-gradient-to-r from-slate-900/90 via-indigo-950/40 to-slate-900/90 border border-indigo-500/30 rounded-2xl p-3.5 mb-5 shadow-lg">
+        <div className="bg-white dark:bg-slate-900/90 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl p-3.5 mb-5 shadow-sm">
           <div className="flex items-center justify-between mb-2.5">
-            <div className="flex items-center gap-1.5 text-xs font-black text-amber-300 uppercase tracking-wider">
-              <Trophy className="w-4 h-4 text-amber-400" />
+            <div className="flex items-center gap-1.5 text-xs font-black text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+              <Trophy className="w-4 h-4 text-amber-500" />
               <span>{language === 'en' ? `Round ${selectedCycleIndex} Rewards` : `${selectedCycleIndex}차전 종료 시 지급 순위 보상`}</span>
             </div>
-            <span className="text-[10px] text-slate-400 font-medium">{language === 'en' ? 'Auto Claim on Round End' : '회차 마감 시 자동 정산'}</span>
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{language === 'en' ? 'Auto Claim on Round End' : '회차 마감 시 자동 정산'}</span>
           </div>
           <div className="grid grid-cols-5 gap-1 sm:gap-1.5 text-center text-[10px] sm:text-[11px]">
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
-              <div className="font-black text-amber-300 truncate">{language === 'en' ? '🥇 1st' : '🥇 1위'}</div>
-              <div className="text-white font-black text-xs mt-0.5">🪙 200</div>
-              <div className="text-[8px] sm:text-[9px] text-amber-200/80 font-bold truncate">+150 XP</div>
+            <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
+              <div className="font-black text-amber-800 dark:text-amber-300 truncate">{language === 'en' ? '🥇 1st' : '🥇 1위'}</div>
+              <div className="text-slate-900 dark:text-white font-black text-xs mt-0.5">🪙 200</div>
+              <div className="text-[8px] sm:text-[9px] text-amber-700 dark:text-amber-200/80 font-bold truncate">+150 XP</div>
             </div>
-            <div className="bg-slate-700/30 border border-slate-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
-              <div className="font-black text-slate-200 truncate">{language === 'en' ? '🥈 2nd' : '🥈 2위'}</div>
-              <div className="text-white font-black text-xs mt-0.5">🪙 120</div>
-              <div className="text-[8px] sm:text-[9px] text-slate-300/80 font-bold truncate">+100 XP</div>
+            <div className="bg-slate-100 dark:bg-slate-700/30 border border-slate-300 dark:border-slate-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
+              <div className="font-black text-slate-700 dark:text-slate-200 truncate">{language === 'en' ? '🥈 2nd' : '🥈 2위'}</div>
+              <div className="text-slate-900 dark:text-white font-black text-xs mt-0.5">🪙 120</div>
+              <div className="text-[8px] sm:text-[9px] text-slate-600 dark:text-slate-300/80 font-bold truncate">+100 XP</div>
             </div>
-            <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
-              <div className="font-black text-orange-300 truncate">{language === 'en' ? '🥉 3rd' : '🥉 3위'}</div>
-              <div className="text-white font-black text-xs mt-0.5">🪙 80</div>
-              <div className="text-[8px] sm:text-[9px] text-orange-200/80 font-bold truncate">+60 XP</div>
+            <div className="bg-orange-50 dark:bg-orange-500/10 border border-orange-300 dark:border-orange-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
+              <div className="font-black text-orange-800 dark:text-orange-300 truncate">{language === 'en' ? '🥉 3rd' : '🥉 3위'}</div>
+              <div className="text-slate-900 dark:text-white font-black text-xs mt-0.5">🪙 80</div>
+              <div className="text-[8px] sm:text-[9px] text-orange-700 dark:text-orange-200/80 font-bold truncate">+60 XP</div>
             </div>
-            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
-              <div className="font-black text-purple-300 truncate">{language === 'en' ? '4th~10th' : '4~10위'}</div>
-              <div className="text-white font-black text-xs mt-0.5">🪙 40</div>
-              <div className="text-[8px] sm:text-[9px] text-purple-200/80 font-bold truncate">+30 XP</div>
+            <div className="bg-purple-50 dark:bg-purple-500/10 border border-purple-300 dark:border-purple-500/30 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
+              <div className="font-black text-purple-800 dark:text-purple-300 truncate">{language === 'en' ? '4th~10th' : '4~10위'}</div>
+              <div className="text-slate-900 dark:text-white font-black text-xs mt-0.5">🪙 40</div>
+              <div className="text-[8px] sm:text-[9px] text-purple-700 dark:text-purple-200/80 font-bold truncate">+30 XP</div>
             </div>
-            <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
-              <div className="font-black text-slate-400 truncate">{language === 'en' ? 'Entry' : '참가'}</div>
-              <div className="text-white font-black text-xs mt-0.5">🪙 15</div>
-              <div className="text-[8px] sm:text-[9px] text-slate-400 font-bold truncate">+10 XP</div>
+            <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-300 dark:border-slate-700/60 rounded-xl p-1.5 sm:p-2 flex flex-col justify-center min-w-0">
+              <div className="font-black text-slate-600 dark:text-slate-400 truncate">{language === 'en' ? 'Entry' : '참가'}</div>
+              <div className="text-slate-900 dark:text-white font-black text-xs mt-0.5">🪙 15</div>
+              <div className="text-[8px] sm:text-[9px] text-slate-500 dark:text-slate-400 font-bold truncate">+10 XP</div>
             </div>
           </div>
         </div>
 
         {/* Leaderboard content */}
         {rankingData.length === 0 ? (
-          <div className="bg-slate-800/40 rounded-3xl border-2 border-dashed border-slate-700 p-8 sm:p-10 text-center text-slate-400">
+          <div className="bg-slate-50 dark:bg-slate-800/40 rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 p-8 sm:p-10 text-center text-slate-500 dark:text-slate-400">
             <span className="text-4xl mb-2 block">👀</span>
-            <p className="font-extrabold text-base sm:text-lg text-white">
+            <p className="font-black text-base sm:text-lg text-slate-900 dark:text-white">
               {language === 'en' ? 'No participants in this round yet!' : `${CYCLES.find(c => c.index === selectedCycleIndex)?.label} 참여자가 아직 없습니다!`}
             </p>
-            <p className="mt-1 text-xs text-slate-400 font-medium">
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 font-medium">
               {language === 'en' ? 'Challenge now and claim 1st place!' : '지금 바로 도전해서 영광의 1위 자리를 선점하세요!'}
             </p>
             {selectedCycleIndex === currentCycle.cycleIndex && (
@@ -253,25 +253,25 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
             {rankingData.map((rank, index) => {
               const isCurrentUser = user.name === rank.name;
               let badge: React.ReactNode = (
-                <span className="w-7 h-7 flex items-center justify-center bg-slate-800 rounded-full text-slate-400 font-bold text-xs border border-slate-700 shrink-0">
+                <span className="w-7 h-7 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-full text-slate-700 dark:text-slate-400 font-bold text-xs border border-slate-300 dark:border-slate-700 shrink-0">
                   {index + 1}
                 </span>
               );
-              let rowStyle = 'bg-slate-800/60 border-slate-700/80';
-              let textStyle = 'text-slate-200';
+              let rowStyle = 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/80';
+              let textStyle = 'text-slate-900 dark:text-slate-200';
 
               if (index === 0) {
                 badge = <span className="text-2xl sm:text-3xl filter drop-shadow shrink-0">🥇</span>;
-                rowStyle = 'bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border-amber-400/50 shadow-md ring-1 ring-amber-400/30';
-                textStyle = 'text-amber-300 dark:text-amber-300 font-black';
+                rowStyle = 'bg-amber-50/90 dark:bg-amber-500/20 border-amber-300 dark:border-amber-400/50 shadow-sm ring-1 ring-amber-400/30';
+                textStyle = 'text-amber-950 dark:text-amber-300 font-black';
               } else if (index === 1) {
                 badge = <span className="text-2xl sm:text-3xl filter drop-shadow shrink-0">🥈</span>;
-                rowStyle = 'bg-gradient-to-r from-slate-700/40 to-slate-800/40 border-slate-500/40';
-                textStyle = 'text-slate-200 dark:text-slate-100 font-black';
+                rowStyle = 'bg-slate-50 dark:bg-slate-700/40 border-slate-300 dark:border-slate-500/40';
+                textStyle = 'text-slate-900 dark:text-slate-100 font-black';
               } else if (index === 2) {
                 badge = <span className="text-2xl sm:text-3xl filter drop-shadow shrink-0">🥉</span>;
-                rowStyle = 'bg-gradient-to-r from-orange-950/40 to-slate-800/40 border-orange-700/40';
-                textStyle = 'text-orange-300 dark:text-orange-200 font-black';
+                rowStyle = 'bg-orange-50/90 dark:bg-orange-950/40 border-orange-300 dark:border-orange-700/40';
+                textStyle = 'text-orange-950 dark:text-orange-200 font-black';
               }
 
               return (
@@ -285,7 +285,7 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
                     {badge}
 
                     {/* 🌟 장착된 아바타 프로필 아이콘 & 등급 테두리 */}
-                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br ${rank.avatarBgGradient || 'from-slate-700 to-slate-800 border-slate-600'} border flex items-center justify-center text-xl sm:text-2xl shadow-md shrink-0 relative`}>
+                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br ${rank.avatarBgGradient || 'from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border-slate-300 dark:border-slate-600'} border flex items-center justify-center text-xl sm:text-2xl shadow-sm shrink-0 relative`}>
                       <span>{rank.avatarIcon || '🦁'}</span>
                       {rank.avatarGrade && rank.avatarGrade !== 'starter' && rank.avatarGrade !== 'common' && (
                         <span className="absolute -bottom-1 -right-1 text-[8px] font-black px-1 rounded-full bg-slate-950 border border-amber-400 text-amber-300 uppercase leading-tight shadow-sm">
@@ -305,21 +305,21 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                        <span className="text-slate-300 font-semibold truncate max-w-[100px] sm:max-w-none">{rank.avatarName || (language === 'en' ? 'Avatar' : '아바타')}</span>
+                      <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        <span className="text-slate-700 dark:text-slate-300 font-semibold truncate max-w-[100px] sm:max-w-none">{rank.avatarName || (language === 'en' ? 'Avatar' : '아바타')}</span>
                         <span>•</span>
                         <div className="flex items-center gap-1 shrink-0">
                           <Clock className="w-3 h-3 text-slate-400" />
-                          <span className="text-slate-400 font-medium">{rank.completedAtFormatted || '--:--:--'}</span>
+                          <span className="text-slate-500 dark:text-slate-400 font-medium">{rank.completedAtFormatted || '--:--:--'}</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="text-right shrink-0 ml-2">
-                    <span className="text-lg sm:text-2xl font-black text-white tracking-tight">
+                    <span className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
                       {rank.score}
-                      <span className="text-xs font-bold text-slate-400 ml-1">{language === 'en' ? 'PTS' : '점'}</span>
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">{language === 'en' ? 'PTS' : '점'}</span>
                     </span>
                   </div>
                 </div>

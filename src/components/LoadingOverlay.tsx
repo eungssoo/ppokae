@@ -8,7 +8,7 @@ interface LoadingOverlayProps {
 
 const STAGE_MESSAGES = [
   { icon: '⚡', text: '수능 & 토익 최신 빈출 킬러 문형을 스캔하고 있습니다...' },
-  { icon: '🧠', text: '1~5형식 문법 원리와 매력적인 오답 함정을 정밀 설계 중입니다...' },
+  { icon: '🧠', text: '실전 수능/토익 문법 원리와 매력적인 오답 함정을 정밀 설계 중입니다...' },
   { icon: '🎯', text: '100% 한국어 맞춤 해설과 청크 패턴 뉘앙스를 검수하는 중입니다...' },
   { icon: '💎', text: '단 1개의 유일 정답과 4지선다 보기를 최적화하고 있습니다...' },
   { icon: '🚀', text: '초고속 병렬 AI 엔진이 문제 팩을 패키징 중입니다...' },
@@ -17,7 +17,7 @@ const STAGE_MESSAGES = [
 
 const GRAMMAR_TIPS = [
   {
-    tag: '5형식 사역동사',
+    tag: '사역동사 목적격 보어',
     tip: 'make, have, let 뒤에 오는 목적격 보어는 반드시 [동사원형]입니다!',
     example: 'She made him clean the room. (to clean ❌)'
   },

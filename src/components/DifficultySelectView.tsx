@@ -120,18 +120,18 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
 
         {/* 💡 난이도 & 랭크 승급 한도 친절 가이드 배너 */}
         <div className="bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 border border-amber-500/30 rounded-2xl p-4 mb-6 text-left shadow-sm">
-          <div className="flex items-center gap-2 mb-1 text-amber-300 font-black text-xs sm:text-sm">
-            <Award className="w-4 h-4 text-amber-400 animate-pulse" />
+          <div className="flex items-center gap-2 mb-1 text-amber-700 dark:text-amber-300 font-black text-xs sm:text-sm">
+            <Award className="w-4 h-4 text-amber-500 animate-pulse" />
             <span>{language === 'en' ? '💡 Tier Promotion Caps & Level Guide' : '💡 난이도별 승급 한도 & 레벨 해금 규칙'}</span>
           </div>
-          <p className="text-slate-300 text-xs leading-relaxed">
+          <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed">
             {language === 'en' ? (
               <>
-                Challenging higher difficulty levels unlocks higher rank ceilings: <strong className="text-slate-200">Level 1 (Silver Cap)</strong> ➔ <strong className="text-yellow-300">Level 2 (Gold Cap)</strong> ➔ <strong className="text-cyan-300">Level 3 (Diamond Cap)</strong> ➔ <strong className="text-pink-300">Level 4 (👑 Master Tier Cap)</strong>!
+                Challenging higher difficulty levels unlocks higher rank ceilings: <strong className="text-slate-900 dark:text-slate-200">Level 1 (Silver Cap)</strong> ➔ <strong className="text-amber-600 dark:text-yellow-300">Level 2 (Gold Cap)</strong> ➔ <strong className="text-cyan-600 dark:text-cyan-300">Level 3 (Diamond Cap)</strong> ➔ <strong className="text-pink-600 dark:text-pink-300">Level 4 (👑 Master Tier Cap)</strong>!
               </>
             ) : (
               <>
-                쉬운 문제만 반복해서 풀면 승급 한도가 제한됩니다. <strong className="text-slate-200">1단계(실버까지)</strong> ➔ <strong className="text-yellow-300">2단계(골드까지)</strong> ➔ <strong className="text-cyan-300">3단계(다이아까지)</strong> ➔ <strong className="text-pink-300">4단계(👑 마스터 최종 승급)</strong> 등 상위 난이도에 도전하여 최고의 랭크에 도달해 보세요!
+                쉬운 문제만 반복해서 풀면 승급 한도가 제한됩니다. <strong className="text-slate-900 dark:text-slate-200">1단계(실버까지)</strong> ➔ <strong className="text-amber-600 dark:text-yellow-300">2단계(골드까지)</strong> ➔ <strong className="text-cyan-600 dark:text-cyan-300">3단계(다이아까지)</strong> ➔ <strong className="text-pink-600 dark:text-pink-300">4단계(👑 마스터 최종 승급)</strong> 등 상위 난이도에 도전하여 최고의 랭크에 도달해 보세요!
               </>
             )}
           </p>
@@ -151,20 +151,20 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
                   onSelectLevel(levelInfo);
                 }}
                 disabled={isLoading}
-                className="group p-5 bg-slate-800/60 hover:bg-indigo-500/10 border border-slate-700/80 hover:border-indigo-500/50 rounded-2xl transition-all shadow-sm hover:shadow-md text-left flex items-center justify-between active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group p-5 bg-white dark:bg-slate-800/60 hover:bg-indigo-50/80 dark:hover:bg-indigo-500/10 border border-slate-200 dark:border-slate-700/80 hover:border-indigo-500/50 rounded-2xl transition-all shadow-sm hover:shadow-md text-left flex items-center justify-between active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className="flex-1 pr-2">
                   <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                    <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 font-black text-xs flex items-center justify-center border border-indigo-500/30">
+                    <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-black text-xs flex items-center justify-center border border-indigo-500/30">
                       {levelInfo.level}
                     </span>
-                    <h3 className="text-base sm:text-lg font-bold text-white group-hover:text-indigo-300 transition-colors">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-300 transition-colors">
                       {levelInfo.label}
                     </h3>
                     
                     {/* 코인 & 경험치 보상 */}
-                    <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <Coins className="w-3 h-3 text-amber-400" />
+                    <span className="bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Coins className="w-3 h-3 text-amber-500" />
                       <span>{language === 'en' ? `+${gating.coinsReward} Coins (+${gating.xpReward} XP)` : `정답 시 +${gating.coinsReward} 코인 (+${gating.xpReward} XP)`}</span>
                     </span>
 
@@ -173,8 +173,8 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
                       📈 {gating.tierCap}
                     </span>
 
-                    <span className="bg-slate-700/80 text-slate-300 border border-slate-600 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <BookOpen className="w-3 h-3 text-indigo-400" />
+                    <span className="bg-slate-100 dark:bg-slate-700/80 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <BookOpen className="w-3 h-3 text-indigo-500" />
                       <span>{count} {language === 'en' ? 'Questions' : '문제 준비됨'}</span>
                     </span>
                   </div>
