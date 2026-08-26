@@ -275,7 +275,8 @@ async function generateSingleBatch(
   difficultyLabel: string,
   weaknessFocus: string = "",
   batchCount: number = 20,
-  targetForms?: number[]
+  targetForms?: number[],
+  forbiddenSentences?: string[]
 ): Promise<Question[]> {
   const models = ACTIVE_GEMINI_MODELS;
   
@@ -323,6 +324,10 @@ async function generateSingleBatch(
     userPrompt += `[🚨 형식 균등 배분 필수] 반드시 ${targetForms.map(f => `${f}형식`).join(', ')} 문장을 균등하게 집중 출제하세요. (form 필드 값에 ${targetForms.join(', ')} 중 하나를 부여)\n`;
   } else {
     userPrompt += `[🚨 1~5형식 골고루 출제 필수] 1형식, 2형식, 3형식, 4형식, 5형식 문장을 치우침 없이 골고루 균등하게 섞어서 출제하세요.\n`;
+  }
+  if (forbiddenSentences && forbiddenSentences.length > 0) {
+    const sample = forbiddenSentences.slice(0, 25).map(s => `- ${s}`).join('\n');
+    userPrompt += `\n[🚨 중복 출제 100% 원천 차단] 다음 기존 출제 문장들과 유사하거나 동일한 문장은 절대 생성하지 마세요:\n${sample}\n`;
   }
   userPrompt += `정확히 ${batchCount}개의 4지선다 JSON 배열을 생성하세요. sentence의 빈칸 자리는 반드시 '______' 로 작성하세요.`;
 
@@ -416,15 +421,16 @@ export async function generateBulkQuestions(
   difficultyLabel: string,
   weaknessFocus: string = "",
   count: number = 40,
-  formStats?: { countsByForm: Record<number, number>; underrepresentedForms: number[] }
+  formStats?: { countsByForm: Record<number, number>; underrepresentedForms: number[] },
+  forbiddenSentences?: string[]
 ): Promise<{ success: boolean; questions?: Question[]; error?: string }> {
   try {
     if (count >= 20) {
       // ⚡ 2채널(20개 x 2) 고속 병렬 호출
       const halfCount = Math.ceil(count / 2);
       const batches = await Promise.all([
-        generateSingleBatch(difficultyLabel, weaknessFocus, halfCount, [1, 2, 3]),
-        generateSingleBatch(difficultyLabel, weaknessFocus, halfCount, [3, 4, 5])
+        generateSingleBatch(difficultyLabel, weaknessFocus, halfCount, [1, 2, 3], forbiddenSentences),
+        generateSingleBatch(difficultyLabel, weaknessFocus, halfCount, [3, 4, 5], forbiddenSentences)
       ]);
 
       const merged = batches.flat();
@@ -434,7 +440,7 @@ export async function generateBulkQuestions(
     }
 
     // 단일 배치 생성
-    const singleResult = await generateSingleBatch(difficultyLabel, weaknessFocus, count, [1, 2, 3, 4, 5]);
+    const singleResult = await generateSingleBatch(difficultyLabel, weaknessFocus, count, [1, 2, 3, 4, 5], forbiddenSentences);
     if (singleResult.length > 0) {
       return { success: true, questions: singleResult };
     }

@@ -1770,23 +1770,78 @@ export async function recordCycleAttemptStart(
   }
 }
 
-// 2. 공용 DB (Questions) 문제 저장
+// 🔤 문장 고유 핑거프린트 해시 헬퍼 (공백, 기호, 대소문자 무시 정규화)
+export function getSentenceFingerprint(sentence: string): string {
+  if (!sentence || typeof sentence !== 'string') return '';
+  return sentence.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+// 🎯 사용자별 이미 푼 문제 핑거프린트 목록 조회 (중복 출제 100% 영구 방지)
+export function getUserSolvedFingerprints(userName: string): Set<string> {
+  const set = new Set<string>();
+  if (!userName) return set;
+  try {
+    const stored = localStorage.getItem(`ai_grammar_solved_fp_${userName}`);
+    if (stored) {
+      const arr = JSON.parse(stored);
+      if (Array.isArray(arr)) {
+        arr.forEach(fp => {
+          if (fp && typeof fp === 'string') set.add(fp);
+        });
+      }
+    }
+  } catch {}
+  return set;
+}
+
+// 🎯 사용자별 문제 풀이 기록 영구 저장 (중복 출제 100% 영구 방지)
+export function recordUserSolvedQuestions(userName: string, questions: Question[]): void {
+  if (!userName || !Array.isArray(questions) || questions.length === 0) return;
+  try {
+    const existing = getUserSolvedFingerprints(userName);
+    questions.forEach(q => {
+      const fp = getSentenceFingerprint(q?.sentence || '');
+      if (fp) existing.add(fp);
+    });
+    const arr = Array.from(existing);
+    localStorage.setItem(`ai_grammar_solved_fp_${userName}`, JSON.stringify(arr));
+  } catch {}
+}
+
+// 2. 공용 DB (Questions) 문제 저장 (중복 문장 원천 방지)
 export async function saveQuestionsToFirestore(questions: Question[], difficulty: string): Promise<boolean> {
   try {
-    const batch = writeBatch(db);
     const questionsCol = collection(db, 'questions');
+    const existingSnap = await getDocs(questionsCol);
+    const existingFps = new Set<string>();
+    existingSnap.forEach(d => {
+      const data = d.data();
+      const fp = getSentenceFingerprint(data.sentence || '');
+      if (fp) existingFps.add(fp);
+    });
+
+    const batch = writeBatch(db);
+    let addedCount = 0;
 
     for (const q of questions) {
-      const newDocRef = doc(questionsCol);
       const cleaned = cleanQuestionForStorage({ ...q, difficulty });
+      const fp = getSentenceFingerprint(cleaned.sentence || '');
+      if (!fp || existingFps.has(fp)) {
+        continue; // 이미 DB에 존재하는 중복 문장 건너뛰기
+      }
+      existingFps.add(fp);
+      const newDocRef = doc(questionsCol);
       batch.set(newDocRef, {
         ...cleaned,
         difficulty: difficulty || 'Level 1',
         createdAt: serverTimestamp()
       });
+      addedCount++;
     }
 
-    await batch.commit();
+    if (addedCount > 0) {
+      await batch.commit();
+    }
     return true;
   } catch (error) {
     console.error("saveQuestionsToFirestore Error:", error);
@@ -1794,8 +1849,8 @@ export async function saveQuestionsToFirestore(questions: Question[], difficulty
   }
 }
 
-// 3. 공용 DB에서 난이도별 10문제 추출 (엄격한 난이도 & 길이 필터링 + 부족 시 AI 실시간 자동 생성 보충)
-export async function getRandomQuestions(difficultyLabel: string): Promise<{ success: boolean; data?: Question[]; error?: string }> {
+// 3. 공용 DB에서 난이도별 10문제 추출 (사용자 맞춤 중복 0% 보장 + 문제 고갈 시 실시간 무한 AI 신규 출제)
+export async function getRandomQuestions(difficultyLabel: string, userName: string = ''): Promise<{ success: boolean; data?: Question[]; error?: string }> {
   try {
     const targetLvl = difficultyLabel.includes('Level 4') || difficultyLabel.includes('4단계') || difficultyLabel.includes('실전') || difficultyLabel.includes('Mastery') ? 4
       : difficultyLabel.includes('Level 3') || difficultyLabel.includes('3단계') || difficultyLabel.includes('고득점') || difficultyLabel.includes('Advanced') ? 3
@@ -1803,7 +1858,7 @@ export async function getRandomQuestions(difficultyLabel: string): Promise<{ suc
       : 1;
 
     const snapshot = await getDocs(collection(db, 'questions'));
-    const allQuestions: Question[] = [];
+    const uniqueQuestionsMap = new Map<string, Question>();
 
     if (!snapshot.empty) {
       snapshot.forEach(docSnap => {
@@ -1817,13 +1872,16 @@ export async function getRandomQuestions(difficultyLabel: string): Promise<{ suc
 
         if (docLvl !== targetLvl) return;
 
-        // 🛡️ 문장 단어 수 기반 엄격한 품질/난이도 필터링 (과거 잘못 생성된 단문 유입 원천 차단)
+        // 🛡️ 문장 단어 수 기반 엄격한 품질/난이도 필터링
         const wordCount = (d.sentence || '').trim().split(/\s+/).length;
-        if (targetLvl === 4 && wordCount < 15) return; // Level 4는 15단어 이상 실전 토익/공무원급
-        if (targetLvl === 3 && wordCount < 13) return; // Level 3는 13단어 이상 수능 복문급
-        if (targetLvl === 1 && wordCount > 13) return; // Level 1은 13단어 이하 기초 단문
+        if (targetLvl === 4 && wordCount < 15) return;
+        if (targetLvl === 3 && wordCount < 13) return;
+        if (targetLvl === 1 && wordCount > 13) return;
 
-        allQuestions.push({
+        const fp = getSentenceFingerprint(d.sentence || '');
+        if (!fp || uniqueQuestionsMap.has(fp)) return;
+
+        uniqueQuestionsMap.set(fp, {
           id: docSnap.id,
           form: sanitizeForm(d.form),
           sentence: d.sentence,
@@ -1837,30 +1895,58 @@ export async function getRandomQuestions(difficultyLabel: string): Promise<{ suc
       });
     }
 
-    // 🚀 DB에 유효한 고품질 문제가 10개 미만인 경우: Gemini AI를 실시간 호출하여 정확한 난이도의 10문제를 즉시 생성
-    if (allQuestions.length < 10) {
-      console.log(`[getRandomQuestions]: DB contains ${allQuestions.length} valid questions for [${difficultyLabel}]. Calling Gemini AI for 10 fresh questions...`);
+    const allDbQuestions = Array.from(uniqueQuestionsMap.values());
+    const solvedSet = getUserSolvedFingerprints(userName);
+
+    // 🛡️ 사용자가 과거에 푼 적 없는 완전히 새로운 문제만 필터링
+    let unseenQuestions = allDbQuestions.filter(q => {
+      const fp = getSentenceFingerprint(q.sentence || '');
+      return fp && !solvedSet.has(fp);
+    });
+
+    // 🚀 사용자가 DB의 문제를 거의 다 풀었거나 (남은 문제가 10개 미만) 신규 문제가 필요한 경우:
+    // 기존 문제 재출제 금지! 실시간으로 Gemini AI를 호출하여 20개의 참신한 새 문제를 즉시 무한 생성
+    if (unseenQuestions.length < 10) {
+      console.log(`[getRandomQuestions]: Unseen pool (${unseenQuestions.length}) is below 10 for "${userName}". Triggering Infinite AI Synthesis for [${difficultyLabel}]...`);
       try {
-        const aiResult = await generateBulkQuestions(difficultyLabel, '', 10);
-        if (aiResult.success && aiResult.questions && aiResult.questions.length >= 5) {
-          // 백그라운드로 공용 DB에도 저장하여 누적
-          saveQuestionsToFirestore(aiResult.questions, difficultyLabel).catch(() => {});
-          return { success: true, data: aiResult.questions.slice(0, 10) };
+        const forbidden = Array.from(new Set([
+          ...allDbQuestions.map(q => q.sentence),
+          ...Array.from(solvedSet)
+        ])).slice(0, 30);
+
+        const aiResult = await generateBulkQuestions(difficultyLabel, '', 20, undefined, forbidden);
+        if (aiResult.success && aiResult.questions && aiResult.questions.length > 0) {
+          const freshGenerated = aiResult.questions.filter(q => {
+            const fp = getSentenceFingerprint(q.sentence || '');
+            return fp && !uniqueQuestionsMap.has(fp) && !solvedSet.has(fp);
+          });
+
+          if (freshGenerated.length > 0) {
+            saveQuestionsToFirestore(freshGenerated, difficultyLabel).catch(() => {});
+            freshGenerated.forEach(q => {
+              const fp = getSentenceFingerprint(q.sentence || '');
+              if (fp) {
+                uniqueQuestionsMap.set(fp, q);
+                unseenQuestions.push(q);
+              }
+            });
+          }
         }
       } catch (e) {
-        console.warn("Auto AI question generation fallback failed:", e);
+        console.warn("Infinite AI question synthesis fallback:", e);
       }
     }
 
-    if (allQuestions.length === 0) {
-      return { success: false, error: `선택하신 [${difficultyLabel}] 난이도의 유효한 문제가 부족합니다. [문제 공장]에서 새 문제를 생성해 주세요.` };
-    }
+    // 최종 출제 대상 풀 (새 문제 우선)
+    const targetPool = unseenQuestions.length >= 10 ? unseenQuestions : allDbQuestions;
 
-    const recentSet = getRecentSet(String(targetLvl));
+    if (targetPool.length === 0) {
+      return { success: false, error: `선택하신 [${difficultyLabel}] 난이도의 문제를 준비하지 못했습니다. [문제 공장]에서 새 문제를 출제해 주세요.` };
+    }
 
     // 🎯 1~5형식 문형별 고른 분배 알고리즘 (각 문형당 2문제씩 균등 추출)
     const formBuckets: Record<number, Question[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-    allQuestions.forEach(q => {
+    targetPool.forEach(q => {
       const f = sanitizeForm(q.form);
       if (formBuckets[f]) {
         formBuckets[f].push(q);
@@ -1871,24 +1957,15 @@ export async function getRandomQuestions(difficultyLabel: string): Promise<{ suc
 
     const selected: Question[] = [];
 
-    // 1차: 1~5형식에서 최근에 풀지 않은 문제를 최우선으로 각 2문제씩 균등 추출
+    // 1차: 1~5형식에서 각 2문제씩 균등 추출
     for (let f = 1; f <= 5; f++) {
-      const pool = formBuckets[f];
-      const unseen = pool.filter(q => !recentSet.has(q.id || q.sentence));
-      const seen = pool.filter(q => recentSet.has(q.id || q.sentence));
-
-      const shuffledUnseen = trueShuffle(unseen);
-      const shuffledSeen = trueShuffle(seen);
-
-      const combined = [...shuffledUnseen, ...shuffledSeen];
-      const picked = combined.slice(0, 2);
+      const pool = trueShuffle(formBuckets[f]);
+      const picked = pool.slice(0, 2);
       selected.push(...picked);
-
-      // 남은 문제 갱신
-      formBuckets[f] = combined.slice(2);
+      formBuckets[f] = pool.slice(2);
     }
 
-    // 특정 형식의 문제가 부족하여 10문제가 채워지지 않은 경우 남은 문제 풀에서 보충
+    // 특정 형식의 문제가 부족하여 10문제가 채워지지 않은 경우 남은 풀에서 보충
     if (selected.length < 10) {
       const remaining: Question[] = [];
       for (let f = 1; f <= 5; f++) {
@@ -1899,14 +1976,9 @@ export async function getRandomQuestions(difficultyLabel: string): Promise<{ suc
       selected.push(...shuffledRemaining.slice(0, needed));
     }
 
-    // 출제된 10문제를 recentSet에 등록
-    selected.forEach(q => {
-      recentSet.add(q.id || q.sentence);
-    });
-
-    // 40문제 풀의 75% 이상을 풀었으면 세트 리셋하여 새로운 순환 시작
-    if (recentSet.size >= Math.floor(allQuestions.length * 0.75)) {
-      recentSet.clear();
+    // 출제된 10문제를 사용자 푼 문제 기록에 즉시 등록하여 다음 판 중복 원천 차단
+    if (userName) {
+      recordUserSolvedQuestions(userName, selected);
     }
 
     // 최종 10문제의 출제 순서 및 보기 4개를 100% 무작위 셔플
