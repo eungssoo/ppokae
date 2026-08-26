@@ -16,21 +16,21 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
   const { language, t } = useLanguage();
 
   return (
-    <div className="min-h-screen bg-animated-gradient flex justify-center p-4 sm:p-6 md:p-8">
+    <div className="min-h-screen bg-slate-950 bg-animated-gradient flex justify-center p-4 sm:p-6 md:p-8 selection:bg-indigo-500 selection:text-white">
       <div className="max-w-3xl w-full">
         
         {/* Sticky Header */}
-        <header className="flex justify-between items-center bg-white dark:glass-card p-4 sm:p-5 rounded-[2rem] border border-slate-200 dark:border-slate-700/80 mb-6 sticky top-4 z-20 shadow-sm backdrop-blur-xl">
+        <header className="flex justify-between items-center glass-card p-4 sm:p-5 rounded-[2rem] border border-slate-700/80 mb-6 sticky top-4 z-20 shadow-2xl backdrop-blur-xl">
           <button
             onClick={onBack}
-            className="text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm active:scale-95 border border-slate-200 dark:border-slate-700"
+            className="text-slate-300 font-bold hover:bg-slate-800 hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm active:scale-95 border border-slate-700"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t('home')}</span>
           </button>
           <div className="flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-            <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+            <ClipboardList className="w-5 h-5 text-indigo-400" />
+            <h1 className="text-lg sm:text-xl font-black text-white tracking-tight">
               {language === 'en' ? 'Incorrect Review Notes' : '내 오답 노트'}
             </h1>
           </div>
@@ -38,12 +38,12 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
 
         {/* List Content */}
         {incorrectList.length === 0 ? (
-          <div className="bg-white dark:glass-card rounded-[2.5rem] p-12 text-center border border-slate-200 dark:border-slate-700/60 shadow-sm">
+          <div className="glass-card rounded-[2.5rem] p-12 text-center border border-slate-700/60 shadow-2xl">
             <span className="text-5xl mb-3 block">🎉</span>
-            <h3 className="font-black text-xl text-slate-900 dark:text-white">
+            <h3 className="font-black text-xl text-white">
               {language === 'en' ? 'No incorrect questions recorded!' : '오답 기록이 없습니다!'}
             </h3>
-            <p className="text-slate-600 dark:text-slate-400 text-sm mt-2 font-medium">
+            <p className="text-slate-300 text-sm mt-2 font-medium">
               {language === 'en'
                 ? 'Incorrect questions will be collected here automatically for smart review.'
                 : '틀린 문제들이 여기에 자동으로 모여 복습할 수 있게 정리됩니다.'}
@@ -64,16 +64,16 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
               return (
                 <div
                   key={q.id || i}
-                  className="bg-white dark:glass-card rounded-[2rem] p-5 sm:p-7 border border-slate-200 dark:border-slate-700/80 shadow-sm hover:border-indigo-400 transition-all text-left"
+                  className="glass-card rounded-[2rem] p-5 sm:p-7 border border-slate-700/80 shadow-md hover:border-indigo-400 transition-all text-left"
                 >
                   {/* Sentence & Date */}
-                  <div className="flex justify-between items-start mb-4 gap-4 border-b border-slate-100 dark:border-slate-700/60 pb-3.5">
-                    <p className="font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-relaxed font-serif">
+                  <div className="flex justify-between items-start mb-4 gap-4 border-b border-slate-700/60 pb-3.5">
+                    <p className="font-bold text-base sm:text-lg text-white leading-relaxed font-serif">
                       {(() => {
                         const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b)/gi;
                         const parts = q.sentence.split(BLANK_REGEX);
                         if (parts.length <= 1) {
-                          return <span>{q.sentence} <span className="text-emerald-600 dark:text-emerald-400 font-black">({q.correctAnswer})</span></span>;
+                          return <span>{q.sentence} <span className="text-emerald-400 font-black">({q.correctAnswer})</span></span>;
                         }
                         return (
                           <span>
@@ -81,7 +81,7 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
                               <React.Fragment key={idx}>
                                 {part}
                                 {idx < parts.length - 1 && (
-                                  <span className="inline-block mx-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 font-black font-sans text-sm sm:text-base shadow-sm">
+                                  <span className="inline-block mx-1.5 px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-black font-sans text-sm sm:text-base shadow-sm">
                                     {q.correctAnswer}
                                   </span>
                                 )}
@@ -91,41 +91,41 @@ export const IncorrectListView: React.FC<IncorrectListViewProps> = ({
                         );
                       })()}
                     </p>
-                    <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-700 whitespace-nowrap">
+                    <span className="text-[11px] font-bold text-slate-300 bg-slate-800 px-2.5 py-1 rounded-md border border-slate-700 whitespace-nowrap">
                       {q.date || (language === 'en' ? 'Record' : '기록')}
                     </span>
                   </div>
 
                   {/* Wrong Answer vs Correct Answer comparison */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                    <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 p-4 rounded-xl relative overflow-hidden">
+                    <div className="bg-rose-500/10 border border-rose-500/30 p-4 rounded-xl relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
-                      <span className="block text-[10px] font-black text-rose-700 dark:text-rose-400 uppercase tracking-wider mb-1">
+                      <span className="block text-[10px] font-black text-rose-300 uppercase tracking-wider mb-1">
                         {language === 'en' ? 'My Selected Choice' : '내가 고른 오답'}
                       </span>
-                      <span className="text-slate-500 dark:text-slate-400 line-through font-bold text-base">
+                      <span className="text-slate-400 line-through font-bold text-base">
                         {q.wrongAnswer}
                       </span>
                     </div>
 
-                    <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 p-4 rounded-xl relative overflow-hidden">
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
-                      <span className="block text-[10px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-1">
+                      <span className="block text-[10px] font-black text-emerald-300 uppercase tracking-wider mb-1">
                         {language === 'en' ? 'Correct Answer' : '올바른 정답'}
                       </span>
-                      <span className="font-black text-emerald-800 dark:text-emerald-300 text-lg">
+                      <span className="font-black text-emerald-300 text-lg">
                         {q.correctAnswer}
                       </span>
                     </div>
                   </div>
 
                   {/* Category info */}
-                  <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-800">
                     <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-md border flex items-center gap-1 ${tagInfo.bgColor} ${tagInfo.textColor} ${tagInfo.borderColor}`}>
                       <span>{tagInfo.icon}</span>
                       <span>{language === 'en' ? tagInfo.badgeEn : tagInfo.badgeKo}</span>
                     </span>
-                    <span className="text-xs font-black text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-500/30">
+                    <span className="text-xs font-black text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-500/30">
                       #{q.form}형식
                     </span>
                   </div>

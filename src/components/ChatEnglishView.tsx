@@ -63,22 +63,19 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
     }
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
-    return (
-      item.acronym.toLowerCase().includes(q) ||
-      item.fullForm.toLowerCase().includes(q) ||
-      item.meaningKo.toLowerCase().includes(q) ||
-      item.meaningEn.toLowerCase().includes(q)
-    );
+    return item.acronym.toLowerCase().includes(q) ||
+           item.fullForm.toLowerCase().includes(q) ||
+           item.meaningKo.toLowerCase().includes(q);
   });
 
   const currentScenario = CHAT_QUIZ_SCENARIOS[currentScenarioIndex];
 
-  const handleSelectOption = (idx: number) => {
+  const handleSelectOption = (index: number) => {
     if (hasAnswered) return;
-    setSelectedOptionIndex(idx);
+    setSelectedOptionIndex(index);
     setHasAnswered(true);
 
-    const isCorrect = currentScenario.options[idx].isCorrect;
+    const isCorrect = currentScenario.options[index].isCorrect;
     if (isCorrect) {
       sound.playCorrect();
       setQuizScore(prev => prev + 1);
@@ -112,17 +109,17 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex justify-center p-3 sm:p-6 font-sans">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex justify-center p-3 sm:p-6 font-sans selection:bg-indigo-500 selection:text-white">
       <div className="max-w-4xl w-full space-y-6">
         
         {/* Top Navigation Bar */}
-        <header className="flex justify-between items-center bg-slate-900/90 p-4 sm:p-5 rounded-2xl border border-slate-800 sticky top-3 z-30 shadow-lg backdrop-blur-xl">
+        <header className="flex justify-between items-center glass-card p-4 sm:p-5 rounded-2xl border border-slate-800 sticky top-3 z-30 shadow-2xl backdrop-blur-xl">
           <button
             onClick={() => {
               sound.playClick();
               onBack();
             }}
-            className="text-slate-400 font-bold hover:bg-slate-800 hover:text-white px-3 sm:px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm active:scale-95 border border-slate-800"
+            className="text-slate-300 font-bold hover:bg-slate-800 hover:text-white px-3 sm:px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm active:scale-95 border border-slate-700"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t('home')}</span>
@@ -135,7 +132,7 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
             </h1>
           </div>
 
-          <div className="flex bg-slate-950/80 p-1 rounded-xl border border-slate-800 text-xs font-bold">
+          <div className="flex bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-xs font-bold">
             <button
               onClick={() => {
                 sound.playClick();
@@ -171,15 +168,15 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
         {activeTab === 'dict' && (
           <div className="space-y-5 animate-fade-in">
             {/* Hero Card */}
-            <div className="bg-indigo-50/70 dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 shadow-sm text-left relative overflow-hidden">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-2 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/30">
-                <Sparkles className="w-3.5 h-3.5" />
+            <div className="bg-slate-900/90 p-5 sm:p-6 rounded-2xl border border-indigo-500/30 shadow-md text-left relative overflow-hidden">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-2 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Modern Texting & Gen Z Slang</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-2">
+              <h2 className="text-xl sm:text-2xl font-black text-white mb-2">
                 원어민 메신저 필수 줄임말 & 대화체 사전 ⚡
               </h2>
-              <p className="text-slate-700 dark:text-slate-400 text-xs sm:text-sm leading-relaxed max-w-2xl font-medium">
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed max-w-2xl font-medium">
                 인스타그램 DM, 디스코드, 왓츠앱, 사내 슬랙(Slack)에서 매일 쓰이는 핵심 약어와 힙한 슬랭을 실제 카톡방 버블 예시로 마스터하세요!
               </p>
             </div>
@@ -198,7 +195,7 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
                     className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 border active:scale-95 ${
                       selectedCategory === cat.id
                         ? 'bg-indigo-600 border-indigo-400 text-white shadow-md'
-                        : 'bg-white dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-300'
+                        : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
                     }`}
                   >
                     <span>{cat.icon}</span>
@@ -215,7 +212,7 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
                   placeholder="줄임말(tbh, ngl), 슬랭, 또는 한국어 뜻으로 검색..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl pl-11 pr-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-all shadow-sm"
+                  className="w-full bg-slate-900/90 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-all shadow-sm"
                 />
               </div>
             </div>
@@ -225,41 +222,41 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
               {filteredItems.map(item => (
                 <div
                   key={item.id}
-                  className="bg-white dark:bg-slate-900/90 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:border-indigo-500 transition-all flex flex-col justify-between shadow-sm space-y-4 text-left group"
+                  className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 hover:border-indigo-500/60 transition-all flex flex-col justify-between shadow-md space-y-4 text-left group"
                 >
                   {/* Top: Acronym Title & Category Badge */}
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl font-black text-indigo-600 dark:text-indigo-400 font-mono tracking-tight group-hover:text-indigo-700 dark:group-hover:text-indigo-300 transition-colors">
+                        <span className="text-xl font-black text-indigo-400 font-mono tracking-tight group-hover:text-indigo-300 transition-colors">
                           {item.acronym}
                         </span>
                         <button
                           onClick={() => playTTS(`${item.acronym}. ${item.fullForm}`)}
-                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600/20 text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white transition-all border border-slate-200 dark:border-slate-700"
+                          className="p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600/30 text-slate-300 hover:text-white transition-all border border-slate-700"
                           title="발음 듣기"
                         >
                           <Volume2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <span className="text-[11px] font-black text-slate-700 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 px-2.5 py-1 rounded-md border border-slate-200 dark:border-slate-800">
+                      <span className="text-[11px] font-black text-slate-400 bg-slate-950 px-2.5 py-1 rounded-md border border-slate-800">
                         {item.categoryLabel}
                       </span>
                     </div>
 
                     {/* Full Form & Meaning */}
-                    <div className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      풀이: <span className="text-slate-900 dark:text-white font-mono font-black">{item.fullForm}</span>
+                    <div className="text-xs font-bold text-slate-300 mb-1">
+                      풀이: <span className="text-white font-mono font-black">{item.fullForm}</span>
                     </div>
-                    <div className="text-sm font-black text-emerald-700 dark:text-emerald-400">
+                    <div className="text-sm font-black text-emerald-400">
                       👉 {item.meaningKo}
                     </div>
                   </div>
 
                   {/* Chat Bubbles Simulator (Messenger style) */}
-                  <div className="bg-slate-50 dark:bg-slate-950/90 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800/80 space-y-2.5">
+                  <div className="bg-slate-950/90 p-3.5 rounded-xl border border-slate-800/80 space-y-2.5">
                     <div className="text-[10px] font-mono text-slate-500 uppercase tracking-wider flex items-center gap-1 mb-1 font-bold">
-                      <Smartphone className="w-3 h-3 text-indigo-500" />
+                      <Smartphone className="w-3 h-3 text-indigo-400" />
                       <span>실전 메신저 톡 대화</span>
                     </div>
 
@@ -268,19 +265,19 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
                         key={mIdx}
                         className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
                       >
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-0.5 px-1">
+                        <div className="text-[10px] text-slate-400 font-bold mb-0.5 px-1">
                           {msg.name}
                         </div>
                         <div
                           className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs font-semibold leading-relaxed shadow-sm ${
                             msg.sender === 'user'
                               ? 'bg-indigo-600 text-white rounded-tr-none'
-                              : 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-200 rounded-tl-none border border-slate-300 dark:border-slate-700'
+                              : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700'
                           }`}
                         >
                           {msg.text}
                         </div>
-                        <div className="text-[10px] text-slate-600 dark:text-slate-400 mt-0.5 px-1 font-medium">
+                        <div className="text-[10px] text-slate-400 mt-0.5 px-1 font-medium">
                           {msg.translationKo}
                         </div>
                       </div>
@@ -288,7 +285,7 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
                   </div>
 
                   {/* Pro Tip */}
-                  <div className="text-[11px] text-indigo-900 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 p-2.5 rounded-lg border border-indigo-200 dark:border-indigo-500/20 leading-relaxed font-medium">
+                  <div className="text-[11px] text-indigo-300 bg-indigo-950/40 p-2.5 rounded-lg border border-indigo-500/20 leading-relaxed font-medium">
                     {item.tip}
                   </div>
                 </div>
@@ -296,7 +293,7 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
             </div>
 
             {filteredItems.length === 0 && (
-              <div className="py-16 text-center text-slate-500 text-sm bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <div className="py-16 text-center text-slate-500 text-sm bg-slate-900/50 rounded-2xl border border-slate-800 shadow-sm">
                 검색 결과가 없습니다. 다른 단어로 검색해 보세요!
               </div>
             )}
@@ -321,7 +318,7 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
                     </span>
                   </div>
 
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-slate-400">
                     💡 정답 시 🪙 +5 코인 보상
                   </span>
                 </div>
@@ -432,7 +429,7 @@ export const ChatEnglishView: React.FC<ChatEnglishViewProps> = ({ onBack, onAddC
                   <h3 className="text-2xl sm:text-3xl font-black text-white mb-2">
                     채팅 영어 시뮬레이션 완주!
                   </h3>
-                  <p className="text-slate-400 text-sm">
+                  <p className="text-slate-300 text-sm">
                     총 {CHAT_QUIZ_SCENARIOS.length}문제 중 <strong className="text-emerald-400 font-bold">{quizScore}개</strong>의 메신저 상황을 완벽하게 해결했습니다!
                   </p>
                 </div>

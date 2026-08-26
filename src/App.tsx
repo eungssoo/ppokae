@@ -1916,6 +1916,7 @@ function AppContent() {
       {view === 'weakness_view' && (
         <WeaknessReportView
           weaknessData={weaknessData}
+          dbData={dbData}
           onBack={() => setView('menu')}
           onGeneratePrescription={(level) => handlePromptGenerateBulk(level, true)}
           onStartThemePractice={handleStartThemeQuiz}

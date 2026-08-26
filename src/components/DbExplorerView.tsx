@@ -59,18 +59,16 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
         };
         await adminUpdateQuestionEverywhere(fixedQ, q.sentence);
         setDbData(prev => {
-          const nextList = (prev[diff] || []).map(item => (item.id && q.id ? item.id === q.id : item.sentence === q.sentence) ? fixedQ : item);
+          const currentList = prev[diff] || [];
+          const nextList = currentList.map(item => (item.id === q.id || item.sentence === q.sentence) ? fixedQ : item);
           return {
             ...prev,
             [diff]: nextList
           };
         });
-        alert('🤖 AI 문제 재구성 및 DB 반영이 완료되었습니다!');
-      } else {
-        alert(`재구성 실패: ${res.error || 'AI 응답 오류'}`);
       }
     } catch (e: any) {
-      alert(`오류: ${e.message}`);
+      alert(`AI 재구성 실패: ${e.message}`);
     } finally {
       setRegeneratingId(null);
     }
@@ -78,19 +76,16 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
 
   const handleDelete = async (q: Question, diff: string) => {
     const qKey = q.id || q.sentence;
-    if (!window.confirm(`⚠️ [관리자 권한]\n이 문제("${q.sentence}")를 공용 문제집 및 랭킹전 회차 DB에서 영구 삭제하시겠습니까?`)) {
-      return;
-    }
-
+    if (!window.confirm('정말 이 문제를 DB에서 영구 삭제하시겠습니까?')) return;
     sound.playClick();
     setDeletingId(qKey);
     try {
       if (onDeleteQuestion) {
         await onDeleteQuestion(q, diff);
       }
-      // Remove from local view
       setDbData(prev => {
-        const nextList = (prev[diff] || []).filter(item => (item.id && q.id ? item.id !== q.id : item.sentence !== q.sentence));
+        const currentList = prev[diff] || [];
+        const nextList = currentList.filter(item => (item.id !== q.id && item.sentence !== q.sentence));
         return {
           ...prev,
           [diff]: nextList
@@ -124,14 +119,14 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
   const totalQuestions = Object.values(dbData).reduce((sum, list) => sum + list.length, 0);
 
   return (
-    <div className="min-h-screen bg-animated-gradient flex justify-center p-4 sm:p-6 md:p-8">
+    <div className="min-h-screen bg-slate-950 bg-animated-gradient flex justify-center p-4 sm:p-6 md:p-8 selection:bg-indigo-500 selection:text-white">
       <div className="max-w-4xl w-full space-y-6">
         
         {/* Header */}
-        <header className="flex justify-between items-center bg-white dark:glass-card p-4 sm:p-5 rounded-[2rem] border border-slate-200 dark:border-slate-700/80 sticky top-4 z-20 shadow-sm backdrop-blur-xl">
+        <header className="flex justify-between items-center glass-card p-4 sm:p-5 rounded-[2rem] border border-slate-700/80 sticky top-4 z-20 shadow-2xl backdrop-blur-xl">
           <button
             onClick={onBack}
-            className="text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm active:scale-95 border border-slate-200 dark:border-slate-700"
+            className="text-slate-300 font-bold hover:bg-slate-800 hover:text-white px-4 py-2 rounded-xl transition-all flex items-center gap-2 text-sm active:scale-95 border border-slate-700"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t('home')}</span>
@@ -139,16 +134,16 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
           
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              <h1 className="text-base sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+              <BookOpen className="w-5 h-5 text-indigo-400" />
+              <h1 className="text-base sm:text-xl font-black text-white tracking-tight">
                 {language === 'en' ? 'Public Question Library' : '공용 문제집 보관소'}
               </h1>
             </div>
-            <span className="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 text-xs font-black">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-black">
               총 {totalQuestions}문제
             </span>
             {isAdmin && (
-              <span className="px-2.5 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 text-[10px] font-black">
+              <span className="px-2.5 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-black">
                 👑 관리자 삭제 모드
               </span>
             )}
@@ -157,12 +152,12 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
 
         {/* Accordions */}
         {diffKeys.length === 0 || totalQuestions === 0 ? (
-          <div className="bg-white dark:glass-card rounded-[2.5rem] p-12 text-center border border-slate-200 dark:border-slate-700/60 shadow-sm space-y-3">
+          <div className="glass-card rounded-[2.5rem] p-12 text-center border border-slate-700/60 shadow-2xl space-y-3">
             <span className="text-5xl block">📚</span>
-            <h3 className="font-black text-xl text-slate-900 dark:text-white">
+            <h3 className="font-black text-xl text-white">
               {language === 'en' ? 'No saved questions found.' : '저장된 문제가 없습니다.'}
             </h3>
-            <p className="text-slate-600 dark:text-slate-400 text-sm font-medium max-w-md mx-auto">
+            <p className="text-slate-300 text-sm font-medium max-w-md mx-auto">
               {language === 'en' 
                 ? 'Generate new questions from the Question Factory or start a Quiz to auto-populate!' 
                 : '공용 문제집이 비어 있습니다. [문제 공장]에서 난이도별 문제를 생성하거나 랭킹전을 시작하면 새 문제가 등록됩니다!'}
@@ -178,22 +173,22 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
               return (
                 <div
                   key={diff}
-                  className="bg-white dark:glass-card rounded-[2rem] border border-slate-200 dark:border-slate-700/80 overflow-hidden transition-all shadow-sm"
+                  className="glass-card rounded-[2rem] border border-slate-700/80 overflow-hidden transition-all shadow-md"
                 >
                   {/* Summary Bar */}
                   <button
                     onClick={() => toggleSection(diff)}
-                    className="w-full p-5 sm:p-6 font-black flex justify-between items-center text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    className="w-full p-5 sm:p-6 font-black flex justify-between items-center text-left hover:bg-slate-800/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-base sm:text-lg text-slate-900 dark:text-white font-black">{diff}</span>
-                      <span className="bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-bold border border-indigo-200 dark:border-indigo-500/30">
+                      <span className="text-base sm:text-lg text-white font-black">{diff}</span>
+                      <span className="bg-indigo-500/20 text-indigo-300 px-3 py-1 rounded-full text-xs font-bold border border-indigo-500/30">
                         {questions.length} {language === 'en' ? 'Questions' : '문제'}
                       </span>
                     </div>
 
                     <div
-                      className={`w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 transition-transform ${
+                      className={`w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 transition-transform ${
                         isOpen ? 'rotate-180 bg-indigo-600 text-white' : ''
                       }`}
                     >
@@ -203,7 +198,7 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
 
                   {/* Expanded Questions List */}
                   {isOpen && (
-                    <div className="p-5 sm:p-6 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-200 dark:border-slate-700/60 max-h-[700px] overflow-y-auto space-y-4">
+                    <div className="p-5 sm:p-6 bg-slate-950/50 border-t border-slate-700/60 max-h-[700px] overflow-y-auto space-y-4">
                       {questions.map((q, i) => {
                         const qKey = q.id || q.sentence;
                         const isDeleting = deletingId === qKey;
@@ -220,12 +215,12 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                         return (
                           <div
                             key={q.id || i}
-                            className="bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800/80 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-400 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+                            className="bg-slate-900/90 hover:bg-slate-850 p-4 sm:p-5 rounded-2xl border border-slate-800 hover:border-indigo-500/60 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm text-left"
                           >
                             {/* Left: Number & Form badge & Grammar Tag & Question with Blank */}
                             <div className="flex-1 space-y-2">
                               <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">
+                                <span className="text-xs font-mono font-bold text-slate-400">
                                   Q{i + 1}.
                                 </span>
                                 {/* 🏷️ 실전 문법 핵심 태그 */}
@@ -233,18 +228,18 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                                   <span>{tagInfo.icon}</span>
                                   <span>{language === 'en' ? tagInfo.badgeEn : tagInfo.badgeKo}</span>
                                 </span>
-                                <span className="text-xs font-black text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-500/30">
+                                <span className="text-xs font-black text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-500/30">
                                   #{q.form}형식
                                 </span>
                                 {q.createdAt && (
-                                  <span className="text-[10px] text-slate-500">
+                                  <span className="text-[10px] text-slate-400">
                                     {typeof q.createdAt === 'string' ? q.createdAt : ''}
                                   </span>
                                 )}
                               </div>
 
                               {/* The Sentence with Blank (NO answer spoiler) */}
-                              <div className="font-medium text-sm sm:text-base text-slate-900 dark:text-white leading-relaxed font-sans">
+                              <div className="font-medium text-sm sm:text-base text-white leading-relaxed font-sans">
                                 {(() => {
                                   const BLANK_REGEX = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\(\s*_{1,}\s*\)|\[\s*_{1,}\s*\]|\[\s*___+\s*\]|\bblank\b|\bBlank\b|\bBLANK\b|[\(\[]\s*[\w\s\-']+(?:\s*\/\s*[\w\s\-']+)+\s*[\)\]])/gi;
                                   let s = q.sentence || '';
@@ -267,7 +262,7 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                                         <React.Fragment key={idx}>
                                           {part}
                                           {idx < parts.length - 1 && (
-                                            <span className="inline-block mx-1.5 px-3 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-b-2 border-indigo-500 font-mono font-bold text-xs tracking-wider">
+                                            <span className="inline-block mx-1.5 px-3 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border-b-2 border-indigo-500 font-mono font-bold text-xs tracking-wider">
                                               ______
                                             </span>
                                           )}

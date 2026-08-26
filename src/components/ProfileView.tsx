@@ -76,7 +76,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onOpenAdminCenter,
   onOpenInstallModal,
   isStandalone = false,
-  onGoAnalytics,
+  onGoAnalytics
 }) => {
   const { language, setLanguage, t } = useLanguage();
   const [name, setName] = useState<string>(user.name);
@@ -115,17 +115,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-animated-gradient flex items-center justify-center p-3 sm:p-6 md:p-8">
-      <div className="max-w-3xl w-full bg-white dark:glass-card rounded-[2.5rem] p-4 sm:p-8 relative border border-slate-200 dark:border-slate-700/60 shadow-xl text-left">
+    <div className="min-h-screen bg-slate-950 bg-animated-gradient flex items-center justify-center p-3 sm:p-6 md:p-8 selection:bg-indigo-500 selection:text-white">
+      <div className="max-w-3xl w-full glass-card rounded-[2.5rem] p-4 sm:p-8 relative border border-slate-700/60 shadow-2xl text-left">
         
         {/* Top Header */}
-        <div className="flex justify-between items-center mb-4 border-b border-slate-200 dark:border-slate-700/60 pb-3">
+        <div className="flex justify-between items-center mb-4 border-b border-slate-700/60 pb-3">
           <button
             onClick={() => {
               sound.playClick();
               onBack();
             }}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold transition-all flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm active:scale-95"
+            className="text-slate-300 hover:text-white font-bold transition-all flex items-center gap-1.5 bg-slate-800/80 hover:bg-slate-700/80 px-3.5 py-2 rounded-xl border border-slate-700 text-xs sm:text-sm active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t('home')}</span>
@@ -133,20 +133,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           <div className="flex items-center gap-2">
             {/* Coin Badge */}
-            <div className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 px-3 py-1.5 rounded-full text-xs font-black text-amber-800 dark:text-amber-300 shadow-sm">
-              <Coins className="w-3.5 h-3.5 text-amber-600 dark:text-yellow-400" />
+            <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-full text-xs font-black text-amber-300 shadow-sm">
+              <Coins className="w-3.5 h-3.5 text-yellow-400" />
               <span>{user.coins ?? 200} {language === 'en' ? 'Coins' : '코인'}</span>
             </div>
           </div>
         </div>
 
         {/* 🌟 1. Current User Hero Profile Banner */}
-        <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-slate-100 dark:from-indigo-900/70 dark:via-purple-950/85 dark:to-slate-900/95 rounded-3xl p-5 sm:p-6 border border-purple-200 dark:border-purple-500/40 shadow-sm mb-5 relative overflow-hidden">
+        <div className="bg-gradient-to-br from-indigo-900/70 via-purple-950/85 to-slate-900/95 rounded-3xl p-5 sm:p-6 border border-purple-500/40 shadow-md mb-5 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 relative z-10">
             <div className="flex items-center gap-4 w-full sm:w-auto">
-              <div className="w-20 h-20 rounded-3xl bg-white dark:bg-slate-800/90 border-2 border-purple-300 dark:border-purple-400/50 flex items-center justify-center text-5xl shadow-md flex-shrink-0 animate-pulse">
+              <div className="w-20 h-20 rounded-3xl bg-slate-800/90 border-2 border-purple-400/50 flex items-center justify-center text-5xl shadow-md flex-shrink-0 animate-pulse">
                 {user.avatar || '🦁'}
               </div>
               <div>
@@ -155,14 +155,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <span>{tierInfo.icon}</span>
                     <span>{tierInfo.tier}</span>
                   </span>
-                  <span className="bg-purple-100 dark:bg-purple-500/20 text-purple-800 dark:text-purple-200 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-purple-300 dark:border-purple-500/30">
+                  <span className="bg-purple-500/20 text-purple-200 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-purple-500/30">
                     {language === 'en' ? `Catalog ${unlockedCount} / ${AVATAR_DATABASE.length} Collected` : `아바타 도감 ${unlockedCount} / ${AVATAR_DATABASE.length} 수집`}
                   </span>
                 </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
                   <span>{user.name}</span>
                 </h2>
-                <p className="text-xs text-purple-800 dark:text-purple-200/80 font-bold">
+                <p className="text-xs text-purple-200/80 font-bold">
                   {tierInfo.tier} • {currentXp.toLocaleString()} XP
                 </p>
               </div>
@@ -183,11 +183,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
 
         {/* 📊 2. 나의 실시간 영문법 성장 대시보드 */}
-        <div className="bg-white dark:bg-slate-900/90 rounded-3xl p-4 sm:p-5 border border-indigo-200 dark:border-indigo-500/30 shadow-sm mb-6">
-          <div className="flex items-center justify-between mb-3 border-b border-slate-100 dark:border-slate-800 pb-2.5">
+        <div className="bg-slate-900/90 rounded-3xl p-4 sm:p-5 border border-indigo-500/30 shadow-md mb-6">
+          <div className="flex items-center justify-between mb-3 border-b border-slate-800 pb-2.5">
             <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+              <BarChart3 className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-sm sm:text-base font-black text-white">
                 {language === 'en' ? 'My Grammar Growth Dashboard 📊' : '나의 영문법 성장 대시보드 📊'}
               </h3>
             </div>
@@ -197,7 +197,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   sound.playClick();
                   onGoAnalytics();
                 }}
-                className="text-[11px] font-black text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-white flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:hover:bg-indigo-500/30 px-2.5 py-1 rounded-xl border border-indigo-200 dark:border-indigo-500/40 transition-all active:scale-95 shadow-sm"
+                className="text-[11px] font-black text-indigo-300 hover:text-white flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/30 px-2.5 py-1 rounded-xl border border-indigo-500/40 transition-all active:scale-95 shadow-sm"
               >
                 <span>{language === 'en' ? 'View Full Analytics' : '상세 분석 보기'}</span>
                 <ChevronRight className="w-3 h-3" />
@@ -206,19 +206,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
           {/* Tier & XP Progress Bar */}
-          <div className="bg-slate-50 dark:bg-slate-950/60 rounded-2xl p-3.5 border border-slate-200 dark:border-slate-800 mb-3.5 shadow-sm">
+          <div className="bg-slate-950/60 rounded-2xl p-3.5 border border-slate-800 mb-3.5 shadow-sm">
             <div className="flex justify-between items-center text-xs font-black mb-1.5">
-              <span className="text-slate-800 dark:text-slate-300 flex items-center gap-1">
+              <span className="text-slate-300 flex items-center gap-1">
                 <span>{tierInfo.icon}</span>
                 <span>{language === 'en' ? 'To Next Tier' : '다음 티어 승급까지'}</span>
               </span>
-              <span className="text-indigo-700 dark:text-indigo-300 font-mono">
+              <span className="text-indigo-300 font-mono">
                 {tierInfo.maxXp === Infinity 
                   ? (language === 'en' ? 'Max Master Reached 👑' : '최고 마스터 도달 👑')
                   : `${Math.max(0, tierInfo.maxXp - currentXp).toLocaleString()} XP (${tierInfo.progress}%)`}
               </span>
             </div>
-            <div className="w-full bg-slate-200 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-300 dark:border-slate-700/60">
+            <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden border border-slate-700/60">
               <div
                 className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500"
                 style={{ width: `${tierInfo.progress}%` }}
@@ -229,69 +229,69 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           {/* 4-Box Key Metrics Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-3.5">
             {/* Total Solved */}
-            <div className="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-center shadow-sm">
-              <div className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5">
+            <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center shadow-sm">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
                 {language === 'en' ? 'Total Solved' : '총 푼 문제'}
               </div>
-              <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                {totalSolvedCount} <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">{language === 'en' ? 'Qs' : '문제'}</span>
+              <div className="text-base sm:text-lg font-black text-white">
+                {totalSolvedCount} <span className="text-xs text-slate-400 font-normal">{language === 'en' ? 'Qs' : '문제'}</span>
               </div>
             </div>
 
             {/* Overall Accuracy */}
-            <div className="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-center shadow-sm">
-              <div className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5">
+            <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center shadow-sm">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
                 {language === 'en' ? 'Accuracy' : '종합 정답률'}
               </div>
               <div className={`text-base sm:text-lg font-black ${
-                overallAcc >= 90 ? 'text-emerald-600 dark:text-emerald-400' : overallAcc >= 70 ? 'text-blue-600 dark:text-cyan-400' : 'text-amber-600 dark:text-amber-400'
+                overallAcc >= 90 ? 'text-emerald-400' : overallAcc >= 70 ? 'text-cyan-400' : 'text-amber-400'
               }`}>
                 {overallAcc}%
               </div>
             </div>
 
             {/* Total Coins */}
-            <div className="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-center shadow-sm">
-              <div className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5">
+            <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center shadow-sm">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
                 {language === 'en' ? 'Coins' : '보유 코인'}
               </div>
-              <div className="text-base sm:text-lg font-black text-amber-700 dark:text-amber-300">
-                {user.coins ?? 200} <span className="text-xs text-amber-600 dark:text-amber-200/80 font-normal">🪙</span>
+              <div className="text-base sm:text-lg font-black text-amber-300">
+                {user.coins ?? 200} <span className="text-xs text-amber-200/80 font-normal">🪙</span>
               </div>
             </div>
 
             {/* Bookmark Limit */}
-            <div className="bg-slate-50 dark:bg-slate-950/60 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-center shadow-sm">
-              <div className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-0.5">
+            <div className="bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-center shadow-sm">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
                 {language === 'en' ? 'Bookmarks' : '즐겨찾기 보관함'}
               </div>
-              <div className="text-base sm:text-lg font-black text-purple-700 dark:text-purple-300">
-                {bookmarkCount} <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">/ {user.bookmarkLimit || 50}</span>
+              <div className="text-base sm:text-lg font-black text-purple-300">
+                {bookmarkCount} <span className="text-xs text-slate-400 font-normal">/ {user.bookmarkLimit || 50}</span>
               </div>
             </div>
           </div>
 
           {/* Mastery Quick Bar */}
           {masteryStats?.formMasteries && masteryStats.formMasteries.length > 0 && (
-            <div className="bg-slate-50 dark:bg-slate-950/50 rounded-2xl p-3 border border-slate-200 dark:border-slate-800 shadow-sm">
-              <div className="text-[11px] font-black text-slate-800 dark:text-slate-300 mb-2 flex items-center justify-between">
+            <div className="bg-slate-950/50 rounded-2xl p-3 border border-slate-800 shadow-sm">
+              <div className="text-[11px] font-black text-slate-300 mb-2 flex items-center justify-between">
                 <span>{language === 'en' ? 'Core Grammar Mastery Progress' : '실전 문법 문형별 숙련도 현황'}</span>
-                <span className="text-[10px] text-slate-500 font-medium">{language === 'en' ? 'S-Grade (90%+) A-Grade (75%+)' : 'S등급(90%+) A등급(75%+)'}</span>
+                <span className="text-[10px] text-slate-400 font-medium">{language === 'en' ? 'S-Grade (90%+) A-Grade (75%+)' : 'S등급(90%+) A등급(75%+)'}</span>
               </div>
               <div className="grid grid-cols-5 gap-1.5">
                 {masteryStats.formMasteries.map(m => {
                   const gradeColor = 
                     m.grade === 'S' ? 'bg-amber-500 text-slate-950 font-black' :
                     m.grade === 'A' ? 'bg-purple-600 text-white font-black' :
-                    m.grade === 'B' ? 'bg-blue-600 text-white font-black' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-300';
+                    m.grade === 'B' ? 'bg-blue-600 text-white font-black' : 'bg-slate-700 text-slate-300';
 
                   return (
-                    <div key={m.form} className="bg-white dark:bg-slate-900/80 p-2 rounded-xl border border-slate-200 dark:border-slate-800 text-center shadow-sm">
-                      <div className="text-[10px] font-black text-slate-600 dark:text-slate-400">{language === 'en' ? `Form ${m.form}` : `${m.form}형식`}</div>
+                    <div key={m.form} className="bg-slate-900/80 p-2 rounded-xl border border-slate-800 text-center shadow-sm">
+                      <div className="text-[10px] font-black text-slate-400">{language === 'en' ? `Form ${m.form}` : `${m.form}형식`}</div>
                       <div className={`text-[10px] font-black px-1.5 py-0.2 rounded-md my-0.5 inline-block ${gradeColor}`}>
                         {m.grade}
                       </div>
-                      <div className="text-[10px] font-black text-slate-800 dark:text-slate-300">{m.accuracy}%</div>
+                      <div className="text-[10px] font-black text-slate-300">{m.accuracy}%</div>
                     </div>
                   );
                 })}
@@ -304,17 +304,17 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
             <div>
-              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+              <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-purple-400" />
                 <span>{language === 'en' ? 'Avatar Collection Catalog' : '아바타 컬렉션 도감'}</span>
               </h3>
-              <p className="text-slate-600 dark:text-slate-400 text-xs font-medium">
+              <p className="text-slate-400 text-xs font-medium">
                 {language === 'en' ? 'Scroll below to inspect and equip any avatar.' : '아래 전체 창에서 스크롤하여 모든 아바타를 확인하고 장착할 수 있습니다.'}
               </p>
             </div>
 
             {/* 🌟 2-Way Filter Switch */}
-            <div className="flex bg-slate-100 dark:bg-slate-900/90 p-1 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-inner">
+            <div className="flex bg-slate-900/90 p-1 rounded-2xl border border-slate-700/80 shadow-inner">
               <button
                 type="button"
                 onClick={() => {
@@ -324,7 +324,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
                   filterMode === 'all'
                     ? 'bg-purple-600 text-white shadow-md'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -340,7 +340,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
                   filterMode === 'owned'
                     ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
                 <Star className="w-3.5 h-3.5 text-yellow-300" />
@@ -350,9 +350,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
 
           {/* Avatars Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-[420px] overflow-y-auto p-1.5 custom-scrollbar border border-slate-200 dark:border-slate-800/80 rounded-2xl bg-slate-50 dark:bg-slate-950/40">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-[420px] overflow-y-auto p-1.5 custom-scrollbar border border-slate-800/80 rounded-2xl bg-slate-950/40">
             {displayedAvatars.length === 0 ? (
-              <div className="col-span-2 sm:col-span-4 py-12 text-center text-slate-500 dark:text-slate-400 text-xs font-medium">
+              <div className="col-span-2 sm:col-span-4 py-12 text-center text-slate-400 text-xs font-medium">
                 {language === 'en' ? 'No avatars owned yet. Try Avatar Summon! 🎁' : '보유한 아바타가 없습니다. [아바타 가챠 소환]으로 새로운 캐릭터를 얻어보세요! 🎁'}
               </div>
             ) : (
@@ -367,7 +367,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between text-center relative shadow-sm ${
                       isUnlocked
                         ? `bg-gradient-to-br ${av.bgGradient}`
-                        : 'bg-slate-100 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 opacity-60 grayscale'
+                        : 'bg-slate-900/60 border-slate-800 opacity-60 grayscale'
                     }`}
                   >
                     {/* Grade Badge */}
@@ -388,20 +388,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </div>
 
                     {/* Name & Quote */}
-                    <h4 className={`text-xs font-black line-clamp-1 ${isUnlocked ? av.color : 'text-slate-600 dark:text-slate-500'}`}>
+                    <h4 className={`text-xs font-black line-clamp-1 ${isUnlocked ? av.color : 'text-slate-500'}`}>
                       {av.name}
                     </h4>
-                    <p className="text-[10px] text-slate-600 dark:text-slate-400 line-clamp-1 italic mt-0.5 font-medium">
+                    <p className="text-[10px] text-slate-400 line-clamp-1 italic mt-0.5 font-medium">
                       {isUnlocked ? `"${av.quote}"` : `${language === 'en' ? 'Rate' : '확률'} ${gInfo.dropRate}`}
                     </p>
 
                     {/* Equip Button */}
-                    <div className="mt-2.5 pt-2 border-t border-black/10 dark:border-white/10">
+                    <div className="mt-2.5 pt-2 border-t border-white/10">
                       {isUnlocked ? (
                         isEquipped ? (
                           <button
                             disabled
-                            className="w-full py-1.5 bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 rounded-xl text-[11px] font-black border border-emerald-500/30 flex items-center justify-center gap-1"
+                            className="w-full py-1.5 bg-emerald-500/20 text-emerald-300 rounded-xl text-[11px] font-black border border-emerald-500/30 flex items-center justify-center gap-1"
                           >
                             <CheckCircle2 className="w-3 h-3" />
                             <span>{language === 'en' ? 'Equipped' : '장착됨'}</span>
@@ -423,7 +423,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                             sound.playClick();
                             onOpenGachaModal();
                           }}
-                          className="w-full py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95"
+                          className="w-full py-1.5 bg-slate-800 text-slate-400 hover:text-white rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 active:scale-95"
                         >
                           <Lock className="w-3 h-3" />
                           <span>{language === 'en' ? 'Summon in Gacha' : '가챠에서 획득'}</span>
@@ -442,14 +442,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="bg-gradient-to-r from-amber-500/20 via-purple-600/20 to-pink-500/20 border-2 border-amber-500/50 rounded-2xl p-4 mb-5 text-left shadow-xl relative overflow-hidden">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Crown className="w-5 h-5 text-yellow-500 dark:text-yellow-400 animate-pulse" />
-                <span className="text-sm font-black text-amber-900 dark:text-amber-300">👑 Master Admin Center</span>
+                <Crown className="w-5 h-5 text-yellow-400 animate-pulse" />
+                <span className="text-sm font-black text-amber-300">👑 Master Admin Center</span>
               </div>
-              <span className="text-[10px] bg-amber-500/30 text-amber-900 dark:text-amber-200 font-black px-2.5 py-0.5 rounded-full border border-amber-400/40">
+              <span className="text-[10px] bg-amber-500/30 text-amber-200 font-black px-2.5 py-0.5 rounded-full border border-amber-400/40">
                 God Mode Available
               </span>
             </div>
-            <p className="text-xs text-slate-800 dark:text-slate-300 mb-3 font-medium">
+            <p className="text-xs text-slate-300 mb-3 font-medium">
               {language === 'en' ? 'Unlock unlimited coins, manage database, and control game economics.' : '무제한 코인 충전, 전 아바타 올 언락, 실시간 게임 경제/보상 배율 제어, 전체 푸시 공지 발송 및 유저 DB 관리 사령탑을 엽니다.'}
             </p>
             <button
@@ -467,32 +467,32 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
         {/* 🔐 Google Account Linked Status */}
         {user.email ? (
-          <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-500/30 rounded-2xl p-3.5 mb-5 flex items-center justify-between shadow-sm">
+          <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-3.5 mb-5 flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-400/40 flex items-center justify-center">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
               </div>
               <div className="text-left">
-                <div className="text-xs font-black text-emerald-900 dark:text-emerald-300">{language === 'en' ? 'Google Account Linked (Cloud Protected)' : '구글 계정 연동 완료 (데이터 영구 보호 중)'}</div>
-                <div className="text-[11px] text-slate-600 dark:text-slate-400 font-mono font-bold">{user.email}</div>
+                <div className="text-xs font-black text-emerald-300">{language === 'en' ? 'Google Account Linked (Cloud Protected)' : '구글 계정 연동 완료 (데이터 영구 보호 중)'}</div>
+                <div className="text-[11px] text-slate-400 font-mono font-bold">{user.email}</div>
               </div>
             </div>
-            <span className="text-[10px] bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-black px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-500/30">
+            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-black px-2.5 py-1 rounded-full border border-emerald-500/30">
               ✓ {language === 'en' ? 'Protected' : '보호됨'}
             </span>
           </div>
         ) : (
-          <div className="bg-slate-50 dark:bg-gradient-to-br dark:from-indigo-950/90 dark:via-purple-950/80 dark:to-slate-900/90 border border-slate-200 dark:border-indigo-500/40 rounded-2xl p-4 mb-5 text-left shadow-sm relative overflow-hidden">
+          <div className="bg-gradient-to-br from-indigo-950/90 via-purple-950/80 to-slate-900/90 border border-indigo-500/40 rounded-2xl p-4 mb-5 text-left shadow-sm relative overflow-hidden">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-black text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600 dark:text-yellow-300 animate-spin" />
+              <span className="text-xs font-black text-amber-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-spin" />
                 {language === 'en' ? 'Link Google Account for Cloud Sync' : '구글 계정 연동으로 데이터 지키기'}
               </span>
-              <span className="text-[10px] bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 font-black px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-500/30">
+              <span className="text-[10px] bg-amber-500/20 text-amber-300 font-black px-2 py-0.5 rounded-full border border-amber-500/30">
                 {language === 'en' ? 'PIN Account' : 'PIN 간편 계정'}
               </span>
             </div>
-            <p className="text-slate-700 dark:text-slate-300 text-xs mb-3 leading-relaxed font-medium">
+            <p className="text-slate-300 text-xs mb-3 leading-relaxed font-medium">
               {language === 'en'
                 ? 'Currently using PIN account. Link your Google account to ensure your coins, avatars, and review notes are safely backed up to the cloud!'
                 : '현재 PIN으로 로그인 중입니다. 구글 계정을 연동해 두시면 기기를 변경하거나 캐시가 삭제되어도 코인, 아바타 도감, 오답 노트가 100% 안전하게 복구됩니다!'}
@@ -519,20 +519,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         )}
 
         {/* ✏️ Nickname Change Form */}
-        <form onSubmit={handleNicknameSubmit} className="bg-slate-50 dark:bg-slate-900/80 rounded-2xl p-3.5 sm:p-4 border border-slate-200 dark:border-slate-800 mb-5 shadow-sm">
+        <form onSubmit={handleNicknameSubmit} className="bg-slate-900/80 rounded-2xl p-3.5 sm:p-4 border border-slate-800 mb-5 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black text-slate-800 dark:text-slate-300 uppercase tracking-wider">
+            <span className="text-xs font-black text-slate-300 uppercase tracking-wider">
               {language === 'en' ? 'Change Nickname (🪙 30 Coins)' : '닉네임 변경 (🪙 30 코인 소모)'}
             </span>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-bold">{language === 'en' ? 'Current: ' : '현재: '}{user.name}</span>
+              <span className="text-[11px] text-slate-400 font-bold">{language === 'en' ? 'Current: ' : '현재: '}{user.name}</span>
               <button
                 type="button"
                 onClick={() => {
                   sound.playClick();
                   setName(generateRandomNickname());
                 }}
-                className="text-[10px] font-black text-purple-700 dark:text-purple-300 hover:text-purple-900 dark:hover:text-purple-200 bg-purple-100 dark:bg-purple-500/20 px-2 py-0.5 rounded-lg border border-purple-300 dark:border-purple-500/40 transition-all flex items-center gap-1 active:scale-95"
+                className="text-[10px] font-black text-purple-300 hover:text-purple-200 bg-purple-500/20 px-2 py-0.5 rounded-lg border border-purple-500/40 transition-all flex items-center gap-1 active:scale-95"
               >
                 <span>🎲 {language === 'en' ? 'Random' : '랜덤 추천'}</span>
               </button>
@@ -543,7 +543,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="flex-1 px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-bold text-xs sm:text-sm focus:outline-none focus:border-purple-500 transition-all shadow-sm"
+              className="flex-1 px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-bold text-xs sm:text-sm focus:outline-none focus:border-purple-500 transition-all shadow-sm"
               placeholder={language === 'en' ? 'Enter new nickname' : '새로운 닉네임 입력 (최대 12자)'}
               maxLength={12}
             />
@@ -559,13 +559,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </form>
 
         {/* 🌐 앱 기본 언어 설정 */}
-        <div className="mb-5 bg-slate-50 dark:bg-slate-900/80 rounded-2xl p-3.5 sm:p-4 border border-slate-200 dark:border-slate-800 shadow-sm">
-          <label className="block text-xs font-black text-slate-800 dark:text-slate-300 mb-2 uppercase tracking-wider flex items-center justify-between">
+        <div className="mb-5 bg-slate-900/80 rounded-2xl p-3.5 sm:p-4 border border-slate-800 shadow-sm">
+          <label className="block text-xs font-black text-slate-300 mb-2 uppercase tracking-wider flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
               <span>{t('languageSetting')}</span>
             </div>
-            <span className="text-[11px] text-cyan-700 dark:text-cyan-300 font-bold">
+            <span className="text-[11px] text-cyan-300 font-bold">
               {language === 'en' ? 'English 🇺🇸' : '한국어 🇰🇷'}
             </span>
           </label>
@@ -579,7 +579,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2 ${
                 language === 'ko'
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-400 text-white shadow-md font-black'
-                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
               }`}
             >
               <span>🇰🇷 한국어 (Korean)</span>
@@ -594,22 +594,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all active:scale-95 flex items-center justify-center gap-2 ${
                 language === 'en'
                   ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-purple-400 text-white shadow-md font-black'
-                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white'
               }`}
             >
               <span>🇺🇸 English (영어)</span>
               {language === 'en' && <Check className="w-3.5 h-3.5" />}
             </button>
           </div>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 text-left">
+          <p className="text-[11px] text-slate-400 mt-2 text-left">
             * {t('languageDesc')}
           </p>
         </div>
 
         {/* 🎯 Daily Study Goal */}
         <div className="mb-5">
-          <label className="block text-xs font-black text-slate-800 dark:text-slate-300 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-            <Target className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+          <label className="block text-xs font-black text-slate-300 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+            <Target className="w-3.5 h-3.5 text-indigo-400" />
             <span>{t('dailyGoalSetting')}</span>
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -625,7 +625,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 className={`py-2.5 rounded-xl border text-xs font-bold transition-all active:scale-95 ${
                   dailyGoal === goal
                     ? 'bg-indigo-600 border-indigo-400 text-white shadow-md font-black'
-                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
                 }`}
               >
                 {language === 'en' ? `${goal} Qs / Day` : `하루 ${goal}문제`}
