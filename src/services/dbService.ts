@@ -1776,38 +1776,6 @@ export function getSentenceFingerprint(sentence: string): string {
   return sentence.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-// 🎯 사용자별 이미 푼 문제 핑거프린트 목록 조회 (중복 출제 100% 영구 방지)
-export function getUserSolvedFingerprints(userName: string): Set<string> {
-  const set = new Set<string>();
-  if (!userName) return set;
-  try {
-    const stored = localStorage.getItem(`ai_grammar_solved_fp_${userName}`);
-    if (stored) {
-      const arr = JSON.parse(stored);
-      if (Array.isArray(arr)) {
-        arr.forEach(fp => {
-          if (fp && typeof fp === 'string') set.add(fp);
-        });
-      }
-    }
-  } catch {}
-  return set;
-}
-
-// 🎯 사용자별 문제 풀이 기록 영구 저장 (중복 출제 100% 영구 방지)
-export function recordUserSolvedQuestions(userName: string, questions: Question[]): void {
-  if (!userName || !Array.isArray(questions) || questions.length === 0) return;
-  try {
-    const existing = getUserSolvedFingerprints(userName);
-    questions.forEach(q => {
-      const fp = getSentenceFingerprint(q?.sentence || '');
-      if (fp) existing.add(fp);
-    });
-    const arr = Array.from(existing);
-    localStorage.setItem(`ai_grammar_solved_fp_${userName}`, JSON.stringify(arr));
-  } catch {}
-}
-
 // 2. 공용 DB (Questions) 문제 저장 (중복 문장 원천 방지)
 export async function saveQuestionsToFirestore(questions: Question[], difficulty: string): Promise<boolean> {
   try {
@@ -1849,8 +1817,8 @@ export async function saveQuestionsToFirestore(questions: Question[], difficulty
   }
 }
 
-// 3. 공용 DB에서 난이도별 10문제 추출 (사용자 맞춤 중복 0% 보장 + 문제 고갈 시 실시간 무한 AI 신규 출제)
-export async function getRandomQuestions(difficultyLabel: string, userName: string = ''): Promise<{ success: boolean; data?: Question[]; error?: string }> {
+// 3. 공용 DB에서 난이도별 10문제 추출 (1세트 10문제 내 중복 문장 100% 원천 차단)
+export async function getRandomQuestions(difficultyLabel: string): Promise<{ success: boolean; data?: Question[]; error?: string }> {
   try {
     const targetLvl = difficultyLabel.includes('Level 4') || difficultyLabel.includes('4단계') || difficultyLabel.includes('실전') || difficultyLabel.includes('Mastery') ? 4
       : difficultyLabel.includes('Level 3') || difficultyLabel.includes('3단계') || difficultyLabel.includes('고득점') || difficultyLabel.includes('Advanced') ? 3
@@ -1895,58 +1863,35 @@ export async function getRandomQuestions(difficultyLabel: string, userName: stri
       });
     }
 
-    const allDbQuestions = Array.from(uniqueQuestionsMap.values());
-    const solvedSet = getUserSolvedFingerprints(userName);
+    let allDbQuestions = Array.from(uniqueQuestionsMap.values());
 
-    // 🛡️ 사용자가 과거에 푼 적 없는 완전히 새로운 문제만 필터링
-    let unseenQuestions = allDbQuestions.filter(q => {
-      const fp = getSentenceFingerprint(q.sentence || '');
-      return fp && !solvedSet.has(fp);
-    });
-
-    // 🚀 사용자가 DB의 문제를 거의 다 풀었거나 (남은 문제가 10개 미만) 신규 문제가 필요한 경우:
-    // 기존 문제 재출제 금지! 실시간으로 Gemini AI를 호출하여 20개의 참신한 새 문제를 즉시 무한 생성
-    if (unseenQuestions.length < 10) {
-      console.log(`[getRandomQuestions]: Unseen pool (${unseenQuestions.length}) is below 10 for "${userName}". Triggering Infinite AI Synthesis for [${difficultyLabel}]...`);
+    // 🚀 DB에 유효한 고품질 문제가 10개 미만인 경우에만: Gemini AI를 실시간 호출하여 10문제를 보충
+    if (allDbQuestions.length < 10) {
+      console.log(`[getRandomQuestions]: DB contains only ${allDbQuestions.length} valid questions for [${difficultyLabel}]. Calling Gemini AI for 10 fresh questions...`);
       try {
-        const forbidden = Array.from(new Set([
-          ...allDbQuestions.map(q => q.sentence),
-          ...Array.from(solvedSet)
-        ])).slice(0, 30);
-
-        const aiResult = await generateBulkQuestions(difficultyLabel, '', 20, undefined, forbidden);
-        if (aiResult.success && aiResult.questions && aiResult.questions.length > 0) {
-          const freshGenerated = aiResult.questions.filter(q => {
+        const aiResult = await generateBulkQuestions(difficultyLabel, '', 10);
+        if (aiResult.success && aiResult.questions && aiResult.questions.length >= 5) {
+          saveQuestionsToFirestore(aiResult.questions, difficultyLabel).catch(() => {});
+          aiResult.questions.forEach(q => {
             const fp = getSentenceFingerprint(q.sentence || '');
-            return fp && !uniqueQuestionsMap.has(fp) && !solvedSet.has(fp);
+            if (fp && !uniqueQuestionsMap.has(fp)) {
+              uniqueQuestionsMap.set(fp, q);
+            }
           });
-
-          if (freshGenerated.length > 0) {
-            saveQuestionsToFirestore(freshGenerated, difficultyLabel).catch(() => {});
-            freshGenerated.forEach(q => {
-              const fp = getSentenceFingerprint(q.sentence || '');
-              if (fp) {
-                uniqueQuestionsMap.set(fp, q);
-                unseenQuestions.push(q);
-              }
-            });
-          }
+          allDbQuestions = Array.from(uniqueQuestionsMap.values());
         }
       } catch (e) {
-        console.warn("Infinite AI question synthesis fallback:", e);
+        console.warn("Auto AI question generation fallback failed:", e);
       }
     }
 
-    // 최종 출제 대상 풀 (새 문제 우선)
-    const targetPool = unseenQuestions.length >= 10 ? unseenQuestions : allDbQuestions;
-
-    if (targetPool.length === 0) {
-      return { success: false, error: `선택하신 [${difficultyLabel}] 난이도의 문제를 준비하지 못했습니다. [문제 공장]에서 새 문제를 출제해 주세요.` };
+    if (allDbQuestions.length === 0) {
+      return { success: false, error: `선택하신 [${difficultyLabel}] 난이도의 유효한 문제가 부족합니다. [문제 공장]에서 새 문제를 생성해 주세요.` };
     }
 
     // 🎯 1~5형식 문형별 고른 분배 알고리즘 (각 문형당 2문제씩 균등 추출)
     const formBuckets: Record<number, Question[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-    targetPool.forEach(q => {
+    allDbQuestions.forEach(q => {
       const f = sanitizeForm(q.form);
       if (formBuckets[f]) {
         formBuckets[f].push(q);
@@ -1988,11 +1933,6 @@ export async function getRandomQuestions(difficultyLabel: string, userName: stri
           selected.push(q);
         }
       }
-    }
-
-    // 출제된 10문제를 사용자 푼 문제 기록에 즉시 등록하여 다음 판 중복 원천 차단
-    if (userName) {
-      recordUserSolvedQuestions(userName, selected);
     }
 
     // 최종 10문제의 출제 순서 및 보기 4개를 100% 무작위 셔플

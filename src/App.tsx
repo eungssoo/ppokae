@@ -1043,7 +1043,7 @@ function AppContent() {
     setSelectedDifficulty(levelInfo.label);
     setQuizMode('normal');
 
-    const result = await getRandomQuestions(levelInfo.label, user?.name || '');
+    const result = await getRandomQuestions(levelInfo.label);
     setIsLoading(false);
 
     if (result.success && result.data && result.data.length > 0) {
