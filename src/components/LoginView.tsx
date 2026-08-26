@@ -42,7 +42,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-animated-gradient flex items-center justify-center p-4 sm:p-6 md:p-8 relative">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 bg-animated-gradient flex items-center justify-center p-4 sm:p-6 md:p-8 relative selection:bg-indigo-500 selection:text-white">
       {/* 🌐 Top Right Controls: Theme + Language Switcher */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
         {/* ☀️ / 🌙 Theme Toggle */}
@@ -52,7 +52,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             sound.playClick();
             toggleTheme();
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white font-bold text-xs shadow-lg transition-all active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-xs shadow-md transition-all active:scale-95"
           title={theme === 'dark' ? '밝은 테마로 전환' : '다크 모드로 전환'}
         >
           {theme === 'dark' ? (
@@ -62,7 +62,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </>
           ) : (
             <>
-              <Moon className="w-3.5 h-3.5 text-indigo-400" />
+              <Moon className="w-3.5 h-3.5 text-indigo-600" />
               <span>🌙</span>
             </>
           )}
@@ -75,14 +75,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
             sound.playClick();
             setLanguage(language === 'ko' ? 'en' : 'ko');
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white font-bold text-xs shadow-lg transition-all active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-xs shadow-md transition-all active:scale-95"
         >
-          <Globe className="w-3.5 h-3.5 text-cyan-400" />
+          <Globe className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
           <span>{language === 'ko' ? '🇺🇸 English' : '🇰🇷 한국어'}</span>
         </button>
       </div>
 
-      <div className="max-w-md w-full glass-card rounded-[2.5rem] p-6 sm:p-10 border border-slate-700/60 shadow-2xl relative overflow-hidden text-center transition-all duration-300">
+      <div className="max-w-md w-full bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-slate-200 dark:border-slate-700/60 shadow-2xl relative overflow-hidden text-center transition-all duration-300">
         
         {/* Background Ambient Light */}
         <div className="absolute -top-24 -left-24 w-60 h-60 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -90,28 +90,28 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
         {/* Hero Title */}
         <div className="relative z-10 mb-5">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-3 bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-3 bg-indigo-100 dark:bg-indigo-500/15 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>AI English Mastery • PPOKAE</span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight mb-2">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight mb-2">
             {language === 'en' ? 'Ppokae ' : '뽀개 '}
-            <span className="text-indigo-400 font-black">
+            <span className="text-indigo-600 dark:text-indigo-400 font-black">
               AI English
             </span>
           </h1>
 
-          <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed mb-4">
+          <p className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm font-medium leading-relaxed mb-4">
             {language === 'en' ? (
               <>
                 Master grammar triggers, real-world patterns, and native dialogues!<br />
-                Start with <strong>🪙 200 Coins</strong> + 4 Free Learner Avatars!
+                Start with <strong className="text-indigo-700 dark:text-indigo-300">🪙 200 Coins</strong> + 4 Free Learner Avatars!
               </>
             ) : (
               <>
                 실전 문법 공식부터 원어민 표현까지 스마트하게 완성!<br />
-                학습 지원 <strong>🪙 200 코인</strong> & 스타터 아바타 4종 무료 지급!
+                학습 지원 <strong className="text-indigo-700 dark:text-indigo-300">🪙 200 코인</strong> & 스타터 아바타 4종 무료 지급!
               </>
             )}
           </p>
@@ -124,19 +124,19 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 sound.playStar();
                 onOpenInstallModal();
               }}
-              className="w-full py-2.5 px-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/90 border border-slate-700 hover:border-indigo-400 text-white font-bold text-xs flex items-center justify-between shadow-sm transition-all active:scale-95 group"
+              className="w-full py-2.5 px-3.5 rounded-2xl bg-indigo-50 dark:bg-slate-800/80 hover:bg-indigo-100 dark:hover:bg-slate-700/90 border border-indigo-200 dark:border-slate-700 hover:border-indigo-400 text-slate-900 dark:text-white font-bold text-xs flex items-center justify-between shadow-sm transition-all active:scale-95 group"
             >
               <div className="flex items-center gap-2">
                 <span className="text-base">📲</span>
-                <span className="text-slate-200 text-left text-[11px] sm:text-xs">
+                <span className="text-slate-700 dark:text-slate-200 text-left text-[11px] sm:text-xs">
                   {language === 'en' ? (
-                    <>Install App for Homescreen! <strong className="text-indigo-300 underline underline-offset-2">1s Guide</strong></>
+                    <>Install App for Homescreen! <strong className="text-indigo-700 dark:text-indigo-300 underline underline-offset-2">1s Guide</strong></>
                   ) : (
-                    <>스마트폰 홈화면 정식 앱 설치! <strong className="text-indigo-300 underline underline-offset-2">1초 설치 안내</strong></>
+                    <>스마트폰 홈화면 정식 앱 설치! <strong className="text-indigo-700 dark:text-indigo-300 underline underline-offset-2">1초 설치 안내</strong></>
                   )}
                 </span>
               </div>
-              <span className="text-indigo-300 font-bold text-[11px] group-hover:translate-x-0.5 transition-transform shrink-0">
+              <span className="text-indigo-700 dark:text-indigo-300 font-bold text-[11px] group-hover:translate-x-0.5 transition-transform shrink-0">
                 {language === 'en' ? 'Install ➔' : '설치 안내 ➔'}
               </span>
             </button>
@@ -154,7 +154,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   onGoogleLogin();
                 }}
                 disabled={isLoading}
-                className="w-full py-4 px-4 bg-white hover:bg-slate-100 text-slate-900 rounded-2xl font-black text-sm sm:text-base transition-all shadow-xl active:scale-95 flex items-center justify-between gap-2 border border-slate-200 group"
+                className="w-full py-4 px-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-2xl font-black text-sm sm:text-base transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center justify-between gap-2 border border-slate-200 dark:border-slate-700 group"
               >
                 <div className="flex items-center gap-2.5">
                   <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
@@ -165,39 +165,39 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </svg>
                   <span>{t('googleLogin')}</span>
                 </div>
-                <span className="bg-amber-100 text-amber-900 border border-amber-300 font-black text-[11px] px-2 py-0.5 rounded-full shadow-sm">
+                <span className="bg-amber-100 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 font-black text-[11px] px-2.5 py-0.5 rounded-full shadow-sm">
                   {language === 'en' ? '🪙 +300C Bonus' : '🪙 300C 지급'}
                 </span>
               </button>
             )}
 
             <div className="flex items-center my-3">
-              <div className="flex-1 border-t border-slate-700/60" />
-              <span className="px-3 text-[11px] text-slate-500 font-bold">
+              <div className="flex-1 border-t border-slate-200 dark:border-slate-700/60" />
+              <span className="px-3 text-[11px] text-slate-400 dark:text-slate-500 font-bold">
                 {language === 'en' ? 'OR' : '또는'}
               </span>
-              <div className="flex-1 border-t border-slate-700/60" />
+              <div className="flex-1 border-t border-slate-200 dark:border-slate-700/60" />
             </div>
 
-            {/* 계정 생성 / PIN 로그인 버튼 (클릭 시 닉네임/PIN 입력창 열림) */}
+            {/* 계정 생성 / PIN 로그인 버튼 */}
             <button
               type="button"
               onClick={() => {
                 sound.playClick();
                 setShowPinRegister(true);
               }}
-              className="w-full py-3.5 px-4 bg-slate-800/90 hover:bg-slate-750 text-slate-200 hover:text-white rounded-2xl font-black text-xs sm:text-sm transition-all border border-slate-700 active:scale-95 flex items-center justify-center gap-2"
+              className="w-full py-3.5 px-4 bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white rounded-2xl font-black text-xs sm:text-sm transition-all border border-slate-200 dark:border-slate-700 active:scale-95 flex items-center justify-center gap-2"
             >
-              <UserPlus className="w-4 h-4 text-purple-400" />
+              <UserPlus className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               <span>{language === 'en' ? 'Free Account / PIN Login' : '무료 계정 생성 / PIN 로그인'}</span>
             </button>
           </div>
         ) : (
-          /* 📝 2. 계정 생성 / PIN 로그인 클릭 시 펼쳐지는 아이디 & PIN 입력창 및 데이터 백업 안내 */
+          /* 📝 2. 계정 생성 / PIN 로그인 */
           <div className="space-y-4 relative z-10 text-left animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-700/60">
-              <span className="text-xs font-black text-purple-300 flex items-center gap-1.5">
-                <UserPlus className="w-4 h-4 text-pink-400" />
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700/60">
+              <span className="text-xs font-black text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                <UserPlus className="w-4 h-4 text-pink-500 dark:text-pink-400" />
                 <span>{language === 'en' ? 'Account Setup / PIN Login' : '계정 생성 / PIN 로그인'}</span>
               </span>
               <button
@@ -206,7 +206,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   sound.playClick();
                   setShowPinRegister(false);
                 }}
-                className="text-[11px] text-slate-400 hover:text-white font-bold flex items-center gap-1 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 transition-all"
+                className="text-[11px] text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 transition-all"
               >
                 <ArrowLeft className="w-3 h-3" />
                 <span>{t('back')}</span>
@@ -216,7 +216,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <form onSubmit={handleSubmit} className="space-y-3.5 pt-1">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-bold text-slate-300">
+                  <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                     {language === 'en' ? '1. Choose Nickname (Free)' : '1. 닉네임 설정 (무료)'}
                   </label>
                   <button
@@ -225,7 +225,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       sound.playClick();
                       setName(generateRandomNickname());
                     }}
-                    className="text-[10px] font-bold text-purple-300 hover:text-purple-200 bg-purple-500/20 hover:bg-purple-500/30 px-2 py-0.5 rounded-lg border border-purple-500/40 transition-all flex items-center gap-1 active:scale-95"
+                    className="text-[10px] font-bold text-purple-700 dark:text-purple-300 hover:text-purple-800 dark:hover:text-purple-200 bg-purple-100 dark:bg-purple-500/20 hover:bg-purple-200 dark:hover:bg-purple-500/30 px-2 py-0.5 rounded-lg border border-purple-200 dark:border-purple-500/40 transition-all flex items-center gap-1 active:scale-95"
                   >
                     <Dice5 className="w-3 h-3" />
                     <span>{language === 'en' ? 'Random' : '랜덤'}</span>
@@ -239,13 +239,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     onChange={(e) => setName(e.target.value)}
                     placeholder={t('enterName')}
                     required
-                    className="w-full pl-11 pr-4 py-3 bg-slate-800/90 border border-slate-700 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-slate-300 mb-1 block">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 block">
                   {language === 'en' ? '2. Secret 6-Digit PIN' : '2. 6자리 비밀 PIN 번호'}
                 </label>
                 <div className="relative">
@@ -257,16 +257,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     placeholder={language === 'en' ? '6-digit number (e.g. 123456)' : '숫자 6자리 (예: 123456)'}
                     required
                     maxLength={6}
-                    className="w-full pl-11 pr-4 py-3 bg-slate-800/90 border border-slate-700 rounded-2xl text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 tracking-widest transition-all"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800/90 border border-slate-300 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 tracking-widest transition-all"
                   />
                 </div>
               </div>
 
               {/* 🦁 4종 스타터 아바타 선택 섹션 */}
               <div>
-                <label className="text-[11px] font-bold text-slate-300 mb-1.5 flex items-center justify-between">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
                   <span>{language === 'en' ? '3. Select Starter Avatar (Free)' : '3. 대표 스타터 아바타 선택 (무료)'}</span>
-                  <span className="text-[10px] text-purple-300">{language === 'en' ? 'Pick 1 of 4' : '4종 중 택1'}</span>
+                  <span className="text-[10px] text-purple-700 dark:text-purple-300">{language === 'en' ? 'Pick 1 of 4' : '4종 중 택1'}</span>
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {STARTER_AVATARS.map((avatar) => {
@@ -281,12 +281,12 @@ export const LoginView: React.FC<LoginViewProps> = ({
                         }}
                         className={`p-2 rounded-2xl border transition-all text-center flex flex-col items-center gap-1 ${
                           isSelected
-                            ? 'bg-gradient-to-b from-purple-600/30 to-pink-600/30 border-pink-400 shadow-md shadow-pink-500/20 scale-105'
-                            : 'bg-slate-800/70 border-slate-700/80 hover:border-slate-600 opacity-70 hover:opacity-100'
+                            ? 'bg-purple-100 dark:bg-gradient-to-b dark:from-purple-600/30 dark:to-pink-600/30 border-purple-500 dark:border-pink-400 shadow-md scale-105'
+                            : 'bg-slate-100 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700/80 hover:border-slate-400 opacity-70 hover:opacity-100'
                         }`}
                       >
                         <span className="text-2xl">{avatar.icon}</span>
-                        <span className={`text-[10px] font-black ${isSelected ? 'text-white' : 'text-slate-400'}`}>
+                        <span className={`text-[10px] font-black ${isSelected ? 'text-purple-900 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>
                           {avatar.name}
                         </span>
                       </button>
@@ -296,10 +296,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </div>
 
               {/* 💡 가챠 아바타 변경 안내 */}
-              <div className="p-3 bg-purple-950/50 border border-purple-500/30 rounded-2xl text-left flex items-start gap-2 shadow-inner">
-                <Sparkles className="w-4 h-4 text-amber-300 flex-shrink-0 mt-0.5" />
-                <p className="text-[11px] text-slate-300 leading-relaxed">
-                  <strong className="text-pink-300">{language === 'en' ? 'Avatar Customization' : '아바타 & 닉네임 변경'}</strong>: {language === 'en' ? 'You can summon mythical & legendary avatars and switch anytime for free!' : '닉네임과 아바타는 가입 후 언제든지 [🎰 아바타 소환소]에서 전설/신화 아바타를 소환하여 무료로 자유롭게 변경할 수 있습니다!'}
+              <div className="p-3 bg-purple-50 dark:bg-purple-950/50 border border-purple-200 dark:border-purple-500/30 rounded-2xl text-left flex items-start gap-2 shadow-inner">
+                <Sparkles className="w-4 h-4 text-amber-500 dark:text-amber-300 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
+                  <strong className="text-pink-600 dark:text-pink-300">{language === 'en' ? 'Avatar Customization' : '아바타 & 닉네임 변경'}</strong>: {language === 'en' ? 'You can summon mythical & legendary avatars and switch anytime for free!' : '닉네임과 아바타는 가입 후 언제든지 [🎰 아바타 소환소]에서 전설/신화 아바타를 소환하여 무료로 자유롭게 변경할 수 있습니다!'}
                 </p>
               </div>
 
@@ -314,18 +314,18 @@ export const LoginView: React.FC<LoginViewProps> = ({
             </form>
 
             {/* 💡 PIN 가입자 전용 데이터 백업 안내 배너 */}
-            <div className="p-3 bg-indigo-950/70 border border-indigo-500/30 rounded-2xl text-left flex items-start gap-2.5 shadow-inner">
-              <Link2 className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                <strong className="text-amber-300">{language === 'en' ? 'Cloud Sync Note' : '데이터 백업 안내'}</strong>: {language === 'en' ? 'Link your Google account anytime in Profile Settings for seamless cloud sync.' : '가입 후 [프로필 설정]에서 구글 계정을 연동하면 학습 기록과 코인을 안전하게 영구 백업할 수 있습니다.'}
+            <div className="p-3 bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl text-left flex items-start gap-2.5 shadow-inner">
+              <Link2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+              <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed">
+                <strong className="text-amber-700 dark:text-amber-300">{language === 'en' ? 'Cloud Sync Note' : '데이터 백업 안내'}</strong>: {language === 'en' ? 'Link your Google account anytime in Profile Settings for seamless cloud sync.' : '가입 후 [프로필 설정]에서 구글 계정을 연동하면 학습 기록과 코인을 안전하게 영구 백업할 수 있습니다.'}
               </p>
             </div>
           </div>
         )}
 
         {/* Footer Note */}
-        <div className="mt-6 flex items-center justify-center gap-1.5 text-slate-500 text-[11px] font-medium relative z-10">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400/80" />
+        <div className="mt-6 flex items-center justify-center gap-1.5 text-slate-500 dark:text-slate-400 text-[11px] font-medium relative z-10">
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400/80" />
           <span>{t('guestNotice')}</span>
         </div>
 

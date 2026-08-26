@@ -1592,7 +1592,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 selection:bg-indigo-500 selection:text-white">
       {/* ⚠️ 관리자에게만 보이는 점검 모드 활성화 알림 바 */}
       {systemSettings.maintenanceMode && (
         <div className="bg-gradient-to-r from-rose-600 to-pink-600 text-white px-4 py-2.5 text-xs font-black text-center flex flex-wrap items-center justify-center gap-2 sticky top-0 z-50 shadow-lg">
