@@ -1956,24 +1956,38 @@ export async function getRandomQuestions(difficultyLabel: string, userName: stri
     });
 
     const selected: Question[] = [];
+    const quizUniqueFps = new Set<string>();
 
-    // 1차: 1~5형식에서 각 2문제씩 균등 추출
+    // 1차: 1~5형식에서 각 2문제씩 균등 추출 (1세트 10문제 내 중복 문장 100% 원천 차단)
     for (let f = 1; f <= 5; f++) {
       const pool = trueShuffle(formBuckets[f]);
-      const picked = pool.slice(0, 2);
-      selected.push(...picked);
-      formBuckets[f] = pool.slice(2);
+      let pickedCount = 0;
+      for (const q of pool) {
+        const fp = getSentenceFingerprint(q.sentence || '');
+        if (fp && !quizUniqueFps.has(fp)) {
+          quizUniqueFps.add(fp);
+          selected.push(q);
+          pickedCount++;
+          if (pickedCount >= 2) break;
+        }
+      }
     }
 
-    // 특정 형식의 문제가 부족하여 10문제가 채워지지 않은 경우 남은 풀에서 보충
+    // 특정 형식의 문제가 부족하여 10문제가 채워지지 않은 경우 남은 풀에서 중복 없이 보충
     if (selected.length < 10) {
       const remaining: Question[] = [];
       for (let f = 1; f <= 5; f++) {
         remaining.push(...formBuckets[f]);
       }
       const shuffledRemaining = trueShuffle(remaining);
-      const needed = 10 - selected.length;
-      selected.push(...shuffledRemaining.slice(0, needed));
+      for (const q of shuffledRemaining) {
+        if (selected.length >= 10) break;
+        const fp = getSentenceFingerprint(q.sentence || '');
+        if (fp && !quizUniqueFps.has(fp)) {
+          quizUniqueFps.add(fp);
+          selected.push(q);
+        }
+      }
     }
 
     // 출제된 10문제를 사용자 푼 문제 기록에 즉시 등록하여 다음 판 중복 원천 차단
