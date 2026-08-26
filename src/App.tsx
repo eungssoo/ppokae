@@ -12,7 +12,8 @@ import {
   ExpressionItem,
   BookmarkItem,
   FormMastery,
-  AvatarItem
+  AvatarItem,
+  SystemSettings
 } from './types';
 import { 
   authenticateUser, 
@@ -71,6 +72,7 @@ import {
 import { auth } from './config/firebase';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
 import { generateBulkQuestions, generateNativeExpressions, validateNicknameWithAI } from './services/geminiService';
+import { getGrammarTagInfo } from './services/grammarTagService';
 import { trackUserAction } from './services/analyticsService';
 import { sound } from './services/soundService';
 
@@ -89,6 +91,7 @@ import { ExpressionSelectView, EXPRESSION_CATEGORIES } from './components/Expres
 import { ExpressionStudyView } from './components/ExpressionStudyView';
 import { BookmarkedListView } from './components/BookmarkedListView';
 import { GrammarSkillVaultView } from './components/GrammarSkillVaultView';
+import { ChatEnglishView } from './components/ChatEnglishView';
 import { ActionConfirmModal, ActionModalConfig } from './components/ActionConfirmModal';
 import { AnalyticsDashboardView } from './components/AnalyticsDashboardView';
 import { ProfileView } from './components/ProfileView';
@@ -101,11 +104,12 @@ import { InitialProfileSetupModal } from './components/InitialProfileSetupModal'
 import { UserInquiryModal } from './components/UserInquiryModal';
 import { ToastProvider, useToast } from './components/ToastContainer';
 import { useLanguage } from './services/i18n';
-import { SystemSettings } from './types';
+import { useTheme } from './services/themeService';
 
 function AppContent() {
   const toast = useToast();
   const { language, t } = useLanguage();
+  useTheme();
 
   // User Profile
   const [user, setUser] = useState<UserProfile | null>(() => {
@@ -898,12 +902,13 @@ function AppContent() {
     const formSummary = Object.entries(formStats.countsByForm).map(([f, cnt]) => `${f}형식(${cnt}개)`).join(' ');
     console.log(`[DB Form Analysis for ${levelInfo.label}]:`, formSummary);
 
-    setLoadingText(language === 'en' ? `Gemini AI is generating 40 questions balanced across Forms 1-5 for [${levelInfo.label}]...` : `Gemini AI가 [${levelInfo.label}] 1~5형식 문형 균형을 맞춰 40문제를 생성하고 있습니다...`);
+    setLoadingText(language === 'en' ? `Gemini AI is generating 40 questions balanced across practical grammar points and structures for [${levelInfo.label}]...` : `Gemini AI가 [${levelInfo.label}] 실전 문법 포인트 및 구문 균형을 맞춰 40문제를 생성하고 있습니다...`);
 
     let focus = '';
     if (isWeakness && weaknessData.total > 0) {
-      const sortedForms = Object.entries(weaknessData.forms).sort((a, b) => b[1] - a[1]);
-      focus = sortedForms.slice(0, 2).map(f => `${f[0]}형식`).join(', ');
+      const topCats = Object.entries(weaknessData.categories || {}).sort((a, b) => b[1] - a[1]);
+      const catFocus = topCats.length > 0 ? getGrammarTagInfo(topCats[0][0]).nameKo : '';
+      focus = catFocus ? `실전 핵심 문법 [${catFocus}] 70% 이상 집중 출제` : '';
     }
 
     const genResult = await generateBulkQuestions(levelInfo.label, focus, 40, formStats);
@@ -1774,10 +1779,21 @@ function AppContent() {
         />
       )}
 
-      {/* 🧠 4.5. Grammar Skill Vault View (시험장 1초 킬러 문법 보관소 전용 화면) */}
+      {/* 🧠 4.5. Grammar Skill Vault View (문법 딸깍 보관소 전용 화면) */}
       {view === 'grammar_skill_vault' && (
         <GrammarSkillVaultView
           onBack={() => setView('menu')}
+        />
+      )}
+
+      {/* 💬 4.6. Chat English & Slang Lounge (채팅 영어 & 메신저 슬랭 라운지) */}
+      {view === 'chat_english' && (
+        <ChatEnglishView
+          onBack={() => setView('menu')}
+          onAddCoins={(reward) => {
+            setUser(prev => prev ? { ...prev, coins: (prev.coins ?? 0) + reward } : prev);
+            toast.coin('🪙 학습 보상 획득!', `채팅 영어 퀴즈 완주 보상으로 +${reward} 코인을 획득했습니다!`);
+          }}
         />
       )}
 

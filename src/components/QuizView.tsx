@@ -26,6 +26,7 @@ import { getRankingQuestionPoints, getLevelGatingInfo, adminDeleteSingleQuestion
 import { regenerateQuestionWithAI } from '../services/reportService';
 import { useLanguage } from '../services/i18n';
 import { getOrFetchEnglishExplanation, prefetchEnglishExplanation, generateFallbackEnglishExplanation, EnglishExplanation } from '../services/englishExplanationService';
+import { inferGrammarCategory } from '../services/grammarTagService';
 import { QuestionReportModal } from './QuestionReportModal';
 
 interface QuizViewProps {
@@ -548,33 +549,41 @@ export const QuizView: React.FC<QuizViewProps> = ({
               })()}
             </p>
 
-            <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
-              <span className="inline-block bg-slate-800 text-indigo-300 font-bold text-xs px-3 py-1 rounded-full border border-slate-700">
-                {currentQuestion.form}{language === 'en' ? '-Form Sentence' : '형식 문장'}
-              </span>
-              {quizMode === 'daily' ? (
-                <span className={`inline-flex items-center gap-1.5 font-black text-xs px-3 py-1 rounded-full border ${scoreInfo.badgeBg} ${scoreInfo.badgeText} ${scoreInfo.badgeBorder} shadow-sm`}>
-                  <span>🎯 {scoreInfo.levelLabel}</span>
-                  <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px] text-white font-black">+{scoreInfo.points}{language === 'en' ? ' PTS' : '점'}</span>
-                </span>
-              ) : (
-                <span className={`inline-flex items-center gap-1 font-bold text-xs px-3 py-1 rounded-full border ${levelGating.badgeBg} ${levelGating.badgeText} ${levelGating.badgeBorder}`}>
-                  <span>🎯 {levelGating.levelLabel}</span>
-                </span>
-              )}
+            {/* Sentence Badges & Grammar Category */}
+            {(() => {
+              const grammarInfo = inferGrammarCategory(currentQuestion);
+              return (
+                <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+                  {/* 🏷️ 1순위 강조: 실전 문법 핵심 포인트 태그 */}
+                  <span className={`inline-flex items-center gap-1.5 font-black text-xs px-3.5 py-1 rounded-full border shadow-sm ${grammarInfo.bgColor} ${grammarInfo.textColor} ${grammarInfo.borderColor}`}>
+                    <span>{grammarInfo.icon}</span>
+                    <span>{language === 'en' ? grammarInfo.nameEn : grammarInfo.nameKo}</span>
+                  </span>
 
-              {/* 🪙 코인 보상 배지 */}
-              <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-black px-3 py-1 rounded-full flex items-center gap-1">
-                <span>🪙</span>
-                <span>{language === 'en' ? `+${levelGating.coinsReward} Coins on Correct` : `정답 시 +${levelGating.coinsReward} 코인`}</span>
-              </span>
+                  {/* 2순위: 문장 형식 배지 */}
+                  <span className="inline-block bg-slate-800 text-slate-300 font-bold text-xs px-3 py-1 rounded-full border border-slate-700">
+                    {currentQuestion.form}{language === 'en' ? '-Form Sentence' : '형식 문장'}
+                  </span>
 
-              {/* 📈 랭크 승급 한도 배지 */}
-              <span className="bg-slate-800/90 text-slate-300 border border-slate-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1" title={levelGating.tierCapNotice}>
-                <span>📈</span>
-                <span>{language === 'en' ? `Tier Cap: ${levelGating.tierCap}` : `승급 한도: ${levelGating.tierCap}`}</span>
-              </span>
-            </div>
+                  {quizMode === 'daily' ? (
+                    <span className={`inline-flex items-center gap-1.5 font-black text-xs px-3 py-1 rounded-full border ${scoreInfo.badgeBg} ${scoreInfo.badgeText} ${scoreInfo.badgeBorder} shadow-sm`}>
+                      <span>🎯 {scoreInfo.levelLabel}</span>
+                      <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px] text-white font-black">+{scoreInfo.points}{language === 'en' ? ' PTS' : '점'}</span>
+                    </span>
+                  ) : (
+                    <span className={`inline-flex items-center gap-1 font-bold text-xs px-3 py-1 rounded-full border ${levelGating.badgeBg} ${levelGating.badgeText} ${levelGating.badgeBorder}`}>
+                      <span>🎯 {levelGating.levelLabel}</span>
+                    </span>
+                  )}
+
+                  {/* 🪙 코인 보상 배지 */}
+                  <span className="bg-amber-500/10 text-amber-300 border border-amber-500/30 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                    <span>🪙</span>
+                    <span>{language === 'en' ? `+${levelGating.coinsReward} Coins` : `정답 시 +${levelGating.coinsReward} 코인`}</span>
+                  </span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Options & Action Section */}
@@ -711,6 +720,29 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* 🏷️ 실전 문법 핵심 포인트 & 형식 구조 분석 요약 카드 */}
+              {(() => {
+                const grammarInfo = inferGrammarCategory(currentQuestion);
+                return (
+                  <div className={`p-4 sm:p-5 rounded-2xl border ${grammarInfo.bgColor} ${grammarInfo.borderColor} shadow-sm`}>
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{grammarInfo.icon}</span>
+                        <span className={`text-xs sm:text-sm font-black uppercase tracking-wide ${grammarInfo.textColor}`}>
+                          {language === 'en' ? 'Core Exam Trigger:' : '실전 출제 핵심 포인트:'} {language === 'en' ? grammarInfo.nameEn : grammarInfo.nameKo}
+                        </span>
+                      </div>
+                      <span className="bg-slate-900/80 text-slate-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-slate-700">
+                        {currentQuestion.form}{language === 'en' ? '-Form Structure' : '형식 문형 구조'}
+                      </span>
+                    </div>
+                    <p className="text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
+                      {language === 'en' ? grammarInfo.descEn : grammarInfo.descKo}
+                    </p>
+                  </div>
+                );
+              })()}
 
               {/* 🇰🇷 한국어 번역 (한국어 모드일 때만 표시) */}
               {explanationLang === 'ko' && (

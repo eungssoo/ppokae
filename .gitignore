@@ -6,6 +6,7 @@ dist-ssr
 .env.*
 .DS_Store
 .vercel
+.firebase
 *.log
 seed_*.js
 reseed_*.js

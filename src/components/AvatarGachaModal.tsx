@@ -117,16 +117,16 @@ export const AvatarGachaModal: React.FC<AvatarGachaModalProps> = ({
 
         {/* Title Header */}
         <div className="mb-6">
-          <div className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-2 bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-pink-500/20 text-amber-300 border border-amber-500/40">
-            <Sparkles className="w-4 h-4 text-yellow-300 animate-spin" />
-            <span>0.05% Ultra Rare Avatar Gacha</span>
+          <div className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-2 bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+            <span>{language === 'en' ? 'Learner Avatar Rewards' : '학습 보상 아바타 컬렉션'}</span>
           </div>
 
-          <h2 className="text-2xl sm:text-4xl font-black tracking-tight flex items-center justify-center gap-2">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-300 to-purple-400">
-              {language === 'en' ? 'Legendary & Mythic Avatar Summon' : '전설 & 초월 아바타 소환'}
+          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center justify-center gap-2">
+            <span>
+              {language === 'en' ? 'Avatar Rewards & Collection' : '아바타 보상 소환소'}
             </span>
-            <span className="inline-block text-2xl sm:text-3xl">🎰</span>
+            <span className="inline-block text-2xl">🌟</span>
           </h2>
 
           <div className="flex items-center justify-center gap-2 mt-2">

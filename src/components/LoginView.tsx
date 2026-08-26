@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, ShieldCheck, User, KeyRound, UserPlus, Link2, ArrowLeft, Dice5, Globe } from 'lucide-react';
+import { Sparkles, ArrowRight, ShieldCheck, User, KeyRound, UserPlus, Link2, ArrowLeft, Dice5, Globe, Sun, Moon } from 'lucide-react';
 import { sound } from '../services/soundService';
 import { generateRandomNickname } from '../services/avatarService';
 import { useLanguage } from '../services/i18n';
+import { useTheme } from '../services/themeService';
 
 interface LoginViewProps {
   onLogin: (name: string, pin: string, starterAvatarId?: string) => void;
@@ -20,6 +21,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   isLoading,
 }) => {
   const { language, setLanguage, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const [showPinRegister, setShowPinRegister] = useState(false);
   const [name, setName] = useState('');
   const [pin, setPin] = useState('');
@@ -41,8 +43,32 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   return (
     <div className="min-h-screen bg-animated-gradient flex items-center justify-center p-4 sm:p-6 md:p-8 relative">
-      {/* 🌐 Top Right Language Switcher */}
-      <div className="absolute top-4 right-4 z-20">
+      {/* 🌐 Top Right Controls: Theme + Language Switcher */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        {/* ☀️ / 🌙 Theme Toggle */}
+        <button
+          type="button"
+          onClick={() => {
+            sound.playClick();
+            toggleTheme();
+          }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white font-bold text-xs shadow-lg transition-all active:scale-95"
+          title={theme === 'dark' ? '밝은 테마로 전환' : '다크 모드로 전환'}
+        >
+          {theme === 'dark' ? (
+            <>
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+              <span>☀️</span>
+            </>
+          ) : (
+            <>
+              <Moon className="w-3.5 h-3.5 text-indigo-400" />
+              <span>🌙</span>
+            </>
+          )}
+        </button>
+
+        {/* 🌐 Language Switcher */}
         <button
           type="button"
           onClick={() => {
@@ -59,33 +85,33 @@ export const LoginView: React.FC<LoginViewProps> = ({
       <div className="max-w-md w-full glass-card rounded-[2.5rem] p-6 sm:p-10 border border-slate-700/60 shadow-2xl relative overflow-hidden text-center transition-all duration-300">
         
         {/* Background Ambient Light */}
-        <div className="absolute -top-24 -left-24 w-60 h-60 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 w-60 h-60 bg-pink-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -left-24 w-60 h-60 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 w-60 h-60 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Hero Title */}
         <div className="relative z-10 mb-5">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-3 bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-pink-500/20 text-amber-300 border border-amber-500/40">
-            <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-spin" />
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-3 bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
             <span>AI English Mastery • PPOKAE</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-tight mb-2 font-serif">
+          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight mb-2">
             {language === 'en' ? 'Ppokae ' : '뽀개 '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-pink-400 to-purple-400 font-black">
-              PPOKAE
+            <span className="text-indigo-400 font-black">
+              AI English
             </span>
           </h1>
 
           <p className="text-slate-300 text-xs sm:text-sm font-medium leading-relaxed mb-4">
             {language === 'en' ? (
               <>
-                Conquer grammar, vocabulary, and native conversation!<br />
-                Instant <strong>🪙 200 Coins</strong> + 4 Free Starter Avatars on signup!
+                Master grammar triggers, real-world patterns, and native dialogues!<br />
+                Start with <strong>🪙 200 Coins</strong> + 4 Free Learner Avatars!
               </>
             ) : (
               <>
-                문법부터 단어, 회화 표현까지 전부 뽀개보자!<br />
-                가입 즉시 <strong>🪙 200 코인</strong> & 스타터 아바타 4종 무료 지급!
+                실전 문법 공식부터 원어민 표현까지 스마트하게 완성!<br />
+                학습 지원 <strong>🪙 200 코인</strong> & 스타터 아바타 4종 무료 지급!
               </>
             )}
           </p>
@@ -98,19 +124,19 @@ export const LoginView: React.FC<LoginViewProps> = ({
                 sound.playStar();
                 onOpenInstallModal();
               }}
-              className="w-full py-2.5 px-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-purple-950/70 to-pink-950/80 border border-indigo-500/50 hover:border-pink-400 text-white font-bold text-xs flex items-center justify-between shadow-md transition-all active:scale-95 group"
+              className="w-full py-2.5 px-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-700/90 border border-slate-700 hover:border-indigo-400 text-white font-bold text-xs flex items-center justify-between shadow-sm transition-all active:scale-95 group"
             >
               <div className="flex items-center gap-2">
-                <span className="text-base animate-bounce">📲</span>
+                <span className="text-base">📲</span>
                 <span className="text-slate-200 text-left text-[11px] sm:text-xs">
                   {language === 'en' ? (
-                    <>Install App for best experience! <strong className="text-amber-300 underline underline-offset-2">1s Guide</strong></>
+                    <>Install App for Homescreen! <strong className="text-indigo-300 underline underline-offset-2">1s Guide</strong></>
                   ) : (
-                    <>스마트폰 정식 앱으로 더 쾌적하게! <strong className="text-amber-300 underline underline-offset-2">1초 설치 안내</strong></>
+                    <>스마트폰 홈화면 정식 앱 설치! <strong className="text-indigo-300 underline underline-offset-2">1초 설치 안내</strong></>
                   )}
                 </span>
               </div>
-              <span className="text-pink-300 font-black text-[11px] group-hover:translate-x-1 transition-transform shrink-0">
+              <span className="text-indigo-300 font-bold text-[11px] group-hover:translate-x-0.5 transition-transform shrink-0">
                 {language === 'en' ? 'Install ➔' : '설치 안내 ➔'}
               </span>
             </button>

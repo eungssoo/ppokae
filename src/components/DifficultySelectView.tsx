@@ -6,19 +6,19 @@ import { getLevelGatingInfo } from '../services/dbService';
 import { useLanguage } from '../services/i18n';
 
 export const DIFFICULTY_LEVELS: DifficultyLevel[] = [
-  { level: 1, label: 'Level 1 (입문/초급)', desc: '기본적인 어휘와 단순한 문장 구조 (중2~중3 수준)' },
-  { level: 2, label: 'Level 2 (실력 중급)', desc: '다양한 어휘와 약간 복잡한 문장 (고1~고2 수준)' },
-  { level: 3, label: 'Level 3 (고득점 도약)', desc: '추상적 어휘와 복합 문장 (고3~수능 수준)' },
-  { level: 4, label: 'Level 4 (실전 마스터)', desc: '학술적/전문적 어휘와 고난도 문장 (토익/편입 수준)' },
+  { level: 1, label: 'Level 1 (기초 탄탄)', desc: '중학 기초 ~ 고1 기본 (기본 시제, 단/복수 수일치, 조동사, 기초 품사 / 일상 어휘)' },
+  { level: 2, label: 'Level 2 (수능 기본 & 토익 중급)', desc: '고교 수능 & 토익 650~750 (관계사, 수동태, to-V/동명사, 접속사 vs 전치사 / 수능 어휘)' },
+  { level: 3, label: 'Level 3 (수능 1등급 & 토익 고득점)', desc: '수능 킬러 & 토익 800~900 (분사구문, 가정법, 부정어 도치, that vs what / 고급 비즈니스 어휘)' },
+  { level: 4, label: 'Level 4 (토익 990 & 명문대 편입)', desc: '토익 만점 & 편입/공무원 킬러 (If생략 도치, 자/타동사 함정, 전치사 to, 혼동 파생어 / 편입·GRE 어휘)' },
 ];
 
 export const getDifficultyLevels = (language: 'ko' | 'en'): DifficultyLevel[] => {
   if (language === 'en') {
     return [
-      { level: 1, label: 'Level 1 (Beginner)', desc: 'Fundamental vocabulary & essential simple structures' },
-      { level: 2, label: 'Level 2 (Intermediate)', desc: 'Rich vocabulary & compound sentence structures' },
-      { level: 3, label: 'Level 3 (Advanced)', desc: 'Complex structures, participles & subjunctive mood' },
-      { level: 4, label: 'Level 4 (Mastery)', desc: 'Academic/business grammar, parallel structures & inversion' },
+      { level: 1, label: 'Level 1 (Core Basics)', desc: 'Middle school to Grade 10: Tenses, subject-verb agreement & modals' },
+      { level: 2, label: 'Level 2 (Intermediate)', desc: 'CSAT Basic & TOEIC 700: Relative clauses, passives, verbals & connectors' },
+      { level: 3, label: 'Level 3 (Advanced)', desc: 'CSAT Tier 1 & TOEIC 850+: Participles, conditionals, inversion & business vocabulary' },
+      { level: 4, label: 'Level 4 (Mastery 990 & Transfer)', desc: 'TOEIC 990 & University Transfer: Inverted subjunctives, transitive traps & GRE vocabulary' },
     ];
   }
   return DIFFICULTY_LEVELS;

@@ -115,17 +115,17 @@ export const GrammarSkillVaultView: React.FC<GrammarSkillVaultViewProps> = ({ on
           <div className="relative z-10">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-2.5 bg-amber-500/20 text-amber-300 border border-amber-500/40">
               <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-              <span>{language === 'en' ? 'SECRET GRAMMAR CHEAT SHEET' : '실전 영문법 1초 정답 치트키'}</span>
+              <span>{language === 'en' ? 'CLICK & SOLVE FORMULA' : '3초 정답 딸깍 공식'}</span>
             </div>
             
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-              <span>{language === 'en' ? 'Grammar Pro Skill & Hacks Vault 🧠' : '시험장 1초 킬러 문법 보관소 🧠'}</span>
+              <span>{language === 'en' ? 'Grammar Click & Solve Vault ⚡' : '문법 딸깍 보관소 ⚡'}</span>
             </h2>
             
             <p className="text-slate-300 text-xs sm:text-sm font-medium mt-2 leading-relaxed">
               {language === 'en'
-                ? 'Master indispensable slot formulas, sensory verb complements, and verb/verbal shortcuts to solve tricky exam questions in 1 second!'
-                : '관사 뒤 명사 자리, 감각동사 형용사 보어, 분사 구별 등 헷갈리는 문법 문제를 1초 만에 풀어내는 실전 필살 비법 모음집!'}
+                ? 'Master indispensable 3-second slot rules, agreement shortcuts, and high-yield killer formulas to solve exam questions with a single click!'
+                : '복잡한 문법 이론은 싹 빼고, 빈칸 앞뒤만 보고 3초 만에 정답을 바로 찍는 실전 딸깍 공식 모음집!'}
             </p>
           </div>
         </div>

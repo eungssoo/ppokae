@@ -63,7 +63,7 @@ export const ReportCenterModal: React.FC<ReportCenterModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-fade-in">
-      <div className="max-w-3xl w-full glass-card rounded-[2.5rem] p-5 sm:p-8 border border-purple-500/40 shadow-2xl relative overflow-hidden text-left flex flex-col max-h-[85vh]">
+      <div className="max-w-3xl w-full glass-card rounded-[2.5rem] p-5 sm:p-8 border border-slate-700/80 shadow-2xl relative overflow-hidden text-left flex flex-col max-h-[85vh]">
         
         {/* Close Button */}
         <button
@@ -78,8 +78,8 @@ export const ReportCenterModal: React.FC<ReportCenterModalProps> = ({
 
         {/* Header */}
         <div className="mb-4">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-2 bg-gradient-to-r from-rose-500/20 to-purple-500/20 text-rose-300 border border-rose-500/30">
-            <ShieldCheck className="w-3.5 h-3.5 text-rose-400" />
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-2 bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
             <span>AI Quality Assurance & Rewards</span>
           </div>
 

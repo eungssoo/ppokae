@@ -69,5 +69,23 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
     },
+    build: {
+      chunkSizeWarningLimit: 800,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/firebase')) {
+              return 'vendor-firebase';
+            }
+            if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('node_modules/lucide-react') || id.includes('node_modules/canvas-confetti')) {
+              return 'vendor-ui';
+            }
+          }
+        }
+      }
+    }
   };
 });

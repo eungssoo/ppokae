@@ -5,6 +5,7 @@ import { useLanguage } from '../services/i18n';
 import { sound } from '../services/soundService';
 import { regenerateQuestionWithAI } from '../services/reportService';
 import { adminUpdateQuestionEverywhere } from '../services/dbService';
+import { getGrammarTagInfo, inferGrammarCategory } from '../services/grammarTagService';
 
 interface DbExplorerViewProps {
   dbData: Record<string, Question[]>;
@@ -207,19 +208,32 @@ export const DbExplorerView: React.FC<DbExplorerViewProps> = ({
                         const qKey = q.id || q.sentence;
                         const isDeleting = deletingId === qKey;
                         const isRegenerating = regeneratingId === qKey;
+                        const tagInfo = q.grammarCategory 
+                          ? getGrammarTagInfo(q.grammarCategory)
+                          : inferGrammarCategory({
+                              form: q.form,
+                              sentence: q.sentence,
+                              answer: q.answer,
+                              grammarTag: q.grammarTag
+                            });
 
                         return (
                           <div
                             key={q.id || i}
                             className="bg-slate-900/90 hover:bg-slate-800/80 p-4 sm:p-5 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md"
                           >
-                            {/* Left: Number & Form badge & Question with Blank */}
+                            {/* Left: Number & Form badge & Grammar Tag & Question with Blank */}
                             <div className="flex-1 space-y-2">
-                              <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-xs font-mono font-bold text-slate-400">
                                   Q{i + 1}.
                                 </span>
-                                <span className="text-xs font-black text-indigo-300 bg-indigo-500/20 px-2.5 py-0.5 rounded-md border border-indigo-500/30">
+                                {/* 🏷️ 실전 문법 핵심 태그 */}
+                                <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-md border flex items-center gap-1 ${tagInfo.bgColor} ${tagInfo.textColor} ${tagInfo.borderColor}`}>
+                                  <span>{tagInfo.icon}</span>
+                                  <span>{language === 'en' ? tagInfo.badgeEn : tagInfo.badgeKo}</span>
+                                </span>
+                                <span className="text-xs font-black text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-500/30">
                                   #{q.form}형식
                                 </span>
                                 {q.createdAt && (

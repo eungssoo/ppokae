@@ -1,4 +1,5 @@
 import { Question, ExpressionItem } from '../types';
+import { inferGrammarCategory } from './grammarTagService';
 
 const LEVEL_RULES: Record<string, string> = {
   'Level 1 (입문/초급)': `
@@ -11,50 +12,91 @@ const LEVEL_RULES: Record<string, string> = {
   4) 기본 to부정사/동명사 목적어 (want to-V, hope to-V, enjoy -ing, finish -ing)
   5) 기초 1~3형식 문형
 - 절대 금지: 복잡한 분사구문, 도치, 가정법, 전문 어휘 사용 금지.
-- 예시: "He ______ to the gym every morning before breakfast." (정답: goes)`,
+- 예시: "He ______ to the library every morning before breakfast." (정답: goes)`,
 
   'Level 2 (실력 중급)': `
-[🎯 Level 2 - 고교 1~2학년 내신/모의고사 중급]
-- 문장 길이: 11~15단어 복문
+[🎯 Level 2 - 고교 1~2학년 / 토익 550~650 실력 중급]
+- 문장 길이: 11~16단어 복문
 - 출제 문법 범위:
   1) 관계대명사(who, which, that, whose, what) 및 관계부사(where, when, why)의 격과 쓰임
-  2) 5형식 목적격 보어 (사역동사 make/have/let + 동사원형, 지각동사 see/hear/watch + 동사원형/-ing, 준사역/일반동사 allow/cause/encourage/enable/require + to-V)
+  2) 5형식 목적격 보어 (사역동사 make/have/let + 동사원형, 지각동사 see/hear/watch + 동사원형/-ing, 일반 5형식 enable/allow/encourage/require + to-V)
   3) 수동태 (be + p.p., 조동사 + be p.p.)
   4) 현재완료 완료/경험/계속/결과 (since + 과거시점, for + 기간)
   5) 접속사 vs 전치사 구별 (although vs despite, because vs because of, while vs during)
   6) 감정 분사형용사 (confusing vs confused, exciting vs excited, satisfying vs satisfied)
 - 절대 금지: "yesterday", "every day" 같은 단순 중학 시제 단서 금지.
-- 예시: "The strict school rules do not allow students ______ their smartphones during lectures." (정답: to use)`,
+- 예시: "The company policy does not allow employees ______ confidential files outside the office." (정답: to access)`,
 
   'Level 3 (고득점 도약)': `
-[🎯 Level 3 - 고3 수능 / 1등급 모의고사 / 고난도 영문법]
-- 문장 길이: 15~22단어의 길고 구조가 복잡한 수능형 복문/혼합문 (절대 10단어 이하 단문 금지!)
-- 출제 문법 범위 (반드시 다음 중 하나를 핵심 출제 포인트로 삼을 것):
-  1) 분사구문 (능동 -ing, 수동 p.p., 완료형 Having p.p., 접속사가 살아있는 분사구문, With + O + O.C. 분사)
-  2) 가정법 (가정법 과거 If S were/did..., 가정법 과거완료 If S had p.p...., 혼합가정법, Without/But for 가정법)
-  3) 도치 구문 (부정어 도치 Never/Hardly/Scarcely/Seldom/Little/No sooner + 조동사 + S + V, Only 부사구 도치)
-  4) 당위성 주장/제안/요구/명령 동사 (insist, suggest, demand, require, recommend, propose + that + S + (should) 동사원형)
-  5) 복합관계대명사/부사 (whoever, whichever, whatever, wherever, however)
-  6) 형용사/부사 비교급 도치 및 특수 구문 (The more..., the more...)
-- 절대 금지: 단순 주어+동사+목적어의 중학 수준 단문 출제 절대 불가! 반드시 수능 지문 수준의 어휘와 복잡한 수식어구(전치사구, 분사구)를 포함할 것.
-- 예시 1: "The senior committee insisted that the safety regulations ______ immediately to prevent future accidents." (정답: be implemented)
-- 예시 2: "Hardly ______ the presentation when the investors began asking critical questions about the budget." (정답: had he finished)
-- 예시 3: "If the government had adopted the economic policy earlier, the current financial crisis ______ avoided." (정답: would have been)`,
+[🎯 Level 3 - 고3 수능 1등급 / 토익 750~850 고난도 도약]
+- 문장 길이: 16~24단어의 길고 구조가 복잡한 수능/토익 복합 지문형 문장 (절대 12단어 이하 단문 금지!)
+- 출제 문맥: 학술 연구, 심리학, 환경 정책, 비즈니스 이메일/보고서, 기술 혁신
+- 출제 문법 범위 (10대 핵심 영역을 다양하게 분산 출제):
+  1) 분사구문 (능동 -ing, 수동 p.p., 완료형 Having p.p., With + O + O.C. 분사)
+  2) 가정법 (가정법 과거 If S were/did, 가정법 과거완료 If S had p.p., 혼합가정법, Without/But for 가정법)
+  3) 부정어/한정어 도치 (Never/Hardly/Scarcely/Seldom/Little/No sooner + 조동사 + S + V, Only 부사구 도치)
+  4) 당위성 주장/제안/요구/명령 동사 (insist, suggest, demand, require, recommend + that + S + (should) 동사원형)
+  5) 명사절 vs 관계사 완결성 분석 (that vs what, in which vs which, whoever/whatever)
+  6) 접속사 vs 복합 전치사구 (provided that, in case of, given that, regardless of)
+  7) The 비교급 The 비교급 및 비교 대상의 일치 (that of / those of)
+- 절대 금지: 단순 주어+동사+목적어의 중학 수준 단문 출제 절대 불가!
+- 예시 1: "The senior committee insisted that the new safety protocol ______ implemented across all laboratories without delay." (정답: be)
+- 예시 2: "Hardly ______ the presentation when the foreign investors began inquiring about the quarterly revenue." (정답: had she finished)
+- 예시 3: "With consumer preferences rapidly ______, the retail brand had to adjust its digital marketing strategy." (정답: shifting)`,
 
   'Level 4 (실전 마스터)': `
-[🎯 Level 4 - 토익 900+ / 편입 / 공무원 영어 / 전문 비즈니스 & 학술 실전]
-- 문장 길이: 18~28단어의 고난도 전문/학술/비즈니스 실전 문장 (절대 12단어 이하 단문 금지!)
-- 출제 문법 범위 (반드시 다음 중 하나를 핵심 출제 포인트로 삼을 것):
-  1) If 생략 가정법 도치 (Had it not been for, Were it not for, Should you require further assistance)
-  2) 고급 접속사 및 복합 전치사구 (provided that, given that, in the event that, so long as, on condition that)
-  3) 병렬 구조 및 상관 접속사 (not only A but also B, not so much A as B, either A or B, neither A nor B)
-  4) 전치사 to vs to부정사 to 구별 관용구 (look forward to -ing, be committed to -ing, object to -ing, be dedicated to -ing)
-  5) 고난도 파생어 품사 자리 채우기 (명사/형용사/부사/동사 어휘 구조 분석)
-  6) 명사절 접속사 that vs what vs whether vs if의 완벽한 문장 구조 분석
-- 절대 금지: 중/고교 기본 문법 문제 출제 절대 불가. 반드시 토익 Part 5 고난도 및 편입 영문법 수준으로 출제.
-- 예시 1: "______ any technical complications arise during the international merger, our legal team will intervene immediately." (정답: Should)
-- 예시 2: "The executive board expressed their sincere dedication to ______ the highest standards of corporate governance." (정답: upholding)
-- 예시 3: "Had the engineers conducted more thorough stress tests, the structural failure ______ averted." (정답: might have been)`
+[🎯 Level 4 - 토익 900+ 만점 대비 / 명문대 편입영어(서강·성균·한양·중앙·외대 등) / 7·9급 공무원 킬러 실전]
+- 문장 길이: 18~30단어의 고난도 전문 비즈니스, 법률 계약서, 학술 논문, 철학/사회과학 비평 실전 문장 (절대 14단어 이하 단문 금지!)
+- 출제 문맥: 다국적 기업 인수합병, 금융 위기 분석, 생명윤리 논쟁, 지정학적 협약, 영미 학술 에세이
+- 출제 핵심 10대 킬러 유형 (매우 다양하게 골고루 출제):
+  1) If 생략 가정법 도치:
+     - Had S p.p. ~ S would have p.p. (예: "Had the directors known the risk, ...")
+     - Were S to-V / Were it not for (예: "Were any technical fault to occur, ...")
+     - Should S V (예: "Should you require further documentation, ...")
+  2) 자·타동사 혼동 & 전치사 오용 함정:
+     - lay - laid - laid vs lie - lay - lain vs lie - lied - lied
+     - raise - raised - raised vs rise - rose - risen
+     - sit - sat - sat vs set - set - set
+     - 전치사 불가 타동사: discuss about(X), mention about(X), marry with(X), reach to(X), accompany with(X), explain about(X)
+     - 전치사 필수 자동사: object to, participate in, account for, dispose of, refrain from, interfere with
+  3) 전치사 to vs to부정사 to 구별 관용 표현:
+     - look forward to -ing, be dedicated/committed/devoted to -ing, object to -ing, with a view to -ing, when it comes to -ing, be accustomed to -ing
+  4) 고난도 혼동 파생어 및 품사 자리:
+     - sensible(분별있는) vs sensitive(민감한)
+     - considerate(사려깊은) vs considerable(상당한)
+     - respectable(존경할만한) vs respectful(공손한) vs respective(각각의)
+     - economic(경제의) vs economical(절약되는/경제적인)
+     - successful(성공적인) vs successive(연속적인)
+  5) 특수 도치 및 강조 구문:
+     - Not until... did S + V, Only after... did S + V
+     - 장소/방향 부사구 도치 (Among the guests was the renowned author.)
+     - 보어 도치 (Enclosed is a copy of the contract.)
+     - Scarcely/Hardly ... when/before, No sooner ... than
+  6) 심화 가정법 구문 & 관용구:
+     - lest S (should) 동사원형 (~하지 않도록) / for fear that S should V
+     - It is (high) time that S + 과거동사 / should 동사원형
+     - as if / as though + 가정법 과거/과거완료
+     - cannot help -ing / cannot but + 동사원형
+  7) 고난도 분사구문 & 절대 분사구문:
+     - 의미상 주어가 다른 독립분사구문 (Weather permitting, All things considered)
+     - with + 목적어 + 분사/형용사/전치사구 (With the deadline approaching)
+     - need -ing (= need to be p.p., 수동 의미의 동명사)
+  8) 비교 대상의 일치 & 병렬 구조:
+     - The GDP of South Korea is significantly larger than that of developing nations. (that/those 대용)
+     - not only A but also B, not so much A as B, prefer A to B, rather than V
+  9) 복합관계사 & 명사절 완결성 판별:
+     - whoever vs whomever vs whatever vs whichever (주격/목적격 판별 및 삽입절 'whoever they believe is competent')
+     - that(완전절) vs what(불완전절) vs where/when(관계부사 완전절)
+  10) 특수 수일치 & 수량 표현:
+     - A number of + 복수명사 + 복수동사 vs The number of + 복수명사 + 단수동사
+     - portion expressions (two-thirds of the apples are / two-thirds of the water is)
+     - every / each + 단수명사 + 단수동사
+     - many a + 단수명사 + 단수동사
+- 예시 1: "______ any unexpected complications arise during the international merger, our legal team will intervene immediately." (정답: Should)
+- 예시 2: "The university provost is deeply committed to ______ academic integrity and ethical leadership across all faculties." (정답: upholding)
+- 예시 3: "Had the investigative journalists not revealed the financial discrepancy, the fraudulent transaction ______ undetected." (정답: would have remained)
+- 예시 4: "The energy consumption of the newly developed electric motor is far lower than ______ of conventional models." (정답: that)
+- 예시 5: "The executive committee insisted that the confidential proposal ______ discussed thoroughly before the press release." (정답: be)`
 };
 
 // Helper: 문장 형식 1~5 정규화
@@ -171,9 +213,13 @@ export function normalizeAndFixQuestion(q: any): Question {
     };
   });
 
+  const tagInfo = inferGrammarCategory(q || {});
+
   return {
     ...q,
     form: sanitizeForm(q?.form),
+    grammarTag: q?.grammarTag || tagInfo.badgeKo,
+    grammarCategory: q?.grammarCategory || tagInfo.id,
     sentence: normalizeSentenceBlank(q?.sentence || '', resolvedAnswer),
     options,
     answer: resolvedAnswer,
@@ -218,27 +264,34 @@ async function generateSingleBatch(
     matchedRule = LEVEL_RULES['Level 1 (입문/초급)'];
   }
 
-  const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사 및 출제위원장입니다.
+  const systemPrompt = `당신은 대한민국 최고 수준의 수능/토익(Part 5&6 990점 만점)/대학 편입영어(서강·성균·한양·중앙·외대 등)/공무원 영어 전문 1타 강사이자 국가공인 출제위원장입니다.
 제시된 [난이도 기준]을 100% 엄격하게 준수하여 객관식 4지선다 영문법 문제를 정확히 ${batchCount}개 생성하세요.
 
-[🚨 난이도 절대 준수 엄격 규칙]
-- 만약 난이도가 Level 3(고득점 도약) 또는 Level 4(실전 마스터)라면, 절대로 중학교/초급 수준의 단순한 단문(예: "He goes to school.", "I like music.")을 단 1문제도 출제해서는 안 됩니다.
-- Level 3: 반드시 15~22단어 이상의 길고 복잡한 수능/모의고사 지문 수준 복문/혼합문으로 출제하고, [가정법/분사구문/도치/당위성 동사원형/복합관계사]를 빈칸 포인트로 삼으세요.
-- Level 4: 반드시 18~28단어의 고난도 토익/편입/공무원 실전 문장으로 출제하고, [가정법 도치/고급 접속사/품사 자리/to부정사 vs 전치사 to]를 출제하세요.
-- Level 2: 11~15단어의 고교 중급 복문으로 출제하세요.
+[🚨 난이도 절대 준수 및 다양성 원칙]
+- 만약 난이도가 Level 4(실전 마스터)라면:
+  * 토익 900+ Part 5 고난도 함정 및 명문대 편입영어 문법 킬러 문항 수준으로 출제하세요.
+  * 주제를 다양하게 분산하세요: 비즈니스/재무/계약서, 생명공학/IT기술, 지정학/외교, 서양철학/비평문, 사회과학 에세이.
+  * 10대 핵심 킬러 유형(If생략 도치, 자/타동사 함정, 전치사 to vs to-V, 혼동 파생어, 특수 도치, 심화 가정법, 독립분사구문, 비교 that/those, 복합관계사, 특수 수일치)을 골고루 섞어 출제하세요.
+  * 4개의 보기(options)는 실제 시험처럼 '매력적인 오답 함정(고난도 문법 트랩)'을 갖추어야 합니다.
+- 만약 난이도가 Level 3(고득점 도약)라면:
+  * 수능 1등급 및 토익 750~850 도약 수준의 16~24단어 복합문으로 [분사구문, 가정법, 부정어 도치, 당위성 동사원형, that vs what]을 출제하세요.
+- Level 2: 11~16단어의 고교 중급/기본 토익 복문으로 출제하세요.
 - Level 1: 7~10단어의 중학 기초 단문으로 출제하세요.
 
 [🚨 출제 및 정답-해설 일치 엄격 원칙]
-1. [정답 텍스트 일치]: answer 필드는 1, 2, A 같은 번호가 아니라 반드시 '정답 영어 보기 텍스트 그 자체'를 정확하게 넣으세요.
-2. [단 1개의 정답 플래그]: options 4개 중 오직 1개만 is_correct: true 로 지정하고, 나머지 3개는 is_correct: false 로 지정하세요.
-3. [해설 일치]: options의 is_correct: true 항목의 feedback은 '정답인 문법적 이유'를 설명하고, is_correct: false 항목들은 '오답인 이유'를 명확하게 설명하세요.
-4. [문형 및 뉘앙스]: explanation의 chunk_pattern과 nuance는 반드시 정답을 기준으로 일관되게 작성하세요.
-5. [1~5형식]: form 필드는 1, 2, 3, 4, 5 정수만 허용.
-6. [빈칸 표기]: sentence의 빈칸은 반드시 '______' 로 작성하세요.`;
+1. [실전 문법 포인트 태그]: grammarTag(예: '주어-동사 수일치', '시제 · 태', '준동사', '관계사 · 명사절', '접속사 vs 전치사', '품사 · 어휘', '가정법 · 조동사', '특수구문 · 도치', '자·타동사 콜로케이션', '병렬 · 상관접속')와 grammarCategory(예: 'subject_verb_agreement', 'tense_voice', 'verbals', 'clauses_relatives', 'connectors', 'parts_of_speech', 'modals_subjunctive', 'special_structures', 'verb_patterns', 'parallel_agreement')를 정확히 지정하세요.
+2. [정답 텍스트 일치]: answer 필드는 1, 2, A 같은 번호가 아니라 반드시 '정답 영어 보기 텍스트 그 자체'를 정확하게 넣으세요.
+3. [단 1개의 정답 플래그]: options 4개 중 오직 1개만 is_correct: true 로 지정하고, 나머지 3개는 is_correct: false 로 지정하세요.
+4. [상세하고 깊이 있는 해설]:
+   - options의 is_correct: true 항목의 feedback은 '정답인 핵심 문법적 원리와 문맥적 이유'를 친절하고 상세하게 설명하세요.
+   - is_correct: false 항목들은 '각각 왜 오답인지(수일치 불일치, 품사 부적합, 시제 오류, 자/타동사 전치사 오류 등)'를 명확하고 상세하게 설명하세요.
+5. [문형 및 뉘앙스]: explanation의 chunk_pattern(문장 성분/구문 덩어리 구조 분석)과 nuance(원어민의 자연스러운 쓰임과 맥락 뉘앙스)는 반드시 정답을 기준으로 상세하게 작성하세요.
+6. [1~5형식]: form 필드는 1, 2, 3, 4, 5 정수만 허용.
+7. [빈칸 표기]: sentence의 빈칸은 반드시 '______' 로 작성하세요.`;
 
   let userPrompt = `난이도: ${difficultyLabel}\n[기준]\n${matchedRule}\n`;
   if (weaknessFocus) {
-    userPrompt += `[맞춤] 취약 문법 형식(${weaknessFocus})을 집중 포함하세요.\n`;
+    userPrompt += `[맞춤] 취약 문법 영역(${weaknessFocus})을 집중 포함하세요.\n`;
   }
   if (targetForms && targetForms.length > 0) {
     userPrompt += `[🚨 형식 균등 배분 필수] 반드시 ${targetForms.map(f => `${f}형식`).join(', ')} 문장을 균등하게 집중 출제하세요. (form 필드 값에 ${targetForms.join(', ')} 중 하나를 부여)\n`;
@@ -258,6 +311,8 @@ async function generateSingleBatch(
           type: "OBJECT",
           properties: {
             form: { type: "INTEGER" },
+            grammarTag: { type: "STRING" },
+            grammarCategory: { type: "STRING" },
             sentence: { type: "STRING" },
             options: {
               type: "ARRAY",

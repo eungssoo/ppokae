@@ -5,13 +5,14 @@ import {
   getDocs, 
   setDoc, 
   updateDoc, 
+  deleteDoc,
   query, 
   where, 
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Question, UserProfile } from '../types';
-import { callGeminiProxy } from './geminiService';
+import { callGeminiProxy, normalizeAndFixQuestion } from './geminiService';
 import { addCoins, removeUndefinedDeep, adminUpdateQuestionEverywhere } from './dbService';
 
 export interface QuestionReport {
@@ -575,7 +576,6 @@ export async function regenerateQuestionWithAI(params: {
       const rawText = resultData?.candidates?.[0]?.content?.parts?.[0]?.text;
       if (rawText) {
         const parsed = JSON.parse(rawText);
-        const { normalizeAndFixQuestion } = await import('./geminiService');
         const fixed = normalizeAndFixQuestion({
           ...parsed,
           id: `ai_repaired_${Date.now()}`
@@ -665,7 +665,6 @@ export async function getAllUserInquiries(): Promise<UserInquiry[]> {
 
 export async function deleteUserInquiry(inquiryId: string): Promise<boolean> {
   try {
-    const { deleteDoc } = await import('firebase/firestore');
     await deleteDoc(doc(db, 'user_inquiries', inquiryId));
     return true;
   } catch (e) {

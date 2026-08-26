@@ -22,12 +22,15 @@ import {
   Smartphone,
   Bell,
   MessageSquare,
-  Globe
+  Globe,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { UserProfile, ViewType, CycleInfo } from '../types';
 import { calculateTier, checkIsAdmin, getCycleStatusText } from '../services/dbService';
 import { sound } from '../services/soundService';
 import { useLanguage } from '../services/i18n';
+import { useTheme } from '../services/themeService';
 
 interface MainMenuViewProps {
   user: UserProfile;
@@ -62,6 +65,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
   onLogout,
 }) => {
   const { language, setLanguage, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const currentXp = user.xp || 0;
   const tierInfo = calculateTier(currentXp);
   const isAdmin = checkIsAdmin(user);
@@ -74,10 +78,10 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2.5 mb-5 border-b border-slate-700/60 pb-3.5">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {/* ⚡ App Brand Badge */}
-            <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-pink-500/20 border border-amber-500/40">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30">
               <span className="text-xs sm:text-sm">⚡</span>
-              <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-pink-300 font-serif">
-                {language === 'en' ? 'Ppokae' : '뽀개'}
+              <span className="text-xs font-black text-indigo-200 font-sans tracking-wide">
+                {language === 'en' ? 'Ppokae AI English' : '뽀개 AI 영어'}
               </span>
             </div>
 
@@ -88,7 +92,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                   sound.playReward();
                   onOpenAdminCenter();
                 }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-[11px] sm:text-xs shadow-lg shadow-amber-500/40 border border-amber-200 active:scale-95 transition-all animate-pulse"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black text-[11px] sm:text-xs shadow-md border border-amber-200 active:scale-95 transition-all"
                 title="마스터 관리자 사령탑 열기"
               >
                 <Crown className="w-3 h-3 fill-slate-950" />
@@ -124,6 +128,28 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
 
           <div className="flex items-center gap-1.5 ml-auto">
 
+            {/* ☀️ / 🌙 테마 전환 버튼 (Dark / Light) */}
+            <button
+              onClick={() => {
+                sound.playClick();
+                toggleTheme();
+              }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700/90 hover:border-amber-400 text-slate-300 hover:text-white font-black text-xs shadow-sm active:scale-95 transition-all"
+              title={theme === 'dark' ? '밝은 테마로 전환' : '다크 모드로 전환'}
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span>☀️</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>🌙</span>
+                </>
+              )}
+            </button>
+
             {/* 🌐 언어 전환 버튼 (KO / EN) */}
             <button
               onClick={() => {
@@ -152,18 +178,18 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               </button>
             )}
 
-            {/* 🎰 아바타 가챠 소환소 Quick Button */}
+            {/* 🌟 아바타 컬렉션 & 보상 소환 Quick Button */}
             {onOpenGachaModal && (
               <button
                 onClick={() => {
                   sound.playStar();
                   onOpenGachaModal();
                 }}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-purple-500 via-pink-500 to-amber-500 hover:from-purple-600 hover:to-pink-600 text-white font-black text-xs shadow-md shadow-purple-500/30 border border-purple-300/40 active:scale-95 transition-all"
-                title="아바타 소환소"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-black text-xs shadow-sm border border-indigo-400/40 active:scale-95 transition-all"
+                title="아바타 보상 컬렉션"
               >
                 <Sparkles className="w-3.5 h-3.5 text-yellow-200" />
-                <span>{t('avatarGachaBtn')}</span>
+                <span>{language === 'en' ? 'Avatars' : '아바타 보상'}</span>
               </button>
             )}
 
@@ -181,18 +207,18 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           </div>
         </div>
 
-        {/* 🏆 1. Top Hero Card: 실시간 랭킹전 (최상단 강조) */}
-        <div className="w-full mb-4 p-5 sm:p-6 bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 rounded-[2.2rem] shadow-[0_10px_30px_rgba(249,115,22,0.3)] border border-orange-400/40 text-left relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        {/* 🏆 1. Top Hero Card: 실시간 랭킹 챌린지 (신뢰감 있는 에듀테크 스타일) */}
+        <div className="w-full mb-4 p-5 sm:p-6 bg-gradient-to-br from-indigo-900/90 via-indigo-950 to-slate-900 rounded-[2.2rem] shadow-xl border border-indigo-500/40 text-left relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
           
           {/* Cycle Status & Countdown */}
           {(() => {
             const status = getCycleStatusText(currentCycle, language);
             return (
-              <div className="inline-flex items-center gap-1.5 bg-black/25 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white mb-3 border border-white/20">
-                <Clock className="w-3.5 h-3.5 text-yellow-200" />
+              <div className="inline-flex items-center gap-1.5 bg-slate-950/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white mb-3 border border-slate-700">
+                <Clock className="w-3.5 h-3.5 text-amber-300" />
                 <span>{status.inProgressText}</span>
-                <span className="bg-rose-500 text-white px-2 py-0.2 rounded-full text-[10px] font-black">
+                <span className="bg-indigo-600 text-white px-2 py-0.2 rounded-full text-[10px] font-black">
                   {status.remainingText}
                 </span>
               </div>
@@ -202,15 +228,15 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           {/* Title & Desc */}
           <div className="relative z-10 flex justify-between items-center mb-1">
             <div className="flex items-center gap-2">
-              <Trophy className="w-6 h-6 text-yellow-200 animate-bounce" />
-              <h2 className="text-xl sm:text-2xl font-black text-white drop-shadow tracking-tight">
+              <Trophy className="w-6 h-6 text-amber-300" />
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
                 {t('rankingHeroTitle')}
               </h2>
             </div>
-            <span className="text-2xl filter drop-shadow">🔥</span>
+            <span className="text-2xl">🔥</span>
           </div>
           
-          <p className="relative z-10 text-orange-100 font-medium text-xs sm:text-sm leading-relaxed mb-4">
+          <p className="relative z-10 text-indigo-100/80 font-medium text-xs sm:text-sm leading-relaxed mb-4">
             {t('rankingHeroDesc')}
           </p>
 
@@ -222,10 +248,9 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onStartDailyChallenge();
               }}
-              className="py-3 px-4 bg-white hover:bg-yellow-200 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 group/btn"
+              className="py-3 px-4 bg-white hover:bg-indigo-50 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group/btn"
             >
-              <span className="text-base">⚔️</span>
-              <span>{language === 'en' ? 'Start 10 Qs Battle' : '10문제 랭킹전 도전'}</span>
+              <span>{language === 'en' ? 'Start 10 Qs Challenge' : '10문제 랭킹 챌린지 도전'}</span>
               <ArrowRight className="w-4 h-4 text-slate-900 group-hover/btn:translate-x-1 transition-transform" />
             </button>
 
@@ -235,11 +260,11 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onNavigate('ranking_board');
               }}
-              className="py-3 px-4 bg-black/30 hover:bg-black/45 text-yellow-200 hover:text-white font-black text-xs sm:text-sm rounded-2xl border-2 border-yellow-300/60 hover:border-yellow-200 shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 backdrop-blur-md group/btn"
+              className="py-3 px-4 bg-slate-900/70 hover:bg-slate-800 text-indigo-200 hover:text-white font-black text-xs sm:text-sm rounded-2xl border border-indigo-400/40 shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 backdrop-blur-md group/btn"
             >
-              <Crown className="w-4 h-4 text-yellow-300 fill-yellow-300 group-hover/btn:scale-110 transition-transform" />
-              <span>{language === 'en' ? 'Live Hall of Fame 👑' : '실시간 명예의 전당 👑'}</span>
-              <ArrowRight className="w-4 h-4 text-yellow-300 group-hover/btn:translate-x-1 transition-transform" />
+              <Crown className="w-4 h-4 text-amber-300 fill-amber-300 group-hover/btn:scale-110 transition-transform" />
+              <span>{language === 'en' ? 'Live Leaderboard 👑' : '실시간 명예의 전당 👑'}</span>
+              <ArrowRight className="w-4 h-4 text-indigo-300 group-hover/btn:translate-x-1 transition-transform" />
             </button>
           </div>
         </div>
@@ -328,7 +353,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           </div>
         )}
 
-        {/* 🚀 2. Core Study Hub: 문제 풀이 핵심 존 (2x2 그리드 최상단 배치) */}
+        {/* 🚀 2. Core Study Hub: 핵심 학습 존 */}
         <div className="mb-5">
           <div className="flex items-center gap-1.5 text-slate-300 text-xs font-black uppercase tracking-wider mb-2.5 px-1">
             <Zap className="w-3.5 h-3.5 text-emerald-400" />
@@ -434,76 +459,122 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
           </div>
         </div>
 
-        {/* 🧠 시험장 1초 킬러 문법 보관소 바로가기 카드 */}
-        <div className="mb-6">
+        {/* 🏭 🔥 AI 문제 공장 강조 하이라이트 배너 */}
+        <div className="mb-5">
           <button
             onClick={() => {
               sound.playClick();
-              onNavigate('grammar_skill_vault');
+              onNavigate('generate');
             }}
-            className="w-full group p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-indigo-500/15 hover:from-amber-500/25 hover:to-indigo-500/25 border-2 border-amber-500/40 hover:border-amber-400 rounded-3xl transition-all shadow-md hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.99] text-left flex items-center justify-between gap-3 relative overflow-hidden"
+            className="w-full group p-4 sm:p-5 bg-gradient-to-r from-blue-950/70 via-indigo-950/80 to-purple-950/70 hover:from-blue-900/80 hover:to-indigo-900/80 border-2 border-indigo-500/50 hover:border-indigo-400 rounded-3xl transition-all shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-0.5 active:scale-[0.99] text-left flex items-center justify-between gap-3 relative overflow-hidden"
           >
-            {/* Ambient Glow */}
-            <div className="absolute top-0 right-0 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-
             <div className="flex items-center gap-3.5 relative z-10 flex-1">
-              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-xl sm:text-2xl shadow-md flex-shrink-0 group-hover:scale-105 transition-transform">
-                🧠
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 flex items-center justify-center text-2xl shadow-md flex-shrink-0 group-hover:scale-105 transition-transform">
+                🏭
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                  <h3 className="text-sm sm:text-base font-black text-white group-hover:text-amber-200 transition-colors">
-                    {language === 'en' ? 'Grammar Pro Skill & Hacks Vault 🧠' : '시험장 1초 킬러 문법 보관소 🧠'}
+                  <h3 className="text-sm sm:text-base font-black text-white group-hover:text-cyan-200 transition-colors">
+                    {language === 'en' ? 'AI Question Factory (40 Qs Generator) 🏭' : 'AI 맞춤 문제 공장 (40문제 대량 생산) 🏭'}
                   </h3>
-                  <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black px-2 py-0.2 rounded-full">
-                    {language === 'en' ? '12 Master Formulas' : '12대 필살 공식'}
+                  <span className="bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-black px-2 py-0.2 rounded-full">
+                    {language === 'en' ? 'Infinite Questions' : '무제한 출제 지원'}
                   </span>
                 </div>
                 <p className="text-slate-300 text-xs font-medium line-clamp-1">
                   {language === 'en'
-                    ? 'Click to view full cheat sheet: slot rules, sensory verbs, that vs what, and participle keys ➔'
-                    : '관사 뒤 명사 자리, 감각동사 형용사 보어, 분사 판별 등 1초 정답 치트키 12선 바로보기 ➔'}
+                    ? '1-Click generates 40 high-yield questions for TOEIC, Transfer, or CSAT levels instantly ➔'
+                    : '토익/편입/수능 원하는 난이도를 선택하면 AI가 1클릭으로 고품질 40문제를 즉시 출제합니다 ➔'}
                 </p>
               </div>
             </div>
 
-            <div className="flex-shrink-0 relative z-10 flex items-center gap-1 text-xs font-black text-amber-300 bg-slate-900/80 px-3 py-2 rounded-2xl border border-amber-500/40 group-hover:bg-amber-500 group-hover:text-slate-950 transition-all">
-              <span className="hidden sm:inline">{language === 'en' ? 'Open Vault' : '보관소 열기'}</span>
+            <div className="flex-shrink-0 relative z-10 flex items-center gap-1 text-xs font-black text-cyan-300 bg-slate-900/90 px-3 py-2 rounded-2xl border border-indigo-500/40 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+              <span>{language === 'en' ? 'Produce Now' : '공장 가동'}</span>
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </div>
           </button>
         </div>
 
-        {/* 📊 3. Analytics & Utility Hub: 학습 분석 & 도구 (하단 보조 메뉴) */}
+        {/* ⚡ 듀얼 특강 존: [문법 딸깍 보관소] + [💬 채팅 영어 & 슬랭 라운지] */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          
+          {/* 1. 문법 딸깍 보관소 */}
+          <button
+            onClick={() => {
+              sound.playClick();
+              onNavigate('grammar_skill_vault');
+            }}
+            className="group p-4 bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 hover:from-amber-900/50 border border-amber-500/40 hover:border-amber-400 rounded-3xl transition-all shadow-md hover:-translate-y-0.5 active:scale-[0.99] text-left flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-2xl">⚡</span>
+              <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
+                3초 정답 공식
+              </span>
+            </div>
+            <h3 className="text-sm sm:text-base font-black text-white group-hover:text-amber-200 transition-colors mb-0.5">
+              {language === 'en' ? 'Grammar Click & Solve Vault ⚡' : '문법 딸깍 보관소 ⚡'}
+            </h3>
+            <p className="text-slate-300 text-xs line-clamp-1">
+              {language === 'en' ? 'Instant 3-sec slot rules & killer shortcuts' : '빈칸 앞뒤 보고 3초 만에 찍는 실전 공식 12선'}
+            </p>
+          </button>
+
+          {/* 2. 채팅 영어 & 슬랭 라운지 */}
+          <button
+            onClick={() => {
+              sound.playClick();
+              onNavigate('chat_english');
+            }}
+            className="group p-4 bg-gradient-to-br from-pink-950/40 via-slate-900 to-slate-900 hover:from-pink-900/50 border border-pink-500/40 hover:border-pink-400 rounded-3xl transition-all shadow-md hover:-translate-y-0.5 active:scale-[0.99] text-left flex flex-col justify-between"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-2xl">💬</span>
+              <span className="bg-pink-500/20 text-pink-300 border border-pink-500/40 text-[10px] font-black px-2 py-0.5 rounded-full">
+                줄임말 & 대화체
+              </span>
+            </div>
+            <h3 className="text-sm sm:text-base font-black text-white group-hover:text-pink-200 transition-colors mb-0.5">
+              {language === 'en' ? 'Chat English & Slang Lounge 💬' : '채팅 영어 & 슬랭 라운지 💬'}
+            </h3>
+            <p className="text-slate-300 text-xs line-clamp-1">
+              {language === 'en' ? 'Master tbh, idk, ngl & texting slang' : '외국인 필수 줄임말(tbh, ngl, fr) 톡 시뮬레이션'}
+            </p>
+          </button>
+
+        </div>
+
+        {/* 📊 3. Analytics & Utility Hub: 학습 분석 & 도구 */}
         <div>
           <div className="flex items-center gap-1.5 text-slate-300 text-xs font-black uppercase tracking-wider mb-2.5 px-1">
             <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
             <span>{language === 'en' ? 'Analytics & Tools' : '학습 분석 & 문제 관리 (Analytics & Tools)'}</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-2.5">
             
-            {/* 🎰 아바타 가챠 소환소 */}
+            {/* 🌟 아바타 보상 컬렉션 */}
             <button
               onClick={() => {
                 sound.playStar();
                 if (onOpenGachaModal) onOpenGachaModal();
                 else onNavigate('profile_view');
               }}
-              className="p-3.5 bg-gradient-to-br from-purple-950/70 via-pink-950/60 to-slate-900/90 hover:from-purple-900/80 hover:to-pink-900/70 border border-purple-500/50 hover:border-pink-400 rounded-2xl transition-all text-left flex items-center justify-between shadow-md group active:scale-[0.98]"
+              className="p-3.5 bg-slate-800/70 hover:bg-indigo-500/10 border border-slate-700/90 hover:border-indigo-400 rounded-2xl transition-all text-left flex items-center justify-between shadow-sm group active:scale-[0.98]"
             >
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <span className="text-base animate-bounce">🎰</span>
-                  <h4 className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-300 via-pink-300 to-amber-300">
-                    {t('avatarGachaBtn')}
+                  <span className="text-base">🌟</span>
+                  <h4 className="text-xs font-black text-indigo-200">
+                    {language === 'en' ? 'Avatar Collection' : '아바타 보상 소환'}
                   </h4>
                 </div>
-                <p className="text-purple-200/70 text-[10px]">
-                  {language === 'en' ? '0.05% Transcendent God' : '0.05% 태초의 신 & 전설'}
+                <p className="text-slate-400 text-[10px]">
+                  {language === 'en' ? 'Special Ranks & Avatars' : '레전드 & 스페셜 아바타'}
                 </p>
               </div>
-              <Sparkles className="w-4 h-4 text-yellow-300 group-hover:rotate-12 transition-transform" />
+              <Sparkles className="w-4 h-4 text-indigo-400 group-hover:rotate-12 transition-transform" />
             </button>
 
             {/* 명예의 전당 */}
@@ -523,28 +594,6 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 </div>
                 <p className="text-slate-400 text-[10px]">
                   {language === 'en' ? 'Live Rankings Leaderboard' : '1/2/3차전 랭킹 순위'}
-                </p>
-              </div>
-              <ArrowRight className="w-3.5 h-3.5 text-slate-500" />
-            </button>
-
-            {/* 문제 공장 */}
-            <button
-              onClick={() => {
-                sound.playClick();
-                onNavigate('generate');
-              }}
-              className="p-3.5 bg-slate-800/60 hover:bg-indigo-500/10 border border-slate-700/80 rounded-2xl transition-all text-left flex items-center justify-between"
-            >
-              <div>
-                <div className="flex items-center gap-1.5 mb-0.5">
-                  <Factory className="w-4 h-4 text-indigo-400" />
-                  <h4 className="text-xs font-extrabold text-white">
-                    {language === 'en' ? 'AI Question Factory' : 'AI 문제 공장'}
-                  </h4>
-                </div>
-                <p className="text-slate-400 text-[10px]">
-                  {language === 'en' ? 'Create 40 Qs (🪙 50)' : '40문제 출제 (🪙 50)'}
                 </p>
               </div>
               <ArrowRight className="w-3.5 h-3.5 text-slate-500" />

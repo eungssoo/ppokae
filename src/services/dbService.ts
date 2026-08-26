@@ -34,6 +34,7 @@ import {
 } from '../types';
 import { sanitizeForm, generateRankingCycleQuestions, generateBulkQuestions, shuffleOptions, normalizeAndFixQuestion } from './geminiService';
 import { STARTER_AVATAR_IDS, performGachaDraw, AVATAR_DATABASE, generateRandomNickname } from './avatarService';
+import { inferGrammarCategory } from './grammarTagService';
 
 export function getTodayDateString(): string {
   const now = new Date();
@@ -2084,10 +2085,13 @@ export async function getOrCreateCycleQuestions(cycleInfo: CycleInfo): Promise<{
 // 7. 오답 저장
 export async function saveIncorrectQuestion(userName: string, qData: Question, wrongAnswer: string, difficulty?: string): Promise<boolean> {
   try {
+    const tagInfo = inferGrammarCategory(qData || {});
     const cleanPayload = removeUndefinedDeep({
       userName,
       difficulty: difficulty || '일일 랭킹전',
       form: sanitizeForm(qData?.form),
+      grammarTag: qData?.grammarTag || tagInfo.badgeKo,
+      grammarCategory: qData?.grammarCategory || tagInfo.id,
       sentence: qData?.sentence || '',
       wrongAnswer: wrongAnswer || '',
       correctAnswer: qData?.answer || '',
@@ -2102,7 +2106,7 @@ export async function saveIncorrectQuestion(userName: string, qData: Question, w
   }
 }
 
-// 8. 약점 분석 데이터 가져오기
+// 8. 약점 분석 데이터 가져오기 (실전 문법 카테고리 & 1~5형식 동시 분석)
 export async function getWeaknessAnalysis(userName: string): Promise<WeaknessAnalysis> {
   try {
     const qQuery = query(collection(db, 'weaknesses'), where('userName', '==', userName));
@@ -2110,17 +2114,32 @@ export async function getWeaknessAnalysis(userName: string): Promise<WeaknessAna
 
     let total = 0;
     const forms: Record<number, number> = {};
+    const categories: Record<string, number> = {};
 
     snapshot.forEach(docSnap => {
       total++;
-      const form = sanitizeForm(docSnap.data().form);
+      const data = docSnap.data();
+      const form = sanitizeForm(data.form);
       forms[form] = (forms[form] || 0) + 1;
+
+      // 실전 문법 카테고리 집계 (기존 데이터 호환 자동 추론)
+      let catId = data.grammarCategory;
+      if (!catId) {
+        const inferred = inferGrammarCategory({
+          form,
+          sentence: data.sentence,
+          answer: data.correctAnswer,
+          grammarTag: data.grammarTag
+        });
+        catId = inferred.id;
+      }
+      categories[catId] = (categories[catId] || 0) + 1;
     });
 
-    return { total, forms };
+    return { total, forms, categories };
   } catch (error) {
     console.error("getWeaknessAnalysis Error:", error);
-    return { total: 0, forms: {} };
+    return { total: 0, forms: {}, categories: {} };
   }
 }
 
@@ -2138,11 +2157,22 @@ export async function getUserIncorrectQuestions(userName: string): Promise<Weakn
         const dt = d.createdAt.toDate();
         dateStr = `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getDate()).padStart(2, '0')} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
       }
+
+      const tagInfo = inferGrammarCategory({
+        form: sanitizeForm(d.form),
+        sentence: d.sentence,
+        answer: d.correctAnswer,
+        grammarTag: d.grammarTag,
+        grammarCategory: d.grammarCategory
+      });
+
       list.push({
         id: docSnap.id,
         userName: d.userName,
         difficulty: d.difficulty,
         form: sanitizeForm(d.form),
+        grammarTag: d.grammarTag || tagInfo.badgeKo,
+        grammarCategory: d.grammarCategory || tagInfo.id,
         sentence: d.sentence,
         wrongAnswer: d.wrongAnswer,
         correctAnswer: d.correctAnswer,
@@ -3605,7 +3635,7 @@ export function getLevelGatingInfo(level: number | string): LevelGatingInfo {
       badgeBg: 'bg-purple-500/20',
       badgeText: 'text-purple-300',
       badgeBorder: 'border-purple-500/40',
-      targetDesc: '고3~수능 심화 복합 문장 및 고급 어휘'
+      targetDesc: '수능 1등급 & 토익 750~850 (분사구문, 가정법, 부정어 도치, that vs what)'
     };
   }
   return {
@@ -3618,7 +3648,7 @@ export function getLevelGatingInfo(level: number | string): LevelGatingInfo {
     badgeBg: 'bg-rose-500/20',
     badgeText: 'text-rose-300',
     badgeBorder: 'border-rose-500/40',
-    targetDesc: '토익/편입/공무원 실전 기출 수준의 고난도 문장'
+    targetDesc: '토익 900+ & 명문대 편입 / 공무원 킬러 실전 (If생략 도치, 자/타동사 함정, 전치사 to, 혼동 파생어)'
   };
 }
 

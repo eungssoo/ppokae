@@ -14,7 +14,8 @@ export type ViewType =
   | 'bookmark_view'
   | 'analytics_view'
   | 'profile_view'
-  | 'grammar_skill_vault';
+  | 'grammar_skill_vault'
+  | 'chat_english';
 
 export type QuizMode = 'normal' | 'personal' | 'daily' | 'expression' | 'bookmark';
 
@@ -54,6 +55,8 @@ export interface QuestionComponent {
 export interface Question {
   id?: string;
   form: number;
+  grammarTag?: string;
+  grammarCategory?: string;
   sentence: string;
   options: QuestionOption[];
   answer: string;
@@ -132,6 +135,8 @@ export interface WeaknessRecord {
   userName: string;
   difficulty: string;
   form: number;
+  grammarTag?: string;
+  grammarCategory?: string;
   sentence: string;
   wrongAnswer: string;
   correctAnswer: string;
@@ -142,6 +147,7 @@ export interface WeaknessRecord {
 export interface WeaknessAnalysis {
   total: number;
   forms: Record<number, number>;
+  categories?: Record<string, number>;
 }
 
 export interface RankingItem {
