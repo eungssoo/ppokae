@@ -63,123 +63,143 @@
 }
 
 /* ========================================================= */
-/* ☀️ LIGHT THEME - HIGH CONTRAST & MAXIMUM READABILITY */
+/* ☀️ LIGHT THEME - 100% COMPLETE HIGH-CONTRAST OVERHAUL */
 /* ========================================================= */
 .theme-light {
   color-scheme: light;
 }
 
+.theme-light,
 .theme-light body {
   background-color: #f8fafc;
   color: #0f172a;
 }
 
+/* 1. App Level Backgrounds */
 .theme-light .bg-animated-gradient,
-.theme-light .min-h-screen.bg-slate-950,
-.theme-light .min-h-screen {
+.theme-light .min-h-screen,
+.theme-light [class*="bg-slate-950"] {
   background: 
-    radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.06) 0%, transparent 40%),
-    radial-gradient(circle at 85% 85%, rgba(14, 165, 233, 0.05) 0%, transparent 45%),
+    radial-gradient(circle at 10% 10%, rgba(99, 102, 241, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 90% 90%, rgba(14, 165, 233, 0.05) 0%, transparent 45%),
     #f8fafc !important;
-  color: #0f172a;
-}
-
-.theme-light .glass-card {
-  background: #ffffff !important;
-  border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03) !important;
-}
-
-/* 1. Universal Text Contrast Fixes in Light Mode */
-.theme-light .text-white,
-.theme-light [class*="text-white"] {
   color: #0f172a !important;
 }
 
-.theme-light .text-slate-100,
-.theme-light [class*="text-slate-100"] {
-  color: #1e293b !important;
+/* 2. Glass Card & Main Containers */
+.theme-light .glass-card {
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03) !important;
+  color: #0f172a !important;
 }
 
-.theme-light .text-slate-200,
-.theme-light [class*="text-slate-200"] {
+/* 3. Base Typography & Headings */
+.theme-light h1,
+.theme-light h2,
+.theme-light h3,
+.theme-light h4,
+.theme-light h5,
+.theme-light h6 {
+  color: #0f172a !important;
+}
+
+.theme-light p {
   color: #334155 !important;
 }
 
-.theme-light .text-slate-300,
+.theme-light strong,
+.theme-light b {
+  color: #0f172a !important;
+}
+
+/* 4. Universal Text Class Overrides (Prevent faint gray/pastel colors) */
+.theme-light .text-white,
+.theme-light [class*="text-white"],
+.theme-light [class*="text-slate-100"] {
+  color: #0f172a !important;
+}
+
+.theme-light [class*="text-slate-200"] {
+  color: #1e293b !important;
+}
+
 .theme-light [class*="text-slate-300"] {
+  color: #334155 !important;
+}
+
+.theme-light [class*="text-slate-400"],
+.theme-light [class*="text-slate-500"] {
   color: #475569 !important;
 }
 
-.theme-light .text-slate-400,
-.theme-light [class*="text-slate-400"] {
-  color: #64748b !important;
+/* Fix Opacity Fading in Light Mode */
+.theme-light [class*="opacity-"] {
+  opacity: 1 !important;
 }
 
-.theme-light .text-slate-500,
-.theme-light [class*="text-slate-500"] {
-  color: #64748b !important;
-}
-
-/* Color Accent Texts (Deep, crisp contrast for readability) */
+/* 5. High-Contrast Accent Text Colors (Rich, readable dark shades) */
 .theme-light [class*="text-indigo-100"],
 .theme-light [class*="text-indigo-200"],
-.theme-light [class*="text-indigo-300"] {
-  color: #3730a3 !important;
+.theme-light [class*="text-indigo-300"],
+.theme-light [class*="text-indigo-400"] {
+  color: #312e81 !important;
 }
 
 .theme-light [class*="text-purple-100"],
 .theme-light [class*="text-purple-200"],
-.theme-light [class*="text-purple-300"] {
+.theme-light [class*="text-purple-300"],
+.theme-light [class*="text-purple-400"] {
   color: #581c87 !important;
 }
 
 .theme-light [class*="text-amber-100"],
 .theme-light [class*="text-amber-200"],
-.theme-light [class*="text-amber-300"] {
-  color: #92400e !important;
+.theme-light [class*="text-amber-300"],
+.theme-light [class*="text-amber-400"],
+.theme-light [class*="text-orange-200"],
+.theme-light [class*="text-orange-300"] {
+  color: #78350f !important;
 }
 
 .theme-light [class*="text-emerald-100"],
 .theme-light [class*="text-emerald-200"],
-.theme-light [class*="text-emerald-300"] {
-  color: #065f46 !important;
+.theme-light [class*="text-emerald-300"],
+.theme-light [class*="text-emerald-400"],
+.theme-light [class*="text-green-300"] {
+  color: #064e3b !important;
 }
 
 .theme-light [class*="text-rose-100"],
 .theme-light [class*="text-rose-200"],
-.theme-light [class*="text-rose-300"] {
-  color: #9f1239 !important;
+.theme-light [class*="text-rose-300"],
+.theme-light [class*="text-rose-400"],
+.theme-light [class*="text-red-300"] {
+  color: #881337 !important;
 }
 
 .theme-light [class*="text-cyan-100"],
 .theme-light [class*="text-cyan-200"],
-.theme-light [class*="text-cyan-300"] {
-  color: #155e75 !important;
+.theme-light [class*="text-cyan-300"],
+.theme-light [class*="text-cyan-400"] {
+  color: #164e63 !important;
 }
 
 .theme-light [class*="text-pink-100"],
 .theme-light [class*="text-pink-200"],
-.theme-light [class*="text-pink-300"] {
+.theme-light [class*="text-pink-300"],
+.theme-light [class*="text-pink-400"] {
   color: #831843 !important;
 }
 
-/* 2. Light Mode Background Cards */
-.theme-light [class*="bg-slate-950"] {
-  background-color: #f1f5f9 !important;
-}
-
-.theme-light [class*="bg-slate-900"] {
+/* 6. Card Backgrounds in Light Mode (Clean pure white or soft slate) */
+.theme-light [class*="bg-slate-900"],
+.theme-light [class*="bg-slate-800"] {
   background-color: #ffffff !important;
+  color: #0f172a !important;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.theme-light [class*="bg-slate-800"] {
-  background-color: #f8fafc !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-}
-
-/* Gradients transformed into crisp, bright cards */
 .theme-light [class*="from-indigo-950"],
 .theme-light [class*="from-blue-950"],
 .theme-light [class*="from-emerald-950"],
@@ -188,78 +208,93 @@
 .theme-light [class*="from-pink-950"],
 .theme-light [class*="from-rose-950"] {
   background: #ffffff !important;
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05) !important;
+  color: #0f172a !important;
+  box-shadow: 0 4px 15px -2px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* 3. Light Mode Borders */
+/* 7. Clean, Visible Borders */
 .theme-light [class*="border-slate-800"],
 .theme-light [class*="border-slate-700"] {
   border-color: #cbd5e1 !important;
 }
 
-.theme-light [class*="border-indigo-500"] {
-  border-color: #a5b4fc !important;
+.theme-light [class*="border-indigo-500"],
+.theme-light [class*="border-indigo-400"] {
+  border-color: #818cf8 !important;
 }
 
-.theme-light [class*="border-amber-500"] {
-  border-color: #fcd34d !important;
+.theme-light [class*="border-amber-500"],
+.theme-light [class*="border-amber-400"] {
+  border-color: #fbbf24 !important;
 }
 
-.theme-light [class*="border-emerald-500"] {
-  border-color: #6ee7b7 !important;
+.theme-light [class*="border-emerald-500"],
+.theme-light [class*="border-emerald-400"] {
+  border-color: #34d399 !important;
 }
 
-.theme-light [class*="border-purple-500"] {
-  border-color: #d8b4fe !important;
+.theme-light [class*="border-purple-500"],
+.theme-light [class*="border-purple-400"] {
+  border-color: #c084fc !important;
 }
 
-.theme-light [class*="border-pink-500"] {
-  border-color: #f9a8d4 !important;
+.theme-light [class*="border-pink-500"],
+.theme-light [class*="border-pink-400"] {
+  border-color: #f472b6 !important;
 }
 
-.theme-light [class*="border-rose-500"] {
-  border-color: #fda4af !important;
+.theme-light [class*="border-rose-500"],
+.theme-light [class*="border-rose-400"] {
+  border-color: #fb7185 !important;
 }
 
-.theme-light [class*="border-cyan-500"] {
-  border-color: #67e8f9 !important;
+.theme-light [class*="border-cyan-500"],
+.theme-light [class*="border-cyan-400"] {
+  border-color: #38bdf8 !important;
 }
 
-/* 4. Light Mode Badge Backgrounds */
+/* 8. Badge & Tag Backgrounds */
 .theme-light [class*="bg-emerald-500\/"],
 .theme-light [class*="bg-emerald-950\/"] {
   background-color: #ecfdf5 !important;
+  color: #064e3b !important;
 }
 
 .theme-light [class*="bg-purple-500\/"],
 .theme-light [class*="bg-purple-950\/"] {
   background-color: #faf5ff !important;
+  color: #581c87 !important;
 }
 
 .theme-light [class*="bg-indigo-500\/"],
 .theme-light [class*="bg-indigo-950\/"] {
   background-color: #eef2ff !important;
+  color: #312e81 !important;
 }
 
 .theme-light [class*="bg-amber-500\/"],
 .theme-light [class*="bg-amber-950\/"] {
   background-color: #fffbeb !important;
+  color: #78350f !important;
 }
 
 .theme-light [class*="bg-rose-500\/"],
 .theme-light [class*="bg-rose-950\/"] {
   background-color: #fff1f2 !important;
+  color: #881337 !important;
 }
 
 .theme-light [class*="bg-cyan-500\/"] {
   background-color: #ecfeff !important;
+  color: #164e63 !important;
 }
 
 .theme-light [class*="bg-pink-500\/"] {
   background-color: #fdf2f8 !important;
+  color: #831843 !important;
 }
 
-/* 5. Light Mode Form Controls & Inputs */
+/* 9. Input & Textarea Fields */
 .theme-light input,
 .theme-light textarea,
 .theme-light select {
@@ -267,17 +302,27 @@
   color: #0f172a !important;
   border: 1.5px solid #cbd5e1 !important;
 }
+
 .theme-light input::placeholder,
 .theme-light textarea::placeholder {
   color: #94a3b8 !important;
 }
+
 .theme-light input:focus,
 .theme-light textarea:focus {
   border-color: #6366f1 !important;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
 }
 
-/* 6. Solid Primary/Action Buttons MUST Keep White Text */
+/* 10. Gradient Heading Text (Use saturated, high-contrast dark tones) */
+.theme-light [class*="bg-clip-text"] {
+  background-image: linear-gradient(135deg, #1e1b4b 0%, #4338ca 50%, #9f1239 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+/* 11. Solid Action Buttons (MUST keep white text) */
 .theme-light .bg-indigo-600,
 .theme-light .bg-indigo-500,
 .theme-light .bg-emerald-600,
@@ -288,7 +333,9 @@
 .theme-light .bg-blue-600,
 .theme-light [class*="from-indigo-600"],
 .theme-light [class*="from-emerald-600"],
-.theme-light [class*="from-purple-600"] {
+.theme-light [class*="from-purple-600"],
+.theme-light [class*="from-indigo-500"],
+.theme-light [class*="from-amber-500 to-rose-500"] {
   color: #ffffff !important;
 }
 
@@ -302,17 +349,21 @@
 .theme-light .bg-blue-600 *,
 .theme-light [class*="from-indigo-600"] *,
 .theme-light [class*="from-emerald-600"] *,
-.theme-light [class*="from-purple-600"] * {
+.theme-light [class*="from-purple-600"] *,
+.theme-light [class*="from-indigo-500"] *,
+.theme-light [class*="from-amber-500 to-rose-500"] * {
   color: #ffffff !important;
 }
 
-/* 7. Amber Gold Badges & Special Buttons (Dark text on yellow/gold) */
+/* Yellow / Gold Badges (Dark text on gold) */
 .theme-light [class*="from-amber-400"] *,
-.theme-light [class*="from-yellow-300"] * {
+.theme-light [class*="from-yellow-300"] *,
+.theme-light .bg-amber-400,
+.theme-light .bg-amber-400 * {
   color: #0f172a !important;
 }
 
-/* 8. Light Mode Scrollbar */
+/* 12. Light Mode Scrollbar */
 .theme-light .custom-scrollbar {
   scrollbar-color: rgba(99, 102, 241, 0.4) #f1f5f9;
 }

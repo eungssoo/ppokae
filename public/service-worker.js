@@ -1,5 +1,5 @@
-// 🚀 PPOKAE PWA Service Worker (v7 - Instant Update & Zero-Delay Network-First)
-const CACHE_NAME = 'ppokae-cache-v7';
+// 🚀 PPOKAE PWA Service Worker (v9 - Zero-Delay Instant Update & Network-First)
+const CACHE_NAME = 'ppokae-cache-v9';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icon-192.png',
@@ -43,14 +43,14 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 1. Navigation / HTML document requests: ALWAYS fetch from network for latest deployment
-  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+  if (event.request.mode === 'navigate' || event.request.destination === 'document' || event.request.url.endsWith('/') || event.request.url.includes('index.html')) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/index.html') || caches.match('/'))
+      fetch(event.request, { cache: 'no-store' }).catch(() => caches.match('/index.html') || caches.match('/'))
     );
     return;
   }
 
-  // 2. Static hashed assets (e.g. /assets/index-xxx.js, css, images): Network First with cache fallback
+  // 2. Static assets: Network First with cache fallback
   event.respondWith(
     fetch(event.request)
       .then((response) => {
