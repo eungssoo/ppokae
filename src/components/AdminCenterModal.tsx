@@ -149,6 +149,55 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
   const [isBatchInjecting, setIsBatchInjecting] = useState<boolean>(false);
   const [isClearingGhosts, setIsClearingGhosts] = useState<boolean>(false);
 
+  // 🔑 Gemini API Key State
+  const [customApiKey, setCustomApiKey] = useState<string>(() => {
+    return (typeof window !== 'undefined' ? localStorage.getItem('custom_gemini_api_key') : '') || '';
+  });
+  const [isTestingApiKey, setIsTestingApiKey] = useState<boolean>(false);
+  const [apiKeyTestResult, setApiKeyTestResult] = useState<{ success: boolean; msg: string } | null>(null);
+
+  const handleSaveApiKey = () => {
+    sound.playReward();
+    const trimmed = customApiKey.trim();
+    if (trimmed) {
+      localStorage.setItem('custom_gemini_api_key', trimmed);
+      onShowToast('✓ API 키 저장 완료', '새로운 Gemini API 키가 로컬 및 프록시에 등록되었습니다.', 'coin');
+    } else {
+      localStorage.removeItem('custom_gemini_api_key');
+      onShowToast('API 키 초기화', '기본 설정 키로 초기화되었습니다.', 'info');
+    }
+  };
+
+  const handleTestApiKey = async () => {
+    sound.playClick();
+    setIsTestingApiKey(true);
+    setApiKeyTestResult(null);
+    const keyToTest = customApiKey.trim();
+    if (!keyToTest) {
+      setIsTestingApiKey(false);
+      setApiKeyTestResult({ success: false, msg: 'API 키를 먼저 입력해 주세요.' });
+      return;
+    }
+
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${keyToTest}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (res.ok && data.models) {
+        setApiKeyTestResult({ success: true, msg: `정상 연결 성공! (${data.models.length}개 모델 가용)` });
+        localStorage.setItem('custom_gemini_api_key', keyToTest);
+        onShowToast('✓ 연결 성공', 'Gemini API 키가 정상 작동합니다!', 'coin');
+      } else {
+        const err = data.error?.message || 'API 키 검증 실패';
+        setApiKeyTestResult({ success: false, msg: `오류: ${err}` });
+      }
+    } catch (e: any) {
+      setApiKeyTestResult({ success: false, msg: `통신 오류: ${e.message}` });
+    } finally {
+      setIsTestingApiKey(false);
+    }
+  };
+
   // 📊 Analytics State
   const [analyticsList, setAnalyticsList] = useState<UserAnalyticsSummary[]>([]);
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState<boolean>(false);
@@ -922,6 +971,67 @@ export const AdminCenterModal: React.FC<AdminCenterModalProps> = ({
                   <Check className="w-4 h-4" />
                   <span>{isSavingSettings ? '저장 중...' : '전역 설정 실시간 배포'}</span>
                 </button>
+              </div>
+
+              {/* 🔑 Gemini AI API 키 설정 카드 */}
+              <div className="p-5 rounded-3xl bg-gradient-to-br from-indigo-950/80 via-slate-900 to-purple-950/80 border-2 border-indigo-500/50 shadow-xl space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-indigo-500/30">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-yellow-400 animate-spin" />
+                    <h4 className="text-sm font-black text-white">
+                      🔑 Google Gemini AI API 키 설정 (실시간 AI 생성 & 튜터)
+                    </h4>
+                  </div>
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-black">
+                    {customApiKey ? '⚡ 커스텀 키 활성화됨' : '🛡️ 고품질 출제 엔진 자동 지원'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                  <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-cyan-300 underline font-bold hover:text-cyan-200 mr-1">
+                    aistudio.google.com
+                  </a>
+                  에서 10초 만에 무료 발급받은 Gemini API 키를 등록하면 실시간 AI 문제 출제 및 1:1 과외 튜터가 즉시 활성화됩니다.
+                  (미등록 또는 키 만료 시에도 자체 탑재된 고품질 출제 엔진이 자동으로 100% 정상 작동합니다.)
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="password"
+                    value={customApiKey}
+                    onChange={e => setCustomApiKey(e.target.value)}
+                    placeholder="AIzaSy... (Google AI Studio 발급 키 입력)"
+                    className="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-700 focus:border-indigo-400 rounded-xl text-xs font-mono font-bold text-white placeholder-slate-500 focus:outline-none shadow-inner"
+                  />
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleSaveApiKey}
+                      className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1.5"
+                    >
+                      <span>💾 저장</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleTestApiKey}
+                      disabled={isTestingApiKey}
+                      className="px-4 py-2.5 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-white text-xs font-black shadow-md transition-all active:scale-95 flex items-center gap-1.5 disabled:opacity-50"
+                    >
+                      <Zap className={`w-3.5 h-3.5 ${isTestingApiKey ? 'animate-spin' : ''}`} />
+                      <span>{isTestingApiKey ? '검증 중...' : '⚡ 연결 테스트'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {apiKeyTestResult && (
+                  <div className={`p-3 rounded-xl border text-xs font-black flex items-center gap-2 ${
+                    apiKeyTestResult.success 
+                      ? 'bg-emerald-950/60 border-emerald-500/60 text-emerald-300' 
+                      : 'bg-rose-950/60 border-rose-500/60 text-rose-300'
+                  }`}>
+                    <span>{apiKeyTestResult.success ? '✅' : '⚠️'}</span>
+                    <span>{apiKeyTestResult.msg}</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

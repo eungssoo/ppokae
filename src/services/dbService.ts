@@ -2294,8 +2294,18 @@ export async function getCycleRankings(cycleId: string): Promise<RankingItem[]> 
 
       // 👑 실시간 프로필 우선 조회 (가챠에서 뽑아 갈아끼운 최신 아바타 즉시 반영)
       const liveUserProf = userProfileMap.get(d.name);
-      const avId = liveUserProf?.currentAvatarId || d.avatarId || 'lion';
-      const avObj = AVATAR_DATABASE.find(a => a.id === avId);
+      let avId = liveUserProf?.currentAvatarId || d.avatarId || d.currentAvatarId;
+      
+      // 🎭 고스트인데 아바타가 없거나 라이언인 경우: 닉네임 기반 해시로 다양한 아바타 자동 배정
+      if (d.isGhost && (!avId || avId === 'lion')) {
+        const charSum = (d.name || '').split('').reduce((acc: number, c: string) => acc + c.charCodeAt(0), 0);
+        const nonStarters = AVATAR_DATABASE.filter(a => a.grade !== 'starter');
+        const picked = nonStarters[charSum % nonStarters.length];
+        if (picked) avId = picked.id;
+      }
+      
+      if (!avId) avId = 'lion';
+      const avObj = AVATAR_DATABASE.find(a => a.id === avId) || AVATAR_DATABASE.find(a => a.id === 'lion') || AVATAR_DATABASE[0];
 
       list.push({
         name: d.name,
@@ -2303,10 +2313,10 @@ export async function getCycleRankings(cycleId: string): Promise<RankingItem[]> 
         completedAt: timeVal,
         completedAtFormatted,
         avatarId: avId,
-        avatarIcon: liveUserProf?.avatar || avObj?.icon || '🦁',
-        avatarName: avObj?.name || '라이언',
-        avatarGrade: avObj?.grade || 'starter',
-        avatarBgGradient: avObj?.bgGradient || 'from-slate-700 to-slate-800 border-slate-600',
+        avatarIcon: liveUserProf?.avatar || d.avatarIcon || avObj?.icon || '🦁',
+        avatarName: d.avatarName || avObj?.name || '라이언',
+        avatarGrade: d.avatarGrade || avObj?.grade || 'starter',
+        avatarBgGradient: d.avatarBgGradient || avObj?.bgGradient || 'from-slate-700 to-slate-800 border-slate-600',
         avatarColor: avObj?.color || 'text-slate-200'
       });
     });
@@ -3321,7 +3331,11 @@ export async function adminInjectGhostRanking(payload: {
       fakeCompletedAt = new Date(minAllowedTime.getTime() + Math.random() * span);
     }
 
-    const targetAvatar = AVATAR_DATABASE.find(a => a.id === payload.avatarId) || AVATAR_DATABASE.find(a => a.id === 'lion');
+    let targetAvatar = AVATAR_DATABASE.find(a => a.id === payload.avatarId);
+    if (!targetAvatar || targetAvatar.id === 'lion') {
+      const nonStarterAvatars = AVATAR_DATABASE.filter(a => a.grade !== 'starter');
+      targetAvatar = nonStarterAvatars[Math.floor(Math.random() * nonStarterAvatars.length)] || AVATAR_DATABASE[0];
+    }
     const avatarIcon = targetAvatar?.icon || '🦁';
     const avatarName = targetAvatar?.name || '라이언';
     const avatarGrade = targetAvatar?.grade || 'starter';
@@ -3332,11 +3346,12 @@ export async function adminInjectGhostRanking(payload: {
       name: trimmedName,
       score,
       completedAt: fakeCompletedAt,
+      avatarId: targetAvatar.id,
+      currentAvatarId: targetAvatar.id,
       avatarIcon,
       avatarName,
       avatarGrade,
       avatarBgGradient,
-      currentAvatarId: targetAvatar?.id || 'lion',
       isGhost: true,
       updatedAt: serverTimestamp()
     });
@@ -3434,11 +3449,12 @@ export async function adminBatchInjectGhostRankings(payload: {
         name,
         score,
         completedAt: fakeCompletedAt,
+        avatarId: targetAvatar.id,
+        currentAvatarId: targetAvatar.id,
         avatarIcon: targetAvatar.icon,
         avatarName: targetAvatar.name,
         avatarGrade: targetAvatar.grade,
         avatarBgGradient: targetAvatar.bgGradient || '',
-        currentAvatarId: targetAvatar.id,
         isGhost: true,
         updatedAt: serverTimestamp()
       });

@@ -25,7 +25,9 @@ function geminiServerProxyPlugin(apiKey: string): Plugin {
         req.on('end', async () => {
           try {
             const body = JSON.parse(bodyStr || '{}');
-            const { model = 'gemini-2.5-flash', payload } = body;
+            const { model = 'gemini-2.0-flash', payload } = body;
+            const headerKey = (req.headers['x-gemini-api-key'] as string) || '';
+            const effectiveKey = headerKey || apiKey;
 
             if (!payload) {
               res.statusCode = 400;
@@ -33,7 +35,13 @@ function geminiServerProxyPlugin(apiKey: string): Plugin {
               return res.end(JSON.stringify({ error: 'Payload is required' }));
             }
 
-            const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            if (!effectiveKey) {
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              return res.end(JSON.stringify({ error: 'GEMINI_API_KEY is not configured.' }));
+            }
+
+            const targetUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${effectiveKey}`;
 
             const googleRes = await fetch(targetUrl, {
               method: 'POST',
@@ -56,6 +64,7 @@ function geminiServerProxyPlugin(apiKey: string): Plugin {
     }
   };
 }
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const geminiApiKey = env.GEMINI_API_KEY || '';

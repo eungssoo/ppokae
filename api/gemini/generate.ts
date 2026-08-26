@@ -17,7 +17,7 @@ export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
   res.setHeader(
     'Access-Control-Allow-Headers',
-    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, x-gemini-api-key'
   );
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
@@ -28,7 +28,8 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'GET') {
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
+      const headerKey = req.headers['x-gemini-api-key'];
+      const apiKey = headerKey || process.env.GEMINI_API_KEY;
       if (!apiKey) {
         return res.status(500).json({ error: 'GEMINI_API_KEY is missing' });
       }
@@ -45,12 +46,13 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { model = 'gemini-2.0-flash', payload } = req.body || {};
-    const apiKey = process.env.GEMINI_API_KEY;
+    const { model = 'gemini-2.0-flash', payload, apiKey: bodyApiKey } = req.body || {};
+    const headerKey = req.headers['x-gemini-api-key'];
+    const apiKey = headerKey || bodyApiKey || process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return res.status(500).json({ 
-        error: 'GEMINI_API_KEY is not configured in Vercel. Please add your Gemini API Key in Vercel Environment Variables.' 
+        error: 'GEMINI_API_KEY is not configured. Please register your Gemini API Key in Admin Center or Vercel Environment Variables.' 
       });
     }
 
@@ -72,7 +74,7 @@ export default async function handler(req: any, res: any) {
       const errMsg = googleData?.error?.message || '';
       if (errMsg.includes('leaked') || googleRes.status === 403) {
         return res.status(403).json({
-          error: 'Google에 의해 해당 Gemini API 키가 만료되었습니다. aistudio.google.com에서 새 API 키를 무료 발급받아 Vercel Environment Variables에 등록해 주세요.'
+          error: 'Google에 의해 해당 Gemini API 키가 만료/차단되었습니다. 관리자 사령탑에서 새 API 키를 등록하거나 aistudio.google.com에서 무료 발급받아 등록해 주세요.'
         });
       }
     }
