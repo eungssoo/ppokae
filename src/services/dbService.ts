@@ -1477,6 +1477,31 @@ export async function isQuestionBookmarked(userName: string, sentence: string): 
   }
 }
 
+// 🎲 완전 무작위 균등 셔플 (Fisher-Yates / Knuth 알고리즘)
+export function trueShuffle<T>(array: T[]): T[] {
+  if (!Array.isArray(array) || array.length <= 1) return [...(array || [])];
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// 🎯 최근 출제된 문제 식별자 추적 (세션 내 동일 문제 반복 출제 방지 & 40문제 풀 순환)
+const recentlyServedQuestionMap = new Map<string, Set<string>>();
+
+function getRecentSet(key: string): Set<string> {
+  if (!recentlyServedQuestionMap.has(key)) {
+    recentlyServedQuestionMap.set(key, new Set<string>());
+  }
+  return recentlyServedQuestionMap.get(key)!;
+}
+
+export function resetRecentlyServedQuestions(): void {
+  recentlyServedQuestionMap.clear();
+}
+
 // 🔤 모든 형태의 빈칸 감지 정규식 (언더스코어, [blank], [Blank], (blank), <blank>, [빈칸], 단독 blank 단어 등)
 export const BLANK_PATTERN = /(?:_{2,}|\[\s*blank\s*\]|\(\s*blank\s*\)|<\s*blank\s*>|\[\s*빈칸\s*\]|\(\s*빈칸\s*\)|\[\s*_{1,}\s*\]|\(\s*_{1,}\s*\)|\bblank\b|\bBlank\b|\bBLANK\b|[\(\[]\s*[\w\s\-']+(?:\s*\/\s*[\w\s\-']+)+\s*[\)\]])/gi;
 
@@ -1831,6 +1856,8 @@ export async function getRandomQuestions(difficultyLabel: string): Promise<{ suc
       return { success: false, error: `선택하신 [${difficultyLabel}] 난이도의 유효한 문제가 부족합니다. [문제 공장]에서 새 문제를 생성해 주세요.` };
     }
 
+    const recentSet = getRecentSet(String(targetLvl));
+
     // 🎯 1~5형식 문형별 고른 분배 알고리즘 (각 문형당 2문제씩 균등 추출)
     const formBuckets: Record<number, Question[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
     allQuestions.forEach(q => {
@@ -1842,32 +1869,56 @@ export async function getRandomQuestions(difficultyLabel: string): Promise<{ suc
       }
     });
 
-    // 각 문형 버킷 셔플
-    for (let f = 1; f <= 5; f++) {
-      formBuckets[f].sort(() => Math.random() - 0.5);
-    }
-
     const selected: Question[] = [];
-    // 1차: 1~5형식에서 각 2문제씩 균등 추출 (5 x 2 = 10문제)
+
+    // 1차: 1~5형식에서 최근에 풀지 않은 문제를 최우선으로 각 2문제씩 균등 추출
     for (let f = 1; f <= 5; f++) {
-      const picked = formBuckets[f].splice(0, 2);
+      const pool = formBuckets[f];
+      const unseen = pool.filter(q => !recentSet.has(q.id || q.sentence));
+      const seen = pool.filter(q => recentSet.has(q.id || q.sentence));
+
+      const shuffledUnseen = trueShuffle(unseen);
+      const shuffledSeen = trueShuffle(seen);
+
+      const combined = [...shuffledUnseen, ...shuffledSeen];
+      const picked = combined.slice(0, 2);
       selected.push(...picked);
+
+      // 남은 문제 갱신
+      formBuckets[f] = combined.slice(2);
     }
 
-    // 특정 형식의 문제가 부족하여 10문제가 채워지지 않은 경우 남은 문제에서 보충
+    // 특정 형식의 문제가 부족하여 10문제가 채워지지 않은 경우 남은 문제 풀에서 보충
     if (selected.length < 10) {
       const remaining: Question[] = [];
       for (let f = 1; f <= 5; f++) {
         remaining.push(...formBuckets[f]);
       }
-      remaining.sort(() => Math.random() - 0.5);
+      const shuffledRemaining = trueShuffle(remaining);
       const needed = 10 - selected.length;
-      selected.push(...remaining.slice(0, needed));
+      selected.push(...shuffledRemaining.slice(0, needed));
     }
 
-    // 최종 10문제의 출제 순서를 랜덤하게 섞어 실제 시험처럼 다채롭게 구성
-    selected.sort(() => Math.random() - 0.5);
-    return { success: true, data: selected };
+    // 출제된 10문제를 recentSet에 등록
+    selected.forEach(q => {
+      recentSet.add(q.id || q.sentence);
+    });
+
+    // 40문제 풀의 75% 이상을 풀었으면 세트 리셋하여 새로운 순환 시작
+    if (recentSet.size >= Math.floor(allQuestions.length * 0.75)) {
+      recentSet.clear();
+    }
+
+    // 최종 10문제의 출제 순서 및 보기 4개를 100% 무작위 셔플
+    const finalizedQuestions = trueShuffle(selected).map(q => {
+      const normalized = normalizeAndFixQuestion(q);
+      return {
+        ...normalized,
+        options: trueShuffle(normalized.options)
+      };
+    });
+
+    return { success: true, data: finalizedQuestions };
   } catch (error: any) {
     console.error("getRandomQuestions Error:", error);
     return { success: false, error: error.message || "문제를 불러오지 못했습니다." };
@@ -1927,7 +1978,7 @@ export async function getRandomPersonalQuestions(userName: string, difficultyLab
           id: docSnap.id,
           form: sanitizeForm(d.form),
           sentence: d.sentence,
-          options: [...(d.options || [])].sort(() => Math.random() - 0.5),
+          options: trueShuffle(d.options || []),
           answer: d.answer,
           translation: d.translation,
           explanation: d.explanation,
@@ -1951,14 +2002,12 @@ export async function getRandomPersonalQuestions(userName: string, difficultyLab
       }
     });
 
-    for (let f = 1; f <= 5; f++) {
-      formBuckets[f].sort(() => Math.random() - 0.5);
-    }
-
     const selected: Question[] = [];
     for (let f = 1; f <= 5; f++) {
-      const picked = formBuckets[f].splice(0, 2);
+      const shuffled = trueShuffle(formBuckets[f]);
+      const picked = shuffled.slice(0, 2);
       selected.push(...picked);
+      formBuckets[f] = shuffled.slice(2);
     }
 
     if (selected.length < 10) {
@@ -1966,13 +2015,20 @@ export async function getRandomPersonalQuestions(userName: string, difficultyLab
       for (let f = 1; f <= 5; f++) {
         remaining.push(...formBuckets[f]);
       }
-      remaining.sort(() => Math.random() - 0.5);
+      const shuffledRemaining = trueShuffle(remaining);
       const needed = 10 - selected.length;
-      selected.push(...remaining.slice(0, needed));
+      selected.push(...shuffledRemaining.slice(0, needed));
     }
 
-    selected.sort(() => Math.random() - 0.5);
-    return { success: true, data: selected };
+    const finalizedQuestions = trueShuffle(selected).map(q => {
+      const normalized = normalizeAndFixQuestion(q);
+      return {
+        ...normalized,
+        options: trueShuffle(normalized.options)
+      };
+    });
+
+    return { success: true, data: finalizedQuestions };
   } catch (error: any) {
     console.error("getRandomPersonalQuestions Error:", error);
     return { success: false, error: error.message || "약점 문제를 불러오지 못했습니다." };
@@ -2030,8 +2086,8 @@ export async function getOrCreateCycleQuestions(cycleInfo: CycleInfo): Promise<{
             components: d.components
           });
         });
-        allQuestions.sort(() => Math.random() - 0.5);
-        selected10 = allQuestions.slice(0, 10).map(q => cleanQuestionForStorage(q));
+        const shuffledAll = trueShuffle(allQuestions);
+        selected10 = shuffledAll.slice(0, 10).map(q => cleanQuestionForStorage(q));
       } else {
         return { 
           success: false, 
@@ -3385,7 +3441,7 @@ export async function adminBatchInjectGhostRankings(payload: {
 
     // 2. 가용한 고유 닉네임 풀 준비
     const availableNames: string[] = [];
-    const shuffledPreset = [...RANDOM_GHOST_NAMES].sort(() => Math.random() - 0.5);
+    const shuffledPreset = trueShuffle(RANDOM_GHOST_NAMES);
     for (const name of shuffledPreset) {
       if (!existingNames.has(name.toLowerCase()) && !availableNames.includes(name)) {
         availableNames.push(name);
@@ -3936,8 +3992,15 @@ export async function getQuestionsByGrammarCategory(
       return { success: false, error: "해당 문법 테마의 문제를 불러오지 못했습니다." };
     }
 
-    matched.sort(() => Math.random() - 0.5);
-    return { success: true, data: matched.slice(0, limitCount) };
+    const finalizedThemeQuestions = trueShuffle(matched).slice(0, limitCount).map(q => {
+      const normalized = normalizeAndFixQuestion(q);
+      return {
+        ...normalized,
+        options: trueShuffle(normalized.options)
+      };
+    });
+
+    return { success: true, data: finalizedThemeQuestions };
   } catch (e: any) {
     console.error("getQuestionsByGrammarCategory error:", e);
     return { success: false, error: e.message || "문제 조회 오류" };
