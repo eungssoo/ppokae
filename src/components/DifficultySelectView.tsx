@@ -89,14 +89,14 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
               sound.playClick();
               onBack();
             }}
-            className="text-slate-400 hover:text-white font-bold transition-all flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700/80 px-4 py-2 rounded-xl shadow-sm border border-slate-700 text-sm active:scale-95"
+            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold transition-all flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/80 px-4 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 text-sm active:scale-95"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>{t('home')}</span>
           </button>
 
           {view === 'generate' && cooldownSeconds > 0 && (
-            <div className="flex items-center gap-1.5 bg-rose-500/10 border border-rose-500/30 text-rose-300 px-3 py-1.5 rounded-full text-xs font-bold">
+            <div className="flex items-center gap-1.5 bg-rose-100 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/30 text-rose-800 dark:text-rose-300 px-3 py-1.5 rounded-full text-xs font-bold">
               <Clock className="w-3.5 h-3.5 animate-spin" />
               <span>{language === 'en' ? `Cooldown: ${Math.floor(cooldownSeconds / 60)}m ${cooldownSeconds % 60}s` : `생성 쿨타임: ${Math.floor(cooldownSeconds / 60)}분 ${cooldownSeconds % 60}초`}</span>
             </div>
@@ -105,15 +105,15 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
 
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-3 bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-black tracking-wider uppercase mb-3 bg-indigo-100 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/30">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
             <span>{header.badge}</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center justify-center gap-2">
+          <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center justify-center gap-2">
             {header.icon}
             <span>{header.title}</span>
           </h2>
-          <p className="text-slate-400 text-xs sm:text-sm font-medium mt-2">
+          <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm font-medium mt-2">
             {header.subtitle}
           </p>
         </div>

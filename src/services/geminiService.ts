@@ -244,6 +244,8 @@ export async function callGeminiProxy(model: string, payload: any): Promise<any>
   return await response.json();
 }
 
+const ACTIVE_GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+
 // ⚡ 단일 배치 문제 생성 헬퍼 함수
 async function generateSingleBatch(
   difficultyLabel: string,
@@ -251,7 +253,7 @@ async function generateSingleBatch(
   batchCount: number = 20,
   targetForms?: number[]
 ): Promise<Question[]> {
-  const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash'];
+  const models = ACTIVE_GEMINI_MODELS;
   
   let matchedRule = LEVEL_RULES['Level 1 (입문/초급)'];
   if (difficultyLabel.includes('Level 4') || difficultyLabel.includes('4단계') || difficultyLabel.includes('실전') || difficultyLabel.includes('Mastery')) {
@@ -447,7 +449,7 @@ export async function generateNativeExpressions(
   existingExpressions: string[] = [],
   count: number = 5
 ): Promise<{ success: boolean; expressions?: ExpressionItem[]; error?: string }> {
-  const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash'];
+  const models = ACTIVE_GEMINI_MODELS;
 
   const categoryNames = {
     daily: '미드 & 일상 생활 회화 / 슬랭 / 관용구',
@@ -554,7 +556,7 @@ export async function askAiTutor(
   userChoice?: string,
   lang: 'ko' | 'en' = 'ko'
 ): Promise<{ success: boolean; answer?: string; error?: string }> {
-  const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash'];
+  const models = ACTIVE_GEMINI_MODELS;
 
   const systemPrompt = lang === 'en'
     ? `You are an elite, world-class English grammar master and ESL tutor.
@@ -817,7 +819,7 @@ export async function generateRankingCycleQuestions(
   cycleId: string,
   cycleName: string
 ): Promise<{ success: boolean; questions?: Question[]; error?: string }> {
-  const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-3.6-flash'];
+  const models = ACTIVE_GEMINI_MODELS;
 
   const systemPrompt = `당신은 대한민국 최고의 수능/토익 영문법 1타 강사이자 공인 랭킹전 출제위원장입니다.
 오늘의 실시간 명예의 전당 랭킹전(${cycleName})을 위해 객관식 4지선다 영문법 문제를 **정확히 10문제** JSON 배열로 생성하세요.
@@ -971,7 +973,7 @@ export async function validateNicknameWithAI(nickname: string): Promise<{ isVali
       }
     };
 
-    const models = ['gemini-3.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.5-flash'];
+    const models = ACTIVE_GEMINI_MODELS;
     for (const model of models) {
       try {
         const res = await callGeminiProxy(model, payload);

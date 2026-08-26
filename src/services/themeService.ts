@@ -19,8 +19,10 @@ export function applyThemeToDOM(theme: ThemeMode) {
   if (theme === 'light') {
     root.classList.add('theme-light');
     root.classList.remove('theme-dark');
+    root.classList.remove('dark');
   } else {
     root.classList.add('theme-dark');
+    root.classList.add('dark');
     root.classList.remove('theme-light');
   }
 }

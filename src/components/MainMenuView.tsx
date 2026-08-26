@@ -208,17 +208,17 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
         </div>
 
         {/* 🏆 1. Top Hero Card: 실시간 랭킹 챌린지 (신뢰감 있는 에듀테크 스타일) */}
-        <div className="w-full mb-4 p-5 sm:p-6 bg-gradient-to-br from-indigo-900/90 via-indigo-950 to-slate-900 rounded-[2.2rem] shadow-xl border border-indigo-500/40 text-left relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+        <div className="w-full mb-4 p-5 sm:p-6 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 dark:from-indigo-900/90 dark:via-indigo-950 dark:to-slate-900 rounded-[2.2rem] shadow-xl border border-indigo-400/50 dark:border-indigo-500/40 text-left relative overflow-hidden text-white">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 dark:bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
           
           {/* Cycle Status & Countdown */}
           {(() => {
             const status = getCycleStatusText(currentCycle, language);
             return (
-              <div className="inline-flex items-center gap-1.5 bg-slate-950/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white mb-3 border border-slate-700">
+              <div className="inline-flex items-center gap-1.5 bg-black/25 dark:bg-slate-950/60 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-white mb-3 border border-white/20 dark:border-slate-700">
                 <Clock className="w-3.5 h-3.5 text-amber-300" />
                 <span>{status.inProgressText}</span>
-                <span className="bg-indigo-600 text-white px-2 py-0.2 rounded-full text-[10px] font-black">
+                <span className="bg-indigo-500 text-white px-2 py-0.2 rounded-full text-[10px] font-black">
                   {status.remainingText}
                 </span>
               </div>
@@ -236,7 +236,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
             <span className="text-2xl">🔥</span>
           </div>
           
-          <p className="relative z-10 text-indigo-100/80 font-medium text-xs sm:text-sm leading-relaxed mb-4">
+          <p className="relative z-10 text-indigo-100 font-medium text-xs sm:text-sm leading-relaxed mb-4">
             {t('rankingHeroDesc')}
           </p>
 
@@ -248,7 +248,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onStartDailyChallenge();
               }}
-              className="py-3 px-4 bg-white hover:bg-indigo-50 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group/btn"
+              className="py-3 px-4 bg-white hover:bg-slate-100 text-slate-950 font-black text-xs sm:text-sm rounded-2xl shadow-md active:scale-95 transition-all flex items-center justify-center gap-2 group/btn"
             >
               <span>{language === 'en' ? 'Start 10 Qs Challenge' : '10문제 랭킹 챌린지 도전'}</span>
               <ArrowRight className="w-4 h-4 text-slate-900 group-hover/btn:translate-x-1 transition-transform" />
@@ -260,11 +260,11 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onNavigate('ranking_board');
               }}
-              className="py-3 px-4 bg-slate-900/70 hover:bg-slate-800 text-indigo-200 hover:text-white font-black text-xs sm:text-sm rounded-2xl border border-indigo-400/40 shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 backdrop-blur-md group/btn"
+              className="py-3 px-4 bg-white/15 hover:bg-white/25 text-white font-black text-xs sm:text-sm rounded-2xl border border-white/30 shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2 backdrop-blur-md group/btn"
             >
               <Crown className="w-4 h-4 text-amber-300 fill-amber-300 group-hover/btn:scale-110 transition-transform" />
               <span>{language === 'en' ? 'Live Leaderboard 👑' : '실시간 명예의 전당 👑'}</span>
-              <ArrowRight className="w-4 h-4 text-indigo-300 group-hover/btn:translate-x-1 transition-transform" />
+              <ArrowRight className="w-4 h-4 text-white group-hover/btn:translate-x-1 transition-transform" />
             </button>
           </div>
         </div>
@@ -275,7 +275,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
             sound.playClick();
             onNavigate('analytics_view');
           }}
-          className="w-full mb-5 cursor-pointer group p-4 sm:p-5 bg-gradient-to-br from-indigo-950/70 via-purple-950/80 to-slate-900/90 rounded-[2rem] border border-indigo-500/40 hover:border-indigo-400 shadow-lg hover:shadow-indigo-500/20 hover:-translate-y-0.5 transition-all text-left relative overflow-hidden active:scale-[0.99]"
+          className="w-full mb-5 cursor-pointer group p-4 sm:p-5 bg-gradient-to-br from-indigo-50/90 via-purple-50/80 to-white dark:from-indigo-950/70 dark:via-purple-950/80 dark:to-slate-900/90 rounded-[2rem] border border-indigo-200 dark:border-indigo-500/40 hover:border-indigo-400 shadow-md hover:shadow-indigo-500/10 hover:-translate-y-0.5 transition-all text-left relative overflow-hidden active:scale-[0.99]"
         >
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2.5">
             <div className="flex items-center gap-2.5">
@@ -284,14 +284,14 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black uppercase text-purple-300">
+                  <span className="text-[11px] font-black uppercase text-indigo-800 dark:text-purple-300">
                     {t('myGrowthReport')}
                   </span>
                   <span className={`bg-gradient-to-r ${tierInfo.badgeColor} text-white font-black text-[10px] px-2 py-0.2 rounded-full`}>
                     {tierInfo.tier}
                   </span>
                 </div>
-                <div className="text-sm font-black text-white">
+                <div className="text-sm font-black text-slate-900 dark:text-white">
                   {language === 'en' 
                     ? `Total ${currentXp.toLocaleString()} XP • Accuracy ${user.totalSolved ? Math.round(((user.totalCorrect || 0) / user.totalSolved) * 100) : 100}%`
                     : `누적 ${currentXp.toLocaleString()} XP • 정답률 ${user.totalSolved ? Math.round(((user.totalCorrect || 0) / user.totalSolved) * 100) : 100}%`}
@@ -299,20 +299,20 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
               </div>
             </div>
 
-            <div className="text-xs font-black text-indigo-300 group-hover:text-white flex items-center gap-1 bg-indigo-500/20 group-hover:bg-indigo-500/40 px-3 py-1.5 rounded-xl border border-indigo-500/40 transition-all">
+            <div className="text-xs font-black text-indigo-700 dark:text-indigo-300 group-hover:text-indigo-900 dark:group-hover:text-white flex items-center gap-1 bg-indigo-100 dark:bg-indigo-500/20 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-500/40 px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-500/40 transition-all">
               <BarChart3 className="w-3.5 h-3.5" />
               <span>{t('growthDashboardBtn')}</span>
             </div>
           </div>
 
           {/* XP Progress Bar */}
-          <div className="w-full bg-slate-950/80 h-2 rounded-full overflow-hidden border border-slate-800">
+          <div className="w-full bg-slate-200 dark:bg-slate-950/80 h-2 rounded-full overflow-hidden border border-slate-300 dark:border-slate-800">
             <div
               className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 h-full rounded-full transition-all duration-500"
               style={{ width: `${tierInfo.progress}%` }}
             />
           </div>
-          <div className="flex justify-between items-center text-[10px] text-slate-400 mt-1 font-mono">
+          <div className="flex justify-between items-center text-[10px] text-slate-600 dark:text-slate-400 mt-1 font-mono">
             <span>{tierInfo.tier}</span>
             <span>
               {tierInfo.maxXp === Infinity 
@@ -330,7 +330,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playStar();
                 onOpenInstallModal();
               }}
-              className="w-full p-3 sm:p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/80 via-purple-950/80 to-slate-900 border border-indigo-500/50 hover:border-pink-400 text-white flex items-center justify-between shadow-md transition-all active:scale-[0.99] group"
+              className="w-full p-3 sm:p-3.5 rounded-2xl bg-indigo-50 dark:bg-gradient-to-r dark:from-indigo-950/80 dark:via-purple-950/80 dark:to-slate-900 border border-indigo-200 dark:border-indigo-500/50 hover:border-pink-400 flex items-center justify-between shadow-sm transition-all active:scale-[0.99] group"
             >
               <div className="flex items-center gap-3 text-left">
                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-pink-500 flex items-center justify-center text-lg shadow-md shrink-0">
@@ -338,9 +338,9 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-white">{t('pwaInstallTitle')}</span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white">{t('pwaInstallTitle')}</span>
                   </div>
-                  <p className="text-[11px] text-slate-300">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300">
                     {t('pwaInstallDesc')}
                   </p>
                 </div>

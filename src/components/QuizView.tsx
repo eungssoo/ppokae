@@ -493,16 +493,16 @@ export const QuizView: React.FC<QuizViewProps> = ({
           )}
 
           {/* Question Sentence Box */}
-          <div className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 p-6 sm:p-10 rounded-[2rem] text-center text-white relative mb-6 sm:mb-8 border border-slate-700/80 shadow-inner">
+          <div className="bg-slate-50 dark:bg-gradient-to-br dark:from-slate-800/90 dark:to-slate-900/90 p-6 sm:p-10 rounded-[2rem] text-center relative mb-6 sm:mb-8 border border-slate-200 dark:border-slate-700/80 shadow-inner">
             
             {/* Audio Button */}
             <button
               onClick={playAudio}
-              className="absolute top-4 right-4 flex items-center gap-1.5 bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/40 px-3 py-1.5 rounded-full transition-all active:scale-95 text-indigo-300 hover:text-white"
+              className="absolute top-4 right-4 flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/30 border border-indigo-200 dark:border-indigo-400/40 px-3 py-1.5 rounded-full transition-all active:scale-95 text-indigo-700 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-white"
               title="Read Aloud (Hotkey: Q)"
             >
               <Volume2 className="w-4 h-4" />
-              <span className="text-[10px] font-mono font-bold bg-white/10 px-1 py-0.5 rounded">Q</span>
+              <span className="text-[10px] font-mono font-bold bg-indigo-100 dark:bg-white/10 px-1 py-0.5 rounded text-indigo-800 dark:text-white">Q</span>
             </button>
 
             {/* Sentence with Blank */}
@@ -561,7 +561,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   </span>
 
                   {/* 2순위: 문장 형식 배지 */}
-                  <span className="inline-block bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                  <span className="inline-block bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
                     {currentQuestion.form}{language === 'en' ? '-Form Sentence' : '형식 문장'}
                   </span>
 
@@ -571,8 +571,8 @@ export const QuizView: React.FC<QuizViewProps> = ({
                       <span className="bg-white/20 px-1.5 py-0.2 rounded-full text-[10px] text-white font-black">+{scoreInfo.points}{language === 'en' ? ' PTS' : '점'}</span>
                     </span>
                   ) : (
-                    <span className={`inline-flex items-center gap-1 font-bold text-xs px-3 py-1 rounded-full border ${levelGating.badgeBg} ${levelGating.badgeText} ${levelGating.badgeBorder}`}>
-                      <span>🎯 {levelGating.levelLabel}</span>
+                    <span className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 text-xs font-bold px-3 py-1 rounded-full">
+                      Lv {currentQuestion.level}
                     </span>
                   )}
 
@@ -643,28 +643,28 @@ export const QuizView: React.FC<QuizViewProps> = ({
               <div
                 className={`p-5 sm:p-6 rounded-[2rem] border-2 flex items-center gap-4 sm:gap-5 shadow-lg ${
                   isCorrect
-                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-100'
-                    : 'bg-rose-500/10 border-rose-500/40 text-rose-100'
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-400 dark:border-emerald-500/40 text-emerald-950 dark:text-emerald-100'
+                    : 'bg-rose-50 dark:bg-rose-500/10 border-rose-400 dark:border-rose-500/40 text-rose-950 dark:text-rose-100'
                 }`}
               >
                 {isCorrect ? (
-                  <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12 text-emerald-400 flex-shrink-0" />
+                  <CheckCircle2 className="w-10 h-10 sm:w-12 sm:h-12 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                 ) : (
-                  <XCircle className="w-10 h-10 sm:w-12 sm:h-12 text-rose-400 flex-shrink-0" />
+                  <XCircle className="w-10 h-10 sm:w-12 sm:h-12 text-rose-600 dark:text-rose-400 flex-shrink-0" />
                 )}
                 <div>
-                  <h3 className="font-black text-xl sm:text-2xl flex items-center flex-wrap gap-2">
+                  <h3 className="font-black text-xl sm:text-2xl flex items-center flex-wrap gap-2 text-slate-900 dark:text-white">
                     {isCorrect ? t('correct') : t('incorrect')}
                     {quizMode === 'daily' && isCorrect && (
-                      <span className="bg-amber-500 text-slate-950 font-black px-2.5 py-0.5 rounded-full text-xs">
+                      <span className="bg-amber-400 text-slate-950 font-black px-2.5 py-0.5 rounded-full text-xs shadow-sm">
                         +{scoreInfo.points} SCORE
                       </span>
                     )}
                   </h3>
                   {!isCorrect && (
-                    <p className="font-medium text-slate-300 text-sm mt-1">
+                    <p className="font-medium text-slate-700 dark:text-slate-300 text-sm mt-1">
                       {t('correctAnswerIs')}{' '}
-                      <strong className="bg-slate-800 text-emerald-400 px-2.5 py-0.5 rounded border border-slate-700 font-black">
+                      <strong className="bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 px-2.5 py-0.5 rounded border border-emerald-300 dark:border-slate-700 font-black">
                         {(() => {
                           const correctOpt = Array.isArray(currentQuestion?.options)
                             ? currentQuestion.options.find((o: any) => typeof o === 'object' && o.is_correct === true)
@@ -681,28 +681,28 @@ export const QuizView: React.FC<QuizViewProps> = ({
               </div>
 
               {/* 🌐 Explanation Language Switcher Bar */}
-              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-sm">
+              <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-cyan-400" />
-                  <span className="text-xs font-black text-slate-300">
+                  <Globe className="w-4 h-4 text-indigo-600 dark:text-cyan-400" />
+                  <span className="text-xs font-black text-slate-800 dark:text-slate-300">
                     {explanationLang === 'en' ? 'AI English Immersion Explanation' : 'AI 상세 문법 해설'}
                   </span>
                   {isEnLoading && (
-                    <span className="text-[10px] text-cyan-300 bg-cyan-500/20 px-2 py-0.5 rounded-full border border-cyan-400/40 animate-pulse flex items-center gap-1">
+                    <span className="text-[10px] text-indigo-700 dark:text-cyan-300 bg-indigo-100 dark:bg-cyan-500/20 px-2 py-0.5 rounded-full border border-indigo-300 dark:border-cyan-400/40 animate-pulse flex items-center gap-1">
                       <Loader2 className="w-2.5 h-2.5 animate-spin" />
                       <span>Translating...</span>
                     </span>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <div className="flex items-center gap-1 bg-white dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => handleToggleExplanationLang('ko')}
                     className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
                       explanationLang === 'ko'
                         ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     🇰🇷 한국어
@@ -713,7 +713,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                     className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
                       explanationLang === 'en'
                         ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-sm'
-                        : 'text-slate-400 hover:text-white'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
                     <span>🇺🇸 English</span>
@@ -733,11 +733,11 @@ export const QuizView: React.FC<QuizViewProps> = ({
                           {language === 'en' ? 'Core Exam Trigger:' : '실전 출제 핵심 포인트:'} {language === 'en' ? grammarInfo.nameEn : grammarInfo.nameKo}
                         </span>
                       </div>
-                      <span className="bg-slate-100 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                      <span className="bg-white dark:bg-slate-900/80 text-slate-800 dark:text-slate-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
                         {currentQuestion.form}{language === 'en' ? '-Form Structure' : '형식 문형 구조'}
                       </span>
                     </div>
-                    <p className="text-slate-700 dark:text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
+                    <p className="text-slate-800 dark:text-slate-300 text-xs sm:text-sm leading-relaxed font-medium">
                       {language === 'en' ? grammarInfo.descEn : grammarInfo.descKo}
                     </p>
                   </div>
@@ -800,12 +800,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
               {/* Chunk Pattern & Nuance */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <div className="bg-amber-500/10 p-5 rounded-2xl border border-amber-500/20 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400" />
-                  <h4 className="font-black text-amber-300 text-xs uppercase tracking-wider mb-2">
+                <div className="bg-amber-50 dark:bg-amber-500/10 p-5 rounded-2xl border border-amber-200 dark:border-amber-500/20 relative overflow-hidden shadow-sm">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
+                  <h4 className="font-black text-amber-800 dark:text-amber-300 text-xs uppercase tracking-wider mb-2">
                     🧩 {explanationLang === 'en' ? 'Grammar Chunk Pattern' : 'Chunk Pattern (문형 구조)'}
                   </h4>
-                  <p className="text-amber-100 text-sm leading-relaxed">
+                  <p className="text-amber-950 dark:text-amber-100 text-sm leading-relaxed font-medium">
                     {renderBoldText(
                       explanationLang === 'en'
                         ? (enExplanation?.chunk_pattern || `Form ${currentQuestion.form} Grammar Structure`)
@@ -814,12 +814,12 @@ export const QuizView: React.FC<QuizViewProps> = ({
                   </p>
                 </div>
 
-                <div className="bg-cyan-500/10 p-5 rounded-2xl border border-cyan-500/20 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-cyan-400" />
-                  <h4 className="font-black text-cyan-300 text-xs uppercase tracking-wider mb-2">
+                <div className="bg-cyan-50 dark:bg-cyan-500/10 p-5 rounded-2xl border border-cyan-200 dark:border-cyan-500/20 relative overflow-hidden shadow-sm">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-cyan-500" />
+                  <h4 className="font-black text-cyan-800 dark:text-cyan-300 text-xs uppercase tracking-wider mb-2">
                     💡 {explanationLang === 'en' ? 'Native Nuance & Usage' : 'Nuance (원어민 뉘앙스)'}
                   </h4>
-                  <p className="text-cyan-100 text-sm leading-relaxed">
+                  <p className="text-cyan-950 dark:text-cyan-100 text-sm leading-relaxed font-medium">
                     {renderBoldText(
                       explanationLang === 'en'
                         ? (enExplanation?.nuance || `Focus on how Form ${currentQuestion.form} structures convey precise meaning in real-life English.`)
@@ -830,20 +830,20 @@ export const QuizView: React.FC<QuizViewProps> = ({
               </div>
 
               {/* 🤖 1타 강사 AI 튜터 1:1 질문 섹션 */}
-              <div className="bg-gradient-to-br from-indigo-950/60 to-purple-950/60 border border-indigo-500/30 rounded-3xl p-5 sm:p-6 shadow-xl">
+              <div className="bg-indigo-50/70 dark:bg-gradient-to-br dark:from-indigo-950/60 dark:to-purple-950/60 border border-indigo-200 dark:border-indigo-500/30 rounded-3xl p-5 sm:p-6 shadow-sm">
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shadow-md">
                       <Bot className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                      <h4 className="font-black text-sm sm:text-base text-white flex items-center gap-1.5">
+                      <h4 className="font-black text-sm sm:text-base text-slate-900 dark:text-white flex items-center gap-1.5">
                         <span>{t('aiTutorTitle')}</span>
-                        <span className="bg-indigo-500/30 text-indigo-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-indigo-400/30">
+                        <span className="bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">
                           PRO
                         </span>
                       </h4>
-                      <p className="text-slate-400 text-xs font-medium">
+                      <p className="text-slate-600 dark:text-slate-400 text-xs font-medium">
                         {t('aiTutorDesc')}
                       </p>
                     </div>
@@ -854,7 +854,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                       sound.playClick();
                       setIsAiTutorOpen(!isAiTutorOpen);
                     }}
-                    className="p-1.5 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-all border border-slate-700"
+                    className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-white dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all border border-slate-200 dark:border-slate-700 shadow-sm"
                   >
                     {isAiTutorOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
@@ -867,7 +867,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                       key={idx}
                       onClick={() => handleAskTutor(q)}
                       disabled={isAiLoading}
-                      className="px-3 py-1.5 bg-slate-800/90 hover:bg-indigo-600/40 border border-slate-700 hover:border-indigo-400/60 rounded-xl text-xs font-bold text-slate-300 hover:text-white transition-all active:scale-[0.98] disabled:opacity-50"
+                      className="px-3 py-1.5 bg-white dark:bg-slate-800/90 hover:bg-indigo-50 dark:hover:bg-indigo-600/40 border border-slate-200 dark:border-slate-700 hover:border-indigo-400 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-indigo-900 dark:hover:text-white transition-all active:scale-[0.98] disabled:opacity-50 shadow-sm"
                     >
                       {q}
                     </button>
@@ -888,7 +888,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                     value={aiQuestion}
                     onChange={(e) => setAiQuestion(e.target.value)}
                     disabled={isAiLoading}
-                    className="flex-1 px-4 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all"
+                    className="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900/80 border border-slate-300 dark:border-slate-700 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
                   />
                   <button
                     type="submit"
@@ -908,19 +908,19 @@ export const QuizView: React.FC<QuizViewProps> = ({
 
                 {/* AI Answer Box */}
                 {(isAiLoading || aiAnswer) && (
-                  <div className="mt-4 p-4 sm:p-5 bg-slate-900/90 border border-indigo-500/40 rounded-2xl shadow-inner">
-                    <div className="flex items-center gap-2 mb-2 text-xs font-black text-indigo-300">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                  <div className="mt-4 p-4 sm:p-5 bg-white dark:bg-slate-900/90 border border-indigo-200 dark:border-indigo-500/40 rounded-2xl shadow-sm">
+                    <div className="flex items-center gap-2 mb-2 text-xs font-black text-indigo-700 dark:text-indigo-300">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 animate-pulse" />
                       <span>{language === 'en' ? 'Master AI Tutor Explanation:' : '1타 강사 AI 튜터의 맞춤 해설:'}</span>
                     </div>
 
                     {isAiLoading ? (
-                      <div className="flex items-center gap-2 text-slate-400 text-xs py-3">
-                        <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-xs py-3">
+                        <Loader2 className="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-400" />
                         <span>{language === 'en' ? 'AI Tutor is analyzing grammar rules and preparing a response...' : '문법 원리를 명쾌하게 분석하여 답변을 작성하고 있습니다...'}</span>
                       </div>
                     ) : (
-                      <div className="text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line font-medium">
+                      <div className="text-slate-800 dark:text-slate-200 text-xs sm:text-sm leading-relaxed whitespace-pre-line font-medium">
                         {renderBoldText(aiAnswer)}
                       </div>
                     )}
@@ -931,7 +931,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
               {/* Next Question Button */}
               <button
                 onClick={handleNext}
-                className="w-full bg-white hover:bg-slate-200 text-slate-950 p-4 sm:p-5 rounded-2xl font-black text-lg sm:text-xl transition-all shadow-[0_0_25px_rgba(255,255,255,0.2)] active:scale-[0.98] flex items-center justify-center gap-2.5 mt-2"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-950 p-4 sm:p-5 rounded-2xl font-black text-lg sm:text-xl transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2.5 mt-2"
               >
                 <span>
                   {questionIndex === totalQuestions
@@ -940,7 +940,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
                       : (language === 'en' ? 'Finish & View Results 🎉' : '퀴즈 완료 및 결과 보기 🎉')
                     : (language === 'en' ? 'Next Question ➔' : '다음 문제 (Next) ➡️')}
                 </span>
-                <span className="hidden sm:inline-block px-2 py-0.5 text-xs font-mono font-bold bg-slate-300 text-slate-800 rounded">
+                <span className="hidden sm:inline-block px-2 py-0.5 text-xs font-mono font-bold bg-white/20 dark:bg-slate-300 text-white dark:text-slate-800 rounded">
                   Enter
                 </span>
               </button>
