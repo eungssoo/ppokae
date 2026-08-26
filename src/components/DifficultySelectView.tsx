@@ -74,8 +74,14 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
   const header = getHeaderInfo();
 
   const getCountForLevel = (level: number): number => {
-    const key = `Level ${level}`;
-    return questionCounts[key] ?? 15;
+    const direct = questionCounts[`Level ${level}`];
+    if (typeof direct === 'number') return direct;
+    for (const [k, v] of Object.entries(questionCounts)) {
+      if (k.includes(`Level ${level}`) || k.includes(`${level}단계`)) {
+        return v;
+      }
+    }
+    return 40;
   };
 
   return (

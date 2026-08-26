@@ -2328,16 +2328,16 @@ export async function getCycleRankings(cycleId: string): Promise<RankingItem[]> 
 // 🏷️ 난이도 라벨 4종 공식 표준화 헬퍼
 export function normalizeDifficultyLabel(diff: string = ''): string {
   const d = String(diff || '').trim();
-  if (d.includes('Level 4') || d.includes('4단계') || d.includes('실전') || d.includes('마스터') || d.includes('Mastery') || d.includes('토익')) {
+  if (d.includes('Level 4') || d.includes('4단계') || d.includes('실전 마스터') || d.includes('Mastery')) {
     return 'Level 4 (실전 마스터)';
   }
-  if (d.includes('Level 3') || d.includes('3단계') || d.includes('고득점') || d.includes('도약') || d.includes('고3') || d.includes('Advanced') || d.includes('수능')) {
+  if (d.includes('Level 3') || d.includes('3단계') || d.includes('고득점 도약') || d.includes('Advanced')) {
     return 'Level 3 (고득점 도약)';
   }
-  if (d.includes('Level 2') || d.includes('2단계') || d.includes('중급') || d.includes('실력') || d.includes('Intermediate')) {
+  if (d.includes('Level 2') || d.includes('2단계') || d.includes('실력 중급') || d.includes('Intermediate')) {
     return 'Level 2 (실력 중급)';
   }
-  if (d.includes('Level 1') || d.includes('1단계') || d.includes('초급') || d.includes('입문') || d.includes('Beginner')) {
+  if (d.includes('Level 1') || d.includes('1단계') || d.includes('입문/초급') || d.includes('기초 탄탄') || d.includes('Beginner')) {
     return 'Level 1 (입문/초급)';
   }
   return 'Level 1 (입문/초급)';
