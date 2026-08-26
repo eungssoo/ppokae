@@ -572,7 +572,9 @@ export const QuizView: React.FC<QuizViewProps> = ({
                     </span>
                   ) : (
                     <span className="bg-indigo-50 dark:bg-indigo-500/10 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30 text-xs font-bold px-3 py-1 rounded-full">
-                      Lv {currentQuestion.level}
+                      {String(currentQuestion.difficulty || currentQuestion.level || '').includes('4') ? 'Lv.4 실전' :
+                       String(currentQuestion.difficulty || currentQuestion.level || '').includes('3') ? 'Lv.3 도약' :
+                       String(currentQuestion.difficulty || currentQuestion.level || '').includes('2') ? 'Lv.2 중급' : 'Lv.1 초급'}
                     </span>
                   )}
 
