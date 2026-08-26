@@ -1,53 +1,33 @@
 import { useState, useEffect } from 'react';
 
-export type ThemeMode = 'dark' | 'light';
-
-const THEME_STORAGE_KEY = 'ppokae_theme_mode';
+export type ThemeMode = 'dark';
 
 export function getInitialTheme(): ThemeMode {
-  try {
-    const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    if (saved === 'light' || saved === 'dark') {
-      return saved;
-    }
-  } catch {}
   return 'dark';
 }
 
-export function applyThemeToDOM(theme: ThemeMode) {
+export function applyThemeToDOM(_theme: ThemeMode = 'dark') {
+  if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  if (theme === 'light') {
-    root.classList.add('theme-light');
-    root.classList.remove('theme-dark');
-    root.classList.remove('dark');
-  } else {
-    root.classList.add('theme-dark');
-    root.classList.add('dark');
-    root.classList.remove('theme-light');
-  }
+  root.classList.add('theme-dark');
+  root.classList.add('dark');
+  root.classList.remove('theme-light');
+  try {
+    localStorage.setItem('ppokae_theme_mode', 'dark');
+  } catch {}
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    const initial = getInitialTheme();
-    applyThemeToDOM(initial);
-    return initial;
-  });
-
-  const toggleTheme = () => {
-    setTheme(prev => {
-      const next: ThemeMode = prev === 'dark' ? 'light' : 'dark';
-      try {
-        localStorage.setItem(THEME_STORAGE_KEY, next);
-      } catch {}
-      applyThemeToDOM(next);
-      return next;
-    });
-  };
+  const [theme] = useState<ThemeMode>('dark');
 
   useEffect(() => {
-    applyThemeToDOM(theme);
-  }, [theme]);
+    applyThemeToDOM('dark');
+  }, []);
 
-  return { theme, toggleTheme, isLight: theme === 'light' };
+  const toggleTheme = () => {
+    // 🔒 Permanent Dark Mode Enforced
+    applyThemeToDOM('dark');
+  };
+
+  return { theme: 'dark' as const, toggleTheme, isLight: false };
 }

@@ -22,15 +22,12 @@ import {
   Smartphone,
   Bell,
   MessageSquare,
-  Globe,
-  Sun,
-  Moon
+  Globe
 } from 'lucide-react';
 import { UserProfile, ViewType, CycleInfo } from '../types';
 import { calculateTier, checkIsAdmin, getCycleStatusText } from '../services/dbService';
 import { sound } from '../services/soundService';
 import { useLanguage } from '../services/i18n';
-import { useTheme } from '../services/themeService';
 
 interface MainMenuViewProps {
   user: UserProfile;
@@ -54,6 +51,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
   totalPublicQuestions,
   currentCycle,
   bookmarkCount = 0,
+  unreadNotificationCount = 0,
   isStandalone = false,
   onNavigate,
   onStartDailyChallenge,
@@ -65,22 +63,23 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
   onLogout,
 }) => {
   const { language, setLanguage, t } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
-  const currentXp = user.xp || 0;
-  const tierInfo = calculateTier(currentXp);
   const isAdmin = checkIsAdmin(user);
 
+  // 티어 및 랭크 점수 계산
+  const currentXp = user.xp || 0;
+  const tierInfo = calculateTier(currentXp);
+
   return (
-    <div className="min-h-screen bg-animated-gradient flex items-center justify-center p-3 sm:p-6 md:p-8">
-      <div className="max-w-3xl w-full bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2.5rem] p-5 sm:p-8 relative border border-slate-200 dark:border-slate-700/60 shadow-2xl">
+    <div className="min-h-screen bg-slate-950 bg-animated-gradient flex items-center justify-center p-3 sm:p-6 md:p-8 selection:bg-indigo-500 selection:text-white">
+      <div className="max-w-3xl w-full glass-card rounded-[2.5rem] p-5 sm:p-8 relative border border-slate-700/60 shadow-2xl">
         
         {/* Top Header Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 mb-5 border-b border-slate-200 dark:border-slate-700/60 pb-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 mb-5 border-b border-slate-700/60 pb-3.5">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             {/* ⚡ App Brand Badge */}
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-500/15 border border-indigo-200 dark:border-indigo-500/30">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40">
               <span className="text-xs sm:text-sm">⚡</span>
-              <span className="text-xs font-black text-indigo-900 dark:text-indigo-200 font-sans tracking-wide">
+              <span className="text-xs font-black text-indigo-300 font-sans tracking-wide">
                 {language === 'en' ? 'Ppokae AI English' : '뽀개 AI 영어'}
               </span>
             </div>
@@ -106,49 +105,27 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onNavigate('profile_view');
               }}
-              className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700/90 border border-slate-200 dark:border-slate-700 px-2.5 sm:px-3 py-1 rounded-full shadow-sm transition-all active:scale-95 text-left"
+              className="flex items-center gap-1.5 bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 px-2.5 sm:px-3 py-1 rounded-full shadow-sm transition-all active:scale-95 text-left"
               title={t('myProfile')}
             >
               <span className="text-sm sm:text-base">{user.avatar || '🤖'}</span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">{user.name}</span>
+              <span className="text-xs font-bold text-white tracking-tight">{user.name}</span>
               <span className={`bg-gradient-to-r ${tierInfo.badgeColor} text-white font-black text-[9px] px-1.5 py-0.2 rounded-full`}>
                 {tierInfo.tier}
               </span>
             </button>
 
             {/* 🪙 코인 잔액 배지 */}
-            <div className="flex items-center gap-1 bg-amber-100 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 px-2.5 py-1 rounded-full shadow-sm">
-              <Coins className="w-3.5 h-3.5 text-amber-600 dark:text-yellow-400" />
-              <span className="text-xs font-black text-amber-900 dark:text-amber-300">
+            <div className="flex items-center gap-1 bg-amber-500/15 border border-amber-500/40 px-2.5 py-1 rounded-full shadow-sm">
+              <Coins className="w-3.5 h-3.5 text-yellow-400" />
+              <span className="text-xs font-black text-amber-300">
                 {user.coins ?? 200}
-                <span className="text-[10px] font-normal text-amber-800 dark:text-amber-200/80 ml-0.5">🪙</span>
+                <span className="text-[10px] font-normal text-amber-200/80 ml-0.5">🪙</span>
               </span>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 ml-auto">
-
-            {/* ☀️ / 🌙 테마 전환 버튼 (Dark / Light) */}
-            <button
-              onClick={() => {
-                sound.playClick();
-                toggleTheme();
-              }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/90 hover:border-amber-400 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-black text-xs shadow-sm active:scale-95 transition-all"
-              title={theme === 'dark' ? '밝은 테마로 전환' : '다크 모드로 전환'}
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span>☀️</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>🌙</span>
-                </>
-              )}
-            </button>
 
             {/* 🌐 언어 전환 버튼 (KO / EN) */}
             <button
@@ -156,10 +133,10 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 setLanguage(language === 'ko' ? 'en' : 'ko');
               }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/90 hover:border-cyan-400 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-black text-xs shadow-sm active:scale-95 transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 hover:border-cyan-400 text-slate-200 hover:text-white font-black text-xs shadow-sm active:scale-95 transition-all"
               title={language === 'ko' ? 'Switch to English' : '한국어로 전환'}
             >
-              <Globe className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+              <Globe className="w-3.5 h-3.5 text-cyan-400" />
               <span>{language === 'ko' ? '🇺🇸 EN' : '🇰🇷 한'}</span>
             </button>
 
@@ -170,10 +147,10 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                   sound.playClick();
                   onOpenInquiryModal();
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700/90 hover:border-indigo-400 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-bold text-xs shadow-sm active:scale-95 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 hover:bg-slate-750 border border-slate-700/80 hover:border-indigo-400 text-slate-200 hover:text-white font-bold text-xs shadow-sm active:scale-95 transition-all"
                 title="문의 및 피드백"
               >
-                <MessageSquare className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <MessageSquare className="w-3.5 h-3.5 text-indigo-400" />
                 <span>{t('inquiryBtn')}</span>
               </button>
             )}
@@ -199,7 +176,7 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onLogout();
               }}
-              className="flex items-center justify-center p-2 text-slate-500 dark:text-slate-400 hover:text-rose-500 bg-slate-100 dark:bg-slate-800/50 hover:bg-rose-50 dark:hover:bg-rose-500/10 border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-500/30 rounded-xl transition-all"
+              className="flex items-center justify-center p-2 text-slate-400 hover:text-rose-400 bg-slate-800/50 hover:bg-rose-500/10 border border-slate-700 hover:border-rose-500/30 rounded-xl transition-all"
               title={t('logout')}
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -412,19 +389,19 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onNavigate('weakness_view');
               }}
-              className="group p-4 sm:p-5 bg-white dark:bg-slate-800/60 hover:bg-rose-50 dark:hover:bg-rose-500/10 border border-slate-200 dark:border-slate-700/80 hover:border-rose-500/40 rounded-2xl transition-all shadow-sm hover:shadow-md text-left flex flex-col justify-between"
+              className="group p-4 sm:p-5 bg-slate-850 hover:bg-rose-500/10 border border-slate-700/80 hover:border-rose-500/40 rounded-2xl transition-all shadow-sm hover:shadow-md text-left flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
-                    <Target className="w-4 h-4 text-rose-500 dark:text-rose-400" />
-                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
+                    <Target className="w-4 h-4 text-rose-400" />
+                    <h3 className="text-sm sm:text-base font-extrabold text-white">
                       {t('weaknessHeroTitle')}
                     </h3>
                   </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-500 group-hover:translate-x-1 transition-all" />
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-400 group-hover:translate-x-1 transition-all" />
                 </div>
-                <p className="text-slate-600 dark:text-slate-400 text-xs font-medium leading-relaxed">
+                <p className="text-slate-300 text-xs font-medium leading-relaxed">
                   {t('weaknessHeroDesc')}
                 </p>
               </div>
@@ -436,21 +413,21 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onNavigate('bookmark_view');
               }}
-              className="group p-4 sm:p-5 bg-white dark:bg-slate-800/60 hover:bg-amber-50 dark:hover:bg-amber-500/10 border border-slate-200 dark:border-slate-700/80 hover:border-amber-500/40 rounded-2xl transition-all shadow-sm hover:shadow-md text-left flex flex-col justify-between"
+              className="group p-4 sm:p-5 bg-slate-850 hover:bg-amber-500/10 border border-slate-700/80 hover:border-amber-500/40 rounded-2xl transition-all shadow-sm hover:shadow-md text-left flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
-                    <Star className="w-4 h-4 text-amber-500 dark:text-amber-400 fill-amber-500 dark:fill-amber-400" />
-                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-amber-200">
+                    <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    <h3 className="text-sm sm:text-base font-extrabold text-amber-200">
                       {t('bookmarkHeroTitle')}
                     </h3>
                   </div>
-                  <span className="text-[10px] text-amber-800 dark:text-amber-300 font-bold bg-amber-100 dark:bg-amber-500/10 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-500/30">
+                  <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
                     {bookmarkCount}{language === 'en' ? ' saved' : '개'}
                   </span>
                 </div>
-                <p className="text-slate-600 dark:text-slate-400 text-xs font-medium leading-relaxed">
+                <p className="text-slate-300 text-xs font-medium leading-relaxed">
                   {t('bookmarkHeroDesc')}
                 </p>
               </div>
@@ -547,8 +524,8 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
 
         {/* 📊 3. Analytics & Utility Hub: 학습 분석 & 도구 */}
         <div>
-          <div className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 text-xs font-black uppercase tracking-wider mb-2.5 px-1">
-            <BarChart3 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+          <div className="flex items-center gap-1.5 text-slate-300 text-xs font-black uppercase tracking-wider mb-2.5 px-1">
+            <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
             <span>{language === 'en' ? 'Analytics & Tools' : '학습 분석 & 문제 관리 (Analytics & Tools)'}</span>
           </div>
 
@@ -561,20 +538,20 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 if (onOpenGachaModal) onOpenGachaModal();
                 else onNavigate('profile_view');
               }}
-              className="p-3.5 bg-white dark:bg-slate-800/70 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border border-slate-200 dark:border-slate-700/90 hover:border-indigo-400 rounded-2xl transition-all text-left flex items-center justify-between shadow-sm group active:scale-[0.98]"
+              className="p-3.5 bg-slate-850 hover:bg-indigo-500/10 border border-slate-700/80 hover:border-indigo-400 rounded-2xl transition-all text-left flex items-center justify-between shadow-sm group active:scale-[0.98]"
             >
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
                   <span className="text-base">🌟</span>
-                  <h4 className="text-xs font-black text-slate-900 dark:text-indigo-200">
+                  <h4 className="text-xs font-black text-indigo-200">
                     {language === 'en' ? 'Avatar Collection' : '아바타 보상 소환'}
                   </h4>
                 </div>
-                <p className="text-slate-600 dark:text-slate-400 text-[10px]">
+                <p className="text-slate-400 text-[10px]">
                   {language === 'en' ? 'Special Ranks & Avatars' : '레전드 & 스페셜 아바타'}
                 </p>
               </div>
-              <Sparkles className="w-4 h-4 text-indigo-500 dark:text-indigo-400 group-hover:rotate-12 transition-transform" />
+              <Sparkles className="w-4 h-4 text-indigo-400 group-hover:rotate-12 transition-transform" />
             </button>
 
             {/* 명예의 전당 */}
@@ -583,20 +560,20 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onNavigate('ranking_board');
               }}
-              className="p-3.5 bg-white dark:bg-slate-800/60 hover:bg-amber-50 dark:hover:bg-amber-500/10 border border-slate-200 dark:border-slate-700/80 hover:border-amber-400 rounded-2xl transition-all text-left flex items-center justify-between shadow-sm"
+              className="p-3.5 bg-slate-850 hover:bg-amber-500/10 border border-slate-700/80 hover:border-amber-400 rounded-2xl transition-all text-left flex items-center justify-between shadow-sm"
             >
               <div>
                 <div className="flex items-center gap-1.5 mb-0.5">
-                  <Crown className="w-4 h-4 text-amber-500 dark:text-amber-400" />
-                  <h4 className="text-xs font-extrabold text-slate-900 dark:text-amber-200">
+                  <Crown className="w-4 h-4 text-amber-400" />
+                  <h4 className="text-xs font-extrabold text-amber-200">
                     {language === 'en' ? 'Hall of Fame' : '명예의 전당'}
                   </h4>
                 </div>
-                <p className="text-slate-600 dark:text-slate-400 text-[10px]">
+                <p className="text-slate-400 text-[10px]">
                   {language === 'en' ? 'Live Rankings Leaderboard' : '1/2/3차전 랭킹 순위'}
                 </p>
               </div>
-              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-500 transition-colors" />
+              <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-amber-400 transition-colors" />
             </button>
 
           </div>
@@ -608,10 +585,10 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onNavigate('db_view');
               }}
-              className="p-2.5 bg-white dark:bg-slate-900/60 hover:bg-slate-50 dark:hover:bg-slate-800/80 border border-slate-200 dark:border-slate-800 rounded-xl transition-all text-center shadow-sm"
+              className="p-2.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-750 rounded-xl transition-all text-center shadow-sm"
             >
-              <BookOpen className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400 mx-auto mb-0.5" />
-              <span className="text-[11px] font-bold text-slate-800 dark:text-slate-300 block">
+              <BookOpen className="w-3.5 h-3.5 text-slate-400 mx-auto mb-0.5" />
+              <span className="text-[11px] font-bold text-slate-200 block">
                 {language === 'en' ? 'Public Bank' : '전체 문제집'}
               </span>
             </button>
@@ -621,10 +598,10 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onNavigate('weakness_view');
               }}
-              className="p-2.5 bg-white dark:bg-slate-900/60 hover:bg-rose-50 dark:hover:bg-rose-500/10 border border-slate-200 dark:border-slate-800 hover:border-rose-300 rounded-xl transition-all text-center shadow-sm"
+              className="p-2.5 bg-slate-900/80 hover:bg-rose-500/15 border border-slate-750 hover:border-rose-500/40 rounded-xl transition-all text-center shadow-sm"
             >
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-500 dark:text-rose-400 mx-auto mb-0.5" />
-              <span className="text-[11px] font-bold text-rose-700 dark:text-rose-300 block">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-400 mx-auto mb-0.5" />
+              <span className="text-[11px] font-bold text-rose-300 block">
                 {language === 'en' ? 'Weakness' : '약점 진단'}
               </span>
             </button>
@@ -634,10 +611,10 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
                 sound.playClick();
                 onNavigate('incorrect_list');
               }}
-              className="p-2.5 bg-white dark:bg-slate-900/60 hover:bg-amber-50 dark:hover:bg-amber-500/10 border border-slate-200 dark:border-slate-800 hover:border-amber-300 rounded-xl transition-all text-center shadow-sm"
+              className="p-2.5 bg-slate-900/80 hover:bg-amber-500/15 border border-slate-750 hover:border-amber-500/40 rounded-xl transition-all text-center shadow-sm"
             >
-              <ClipboardList className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 mx-auto mb-0.5" />
-              <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 block">
+              <ClipboardList className="w-3.5 h-3.5 text-amber-400 mx-auto mb-0.5" />
+              <span className="text-[11px] font-bold text-amber-300 block">
                 {t('incorrectHeroTitle')}
               </span>
             </button>
