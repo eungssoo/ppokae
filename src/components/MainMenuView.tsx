@@ -410,21 +410,21 @@ export const MainMenuView: React.FC<MainMenuViewProps> = ({
             <button
               onClick={() => {
                 sound.playClick();
-                onNavigate('solve_personal_select');
+                onNavigate('weakness_view');
               }}
-              className="group p-4 sm:p-5 bg-slate-800/60 hover:bg-rose-500/10 border border-slate-700/80 hover:border-rose-500/40 rounded-2xl transition-all shadow-sm hover:shadow-md text-left flex flex-col justify-between"
+              className="group p-4 sm:p-5 bg-white dark:bg-slate-800/60 hover:bg-rose-50 dark:hover:bg-rose-500/10 border border-slate-200 dark:border-slate-700/80 hover:border-rose-500/40 rounded-2xl transition-all shadow-sm hover:shadow-md text-left flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
-                    <Target className="w-4 h-4 text-rose-400" />
-                    <h3 className="text-sm sm:text-base font-extrabold text-white">
+                    <Target className="w-4 h-4 text-rose-500 dark:text-rose-400" />
+                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
                       {t('weaknessHeroTitle')}
                     </h3>
                   </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-rose-400 group-hover:translate-x-1 transition-all" />
+                  <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-rose-500 group-hover:translate-x-1 transition-all" />
                 </div>
-                <p className="text-slate-400 text-xs font-medium leading-relaxed">
+                <p className="text-slate-600 dark:text-slate-400 text-xs font-medium leading-relaxed">
                   {t('weaknessHeroDesc')}
                 </p>
               </div>

@@ -32,7 +32,7 @@ import {
   SystemSettings,
   PushAnnouncement
 } from '../types';
-import { sanitizeForm, generateRankingCycleQuestions, generateBulkQuestions, shuffleOptions, normalizeAndFixQuestion } from './geminiService';
+import { sanitizeForm, generateRankingCycleQuestions, generateBulkQuestions, generateTopicQuestions, shuffleOptions, normalizeAndFixQuestion } from './geminiService';
 import { STARTER_AVATAR_IDS, performGachaDraw, AVATAR_DATABASE, generateRandomNickname } from './avatarService';
 import { inferGrammarCategory } from './grammarTagService';
 
@@ -1510,6 +1510,7 @@ export function fillSentenceAnswer(sentence: string, answer: string): string {
 // Helper: Firestore 안전 저장을 위한 Question 객체 정제 (정답 일치화 및 undefined 100% 제거)
 export function cleanQuestionForStorage(q: any): any {
   const normalized = normalizeAndFixQuestion(q);
+  const tagInfo = inferGrammarCategory(normalized);
 
   return removeUndefinedDeep({
     id: normalized.id,
@@ -1519,6 +1520,8 @@ export function cleanQuestionForStorage(q: any): any {
     answer: normalized.answer,
     translation: normalized.translation,
     explanation: normalized.explanation,
+    grammarCategory: normalized.grammarCategory || tagInfo.id,
+    grammarTag: normalized.grammarTag || tagInfo.badgeKo,
     components: Array.isArray(normalized.components)
       ? normalized.components.map((c: any) => ({
           chunk: c?.chunk || '',
@@ -3851,14 +3854,29 @@ export async function adminDeleteSingleQuestion(questionId?: string, sentence?: 
   }
 }
 
-// 🎯 15-14. 실전 문법 테마별 집중 문제 추출 (테마별 10문제)
-export async function getQuestionsByGrammarCategory(topicId: string, limitCount: number = 10): Promise<{ success: boolean; data?: Question[]; error?: string }> {
+// 🎯 15-14. 실전 문법 테마별 + 난이도별 집중 문제 추출 (테마별 10문제)
+export async function getQuestionsByGrammarCategory(
+  topicId: string, 
+  levelNumber: number = 2, 
+  limitCount: number = 10
+): Promise<{ success: boolean; data?: Question[]; error?: string }> {
   try {
     const snap = await getDocs(collection(db, 'questions'));
     const matched: Question[] = [];
 
+    const targetLevelStr = `Level ${levelNumber}`;
+
     snap.forEach(d => {
       const qData = d.data();
+      const qDiff = String(qData.difficulty || qData.level || '');
+      const docLevel = qDiff.includes('Level 4') || qDiff.includes('4단계') || qDiff.includes('실전') ? 4
+        : qDiff.includes('Level 3') || qDiff.includes('3단계') || qDiff.includes('고득점') ? 3
+        : qDiff.includes('Level 2') || qDiff.includes('2단계') || qDiff.includes('중급') ? 2
+        : 1;
+
+      // 난이도 일치 검사
+      if (docLevel !== levelNumber) return;
+
       const qObj: Question = {
         id: d.id,
         form: sanitizeForm(qData.form),
@@ -3868,23 +3886,29 @@ export async function getQuestionsByGrammarCategory(topicId: string, limitCount:
         translation: qData.translation,
         explanation: qData.explanation,
         components: qData.components,
-        difficulty: qData.difficulty
+        difficulty: qData.difficulty || targetLevelStr,
+        level: qData.level || targetLevelStr,
+        grammarCategory: qData.grammarCategory,
+        grammarTag: qData.grammarTag
       };
 
       const cat = inferGrammarCategory(qObj);
-      if (cat.id === topicId) {
-        matched.push(qObj);
+      if (cat.id === topicId || qData.grammarCategory === topicId) {
+        matched.push({
+          ...qObj,
+          grammarCategory: cat.id,
+          grammarTag: cat.badgeKo
+        });
       }
     });
 
-    // DB에 해당 테마 문제가 5개 미만인 경우 AI로 즉시 생성
+    // DB에 해당 테마 + 난이도 문제가 5개 미만인 경우: 전용 Gemini AI로 즉시 생성 보충
     if (matched.length < 5) {
-      const topicTag = inferGrammarCategory({ explanation: { chunk_pattern: topicId } } as any);
-      console.log(`[getQuestionsByGrammarCategory]: DB contains only ${matched.length} questions for [${topicId}]. Generating fresh questions...`);
+      console.log(`[getQuestionsByGrammarCategory]: DB contains only ${matched.length} questions for [${topicId} / Level ${levelNumber}]. Generating fresh questions...`);
       try {
-        const aiRes = await generateBulkQuestions('Level 2 (수능 기본 & 토익 중급)', `실전 문법 [${topicId}] 100% 집중 출제`, 10);
+        const aiRes = await generateTopicQuestions(topicId, levelNumber, 10);
         if (aiRes.success && aiRes.questions && aiRes.questions.length > 0) {
-          saveQuestionsToFirestore(aiRes.questions, 'Level 2 (수능 기본 & 토익 중급)').catch(() => {});
+          saveQuestionsToFirestore(aiRes.questions, `Level ${levelNumber}`).catch(() => {});
           return { success: true, data: aiRes.questions.slice(0, limitCount) };
         }
       } catch (e) {

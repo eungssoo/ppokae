@@ -1099,15 +1099,16 @@ function AppContent() {
     }
   };
 
-  // 5-1. Start Grammar Theme Practice Quiz
-  const handleStartThemeQuiz = async (topicId: string) => {
+  // 5-1. Start Grammar Theme Practice Quiz (선택한 문법 테마 + 선택한 난이도 레벨)
+  const handleStartThemeQuiz = async (topicId: string, levelNumber: number = 2) => {
     const topicInfo = getGrammarTagInfo(topicId);
+    const lvlLabel = `Level ${levelNumber}`;
     setIsLoading(true);
-    setLoadingText(`[${topicInfo.nameKo}] 테마 문제를 불러오는 중...`);
-    setSelectedDifficulty(`${topicInfo.nameKo} 집중 훈련`);
+    setLoadingText(language === 'en' ? `Preparing [${topicInfo.nameEn}] ${lvlLabel} questions...` : `[${topicInfo.nameKo}] ${lvlLabel} 맞춤 10문제를 준비하는 중...`);
+    setSelectedDifficulty(`[${topicInfo.nameKo}] ${lvlLabel}`);
     setQuizMode('normal');
 
-    const result = await getQuestionsByGrammarCategory(topicId, 10);
+    const result = await getQuestionsByGrammarCategory(topicId, levelNumber, 10);
     setIsLoading(false);
 
     if (result.success && result.data && result.data.length > 0) {
@@ -1735,7 +1736,7 @@ function AppContent() {
           masteryStats={masteryStats}
           bookmarkCount={bookmarks.length}
           onBack={() => setView('menu')}
-          onGoSolveWeakness={() => setView('solve_personal_select')}
+          onGoSolveWeakness={() => setView('weakness_view')}
         />
       )}
 

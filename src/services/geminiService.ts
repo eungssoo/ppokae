@@ -1,5 +1,5 @@
 import { Question, ExpressionItem } from '../types';
-import { inferGrammarCategory } from './grammarTagService';
+import { inferGrammarCategory, getGrammarTagInfo } from './grammarTagService';
 
 const LEVEL_RULES: Record<string, string> = {
   'Level 1 (입문/초급)': `
@@ -387,7 +387,7 @@ async function generateSingleBatch(
   return [];
 }
 
-// 🚀 초고속 4채널 병렬(Ultra-Parallel) 대량 문제 생성 함수 (1~5형식 완벽 균형 배분)
+// 🚀 초고속 2채널 병렬 대량 문제 생성 함수 (1~5형식 완벽 균형 배분)
 export async function generateBulkQuestions(
   difficultyLabel: string,
   weaknessFocus: string = "",
@@ -395,38 +395,16 @@ export async function generateBulkQuestions(
   formStats?: { countsByForm: Record<number, number>; underrepresentedForms: number[] }
 ): Promise<{ success: boolean; questions?: Question[]; error?: string }> {
   try {
-    if (count >= 30) {
-      // ⚡ 4채널(10개 x 4) 초고속 병렬 동시 호출: 각 채널별로 형식을 분할 지정하여 1~5형식 완벽 균형 달성
-      // Channel 1: 1형식, 2형식 중심
-      // Channel 2: 2형식, 3형식 중심
-      // Channel 3: 4형식, 5형식 중심
-      // Channel 4: DB에서 가장 부족한 형식 우선 보강
-      const deficient = formStats?.underrepresentedForms || [1, 2, 3, 4, 5];
-      const boostForms = deficient.slice(0, 3);
-
+    if (count >= 20) {
+      // ⚡ 2채널(20개 x 2) 고속 병렬 호출
+      const halfCount = Math.ceil(count / 2);
       const batches = await Promise.all([
-        generateSingleBatch(difficultyLabel, weaknessFocus, 10, [1, 2]),
-        generateSingleBatch(difficultyLabel, weaknessFocus, 10, [2, 3]),
-        generateSingleBatch(difficultyLabel, weaknessFocus, 10, [4, 5]),
-        generateSingleBatch(difficultyLabel, weaknessFocus, 10, boostForms)
+        generateSingleBatch(difficultyLabel, weaknessFocus, halfCount, [1, 2, 3]),
+        generateSingleBatch(difficultyLabel, weaknessFocus, halfCount, [3, 4, 5])
       ]);
 
       const merged = batches.flat();
       if (merged.length > 0) {
-        return { success: true, questions: merged };
-      }
-    } else if (count > 10) {
-      // 2채널 병렬 호출
-      const count1 = Math.ceil(count / 2);
-      const count2 = count - count1;
-
-      const [batch1, batch2] = await Promise.all([
-        generateSingleBatch(difficultyLabel, weaknessFocus, count1, [1, 2, 3]),
-        generateSingleBatch(difficultyLabel, weaknessFocus, count2, [3, 4, 5])
-      ]);
-
-      const merged = [...batch1, ...batch2];
-      if (merged.length >= 5) {
         return { success: true, questions: merged };
       }
     }
@@ -441,6 +419,80 @@ export async function generateBulkQuestions(
   } catch (err: any) {
     return { success: false, error: err.message || "문제 생성 중 오류가 발생했습니다." };
   }
+}
+
+// 🎯 특정 문법 테마 + 특정 난이도 전용 10문제 초고속 AI 생성 함수 (~2초 내 완료)
+export async function generateTopicQuestions(
+  topicId: string,
+  levelNumber: number = 2,
+  count: number = 10
+): Promise<{ success: boolean; questions?: Question[]; error?: string }> {
+  const categoryInfo = getGrammarTagInfo(topicId);
+  const lvlLabel = levelNumber === 4 ? 'Level 4 (실전 마스터)'
+    : levelNumber === 3 ? 'Level 3 (고득점 도약)'
+    : levelNumber === 2 ? 'Level 2 (실력 중급)'
+    : 'Level 1 (입문/초급)';
+
+  const matchedRule = LEVEL_RULES[lvlLabel] || LEVEL_RULES['Level 2 (실력 중급)'];
+
+  const systemPrompt = `당신은 대한민국 최고의 수능/토익/편입 영문법 1타 강사이자 국가공인 출제위원장입니다.
+문법 테마 [${categoryInfo.nameKo} (${categoryInfo.nameEn})]에 100% 집중된 ${lvlLabel} 객관식 4지선다 영문법 문제를 정확히 ${count}개 생성하세요.
+
+[🚨 출제 핵심 원칙]
+1. [테마 집중]: 반드시 [${categoryInfo.nameKo}] (${categoryInfo.descKo}) 범위의 핵심 포인트로만 출제하세요.
+2. [카테고리 태그]: grammarCategory 필드는 반드시 '${categoryInfo.id}'로, grammarTag 필드는 반드시 '${categoryInfo.badgeKo}'로 설정하세요.
+3. [정답 텍스트]: answer 필드는 1, 2 번호가 아니라 '정답 영어 보기 텍스트 그 자체'를 정확하게 넣으세요.
+4. [정답 플래그]: options 4개 중 단 1개만 is_correct: true 로 지정하세요.
+5. [빈칸 표기]: sentence의 빈칸은 반드시 '______' 로 작성하세요.
+6. [형식]: form 필드는 1, 2, 3, 4, 5 정수 중 하나를 지정하세요.
+7. [친절한 해설]: 정답 feedback 및 오답 3개의 feedback, chunk_pattern, nuance를 100% 자연스러운 한국어로 알기 쉽게 작성하세요.`;
+
+  const userPrompt = `[문법 테마]: ${categoryInfo.nameKo} (${categoryInfo.id})
+[출제 난이도]: ${lvlLabel}
+[난이도 기준]:
+${matchedRule}
+
+정확히 ${count}개의 4지선다 JSON 배열을 반환하세요.`;
+
+  const payload = {
+    contents: [{ parts: [{ text: userPrompt }] }],
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.3,
+      maxOutputTokens: 8192
+    }
+  };
+
+  for (const model of ACTIVE_GEMINI_MODELS) {
+    try {
+      const resultData = await callGeminiProxy(model, payload);
+      const rawText = resultData?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (rawText) {
+        const parsed = JSON.parse(rawText);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const formatted = parsed.slice(0, count).map(q => {
+            const normalized = normalizeAndFixQuestion({
+              ...q,
+              grammarCategory: categoryInfo.id,
+              grammarTag: categoryInfo.badgeKo,
+              difficulty: lvlLabel,
+              level: lvlLabel
+            });
+            return {
+              ...normalized,
+              options: shuffleOptions(normalized.options)
+            };
+          });
+          return { success: true, questions: formatted };
+        }
+      }
+    } catch (e: any) {
+      console.warn(`generateTopicQuestions error with ${model}:`, e);
+    }
+  }
+
+  return { success: false, error: "문법 테마 문제를 생성하지 못했습니다." };
 }
 
 // 🌟 5개 원어민 실전 표현 AI 생성 함수 (보안 프록시 호출)

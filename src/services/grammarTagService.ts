@@ -161,145 +161,171 @@ export const PRACTICAL_GRAMMAR_CATEGORIES: GrammarTagInfo[] = [
 export const DEFAULT_GRAMMAR_CATEGORY = PRACTICAL_GRAMMAR_CATEGORIES[0];
 
 /**
- * 🏷️ 주어진 카테고리 ID 또는 태그명에 해당하는 메타 정보 반환
+ * 🏷️ 주어진 카테고리 ID 또는 태그명에 해당하는 메타 정보를 검색 (없으면 null 반환)
  */
-export function getGrammarTagInfo(keyOrId?: string): GrammarTagInfo {
-  if (!keyOrId) return DEFAULT_GRAMMAR_CATEGORY;
+export function findGrammarCategory(keyOrId?: string): GrammarTagInfo | null {
+  if (!keyOrId) return null;
   const lower = keyOrId.toLowerCase().trim();
 
-  const found = PRACTICAL_GRAMMAR_CATEGORIES.find(c => 
-    c.id.toLowerCase() === lower ||
+  // 1. 정확한 ID 일치
+  const byId = PRACTICAL_GRAMMAR_CATEGORIES.find(c => c.id.toLowerCase() === lower);
+  if (byId) return byId;
+
+  // 2. 이름/배지 포함 일치
+  const byName = PRACTICAL_GRAMMAR_CATEGORIES.find(c =>
+    c.nameKo.toLowerCase() === lower ||
+    c.nameEn.toLowerCase() === lower ||
+    c.badgeKo.toLowerCase() === lower ||
+    c.badgeEn.toLowerCase() === lower ||
     c.nameKo.toLowerCase().includes(lower) ||
     c.nameEn.toLowerCase().includes(lower) ||
-    c.badgeKo.toLowerCase().includes(lower) ||
-    c.badgeEn.toLowerCase().includes(lower)
+    lower.includes(c.nameKo.toLowerCase()) ||
+    lower.includes(c.nameEn.toLowerCase())
   );
 
-  return found || DEFAULT_GRAMMAR_CATEGORY;
+  return byName || null;
+}
+
+/**
+ * 🏷️ 주어진 카테고리 ID 또는 태그명에 해당하는 메타 정보 반환 (fallback 보장)
+ */
+export function getGrammarTagInfo(keyOrId?: string): GrammarTagInfo {
+  return findGrammarCategory(keyOrId) || DEFAULT_GRAMMAR_CATEGORY;
 }
 
 /**
  * 🧠 기존 DB 문제나 AI 생성 문제에서 문법 카테고리를 100% 지능형 자동 판별/추론하는 함수
  */
 export function inferGrammarCategory(q: Partial<Question>): GrammarTagInfo {
+  // 1. 명시적 grammarCategory 필드가 유효한 경우 즉시 반환
   if (q.grammarCategory) {
-    const info = getGrammarTagInfo(q.grammarCategory);
-    if (info) return info;
+    const found = findGrammarCategory(q.grammarCategory);
+    if (found) return found;
   }
+
+  // 2. 명시적 grammarTag 필드가 유효한 경우 즉시 반환
   if (q.grammarTag) {
-    const info = getGrammarTagInfo(q.grammarTag);
-    if (info) return info;
+    const found = findGrammarCategory(q.grammarTag);
+    if (found) return found;
   }
 
-  const text = `${q.sentence || ''} ${q.answer || ''} ${q.translation || ''} ${q.explanation?.chunk_pattern || ''} ${q.explanation?.nuance || ''} ${(q.options || []).map(o => o.text + ' ' + (o.feedback || '')).join(' ')}`.toLowerCase();
+  // 3. 지능형 텍스트 분석 (문장, 정답, 해설, 보기 피드백 전수 검사)
+  const sentence = (q.sentence || '').toLowerCase();
+  const answer = (q.answer || '').toLowerCase();
+  const translation = (q.translation || '').toLowerCase();
+  const pattern = (q.explanation?.chunk_pattern || '').toLowerCase();
+  const nuance = (q.explanation?.nuance || '').toLowerCase();
+  const optionsText = (q.options || []).map(o => (o.text || '') + ' ' + (o.feedback || '')).join(' ').toLowerCase();
+  const fullText = `${sentence} ${answer} ${translation} ${pattern} ${nuance} ${optionsText}`;
 
-  // 1. 조동사 & 가정법 심화
+  // [1] 특수구문 & 고난도 도치 (special_structures)
   if (
-    text.includes('가정법') || text.includes('subjunctive') || text.includes('had it not been') ||
-    text.includes('were it not') || text.includes('should you') || text.includes('would have') ||
-    text.includes('could have') || text.includes('might have') || text.includes('insist') ||
-    text.includes('suggest') || text.includes('demand') || text.includes('당위성') ||
-    text.includes('it is high time') || text.includes('lest') || text.includes('without') || text.includes('but for')
-  ) {
-    return PRACTICAL_GRAMMAR_CATEGORIES[6]; // modals_subjunctive
-  }
-
-  // 2. 자·타동사 & 빈출 동사구 (lay/lie, rise/raise, discuss about 등)
-  if (
-    text.includes('자동사') || text.includes('타동사') || text.includes('lay') || text.includes('lie') ||
-    text.includes('raise') || text.includes('rise') || text.includes('sit') || text.includes('set') ||
-    text.includes('전치사 불가') || text.includes('전치사를 쓰지 않는') || text.includes('discuss') ||
-    text.includes('mention') || text.includes('marry') || text.includes('reach') || text.includes('object to') ||
-    text.includes('participate in') || text.includes('account for')
-  ) {
-    return PRACTICAL_GRAMMAR_CATEGORIES[8]; // verb_patterns
-  }
-
-  // 3. 병렬 구조 & 상관접속사 (not only, neither nor, that of, those of)
-  if (
-    text.includes('병렬') || text.includes('병치') || text.includes('상관접속사') ||
-    text.includes('not only') || text.includes('neither') || text.includes('either') ||
-    text.includes('not so much') || text.includes('that of') || text.includes('those of') ||
-    text.includes('비교 대상')
-  ) {
-    return PRACTICAL_GRAMMAR_CATEGORIES[9]; // parallel_agreement
-  }
-
-  // 4. 접속사 vs 전치사 vs 접속부사
-  if (
-    text.includes('because of') || text.includes('despite') || text.includes('in spite of') ||
-    text.includes('although') || text.includes('even though') || text.includes('while') ||
-    text.includes('during') || text.includes('접속사 vs 전치사') || text.includes('전치사구') ||
-    text.includes('provided that') || text.includes('given that') || text.includes('unless')
-  ) {
-    return PRACTICAL_GRAMMAR_CATEGORIES[4]; // connectors
-  }
-
-  // 5. 관계사 & 명사절
-  if (
-    text.includes('관계대명사') || text.includes('관계부사') || text.includes('that vs what') ||
-    text.includes('who') || text.includes('whom') || text.includes('whose') ||
-    text.includes('which') || text.includes('whatever') || text.includes('whoever') ||
-    text.includes('whomever') || text.includes('명사절') || text.includes('선행사') ||
-    text.includes('in which') || text.includes('to whom')
-  ) {
-    return PRACTICAL_GRAMMAR_CATEGORIES[3]; // clauses_relatives
-  }
-
-  // 6. 특수구문 & 고난도 도치
-  if (
-    text.includes('도치') || text.includes('inversion') || text.includes('the more') ||
-    text.includes('hardly') || text.includes('scarcely') || text.includes('seldom') ||
-    text.includes('never') || text.includes('no sooner') || text.includes('only when') ||
-    text.includes('only then') || text.includes('비교급')
+    fullText.includes('도치') || fullText.includes('inversion') || fullText.includes('the 비교급') ||
+    fullText.includes('hardly had') || fullText.includes('scarcely had') || fullText.includes('no sooner') ||
+    fullText.includes('never before') || fullText.includes('seldom') || fullText.includes('only when') ||
+    fullText.includes('only then') || fullText.includes('only after') || fullText.includes('장소부사구 도치')
   ) {
     return PRACTICAL_GRAMMAR_CATEGORIES[7]; // special_structures
   }
 
-  // 7. 준동사 (to부정사, 동명사, 분사)
+  // [2] 조동사 & 가정법 심화 (modals_subjunctive)
   if (
-    text.includes('to부정사') || text.includes('동명사') || text.includes('분사구문') ||
-    text.includes('participle') || text.includes('gerund') || text.includes('infinitive') ||
-    text.includes('looking forward to') || text.includes('dedicated to') || text.includes('committed to') ||
-    text.includes('confusing') || text.includes('confused') || text.includes('having p.p') ||
-    text.includes('with +') || text.includes('독립분사')
+    fullText.includes('가정법') || fullText.includes('subjunctive') || fullText.includes('had it not been') ||
+    fullText.includes('were it not') || fullText.includes('should you require') || fullText.includes('would have p.p') ||
+    fullText.includes('could have') || fullText.includes('might have') || fullText.includes('혼합가정법') ||
+    fullText.includes('당위성') || fullText.includes('insist') || fullText.includes('suggest') ||
+    fullText.includes('demand') || fullText.includes('recommend') || fullText.includes('it is high time') ||
+    fullText.includes('without') && (fullText.includes('would') || fullText.includes('could')) ||
+    fullText.includes('but for')
+  ) {
+    return PRACTICAL_GRAMMAR_CATEGORIES[6]; // modals_subjunctive
+  }
+
+  // [3] 자·타동사 & 빈출 동사구 (verb_patterns)
+  if (
+    fullText.includes('자동사') || fullText.includes('타동사') || fullText.includes('lay vs lie') ||
+    fullText.includes('rise vs raise') || fullText.includes('sit vs set') || fullText.includes('전치사 불가') ||
+    fullText.includes('discuss about') || fullText.includes('mention about') || fullText.includes('marry with') ||
+    fullText.includes('reach to') || fullText.includes('object to') || fullText.includes('participate in') ||
+    fullText.includes('account for') || fullText.includes('dispose of') || fullText.includes('refrain from')
+  ) {
+    return PRACTICAL_GRAMMAR_CATEGORIES[8]; // verb_patterns
+  }
+
+  // [4] 병렬 구조 & 상관접속사 (parallel_agreement)
+  if (
+    fullText.includes('병렬') || fullText.includes('병치') || fullText.includes('상관접속사') ||
+    fullText.includes('not only') || fullText.includes('neither nor') || fullText.includes('either or') ||
+    fullText.includes('both and') || fullText.includes('not a but b') || fullText.includes('that of') ||
+    fullText.includes('those of') || fullText.includes('비교 대상의 일치')
+  ) {
+    return PRACTICAL_GRAMMAR_CATEGORIES[9]; // parallel_agreement
+  }
+
+  // [5] 접속사 vs 전치사 vs 접속부사 (connectors)
+  if (
+    fullText.includes('접속사 vs 전치사') || fullText.includes('because vs because of') ||
+    fullText.includes('although vs despite') || fullText.includes('while vs during') ||
+    fullText.includes('despite') || fullText.includes('in spite of') || fullText.includes('provided that') ||
+    fullText.includes('given that') || fullText.includes('in case of') || fullText.includes('unless') ||
+    fullText.includes('regardless of') || fullText.includes('as long as') || fullText.includes('접속부사')
+  ) {
+    return PRACTICAL_GRAMMAR_CATEGORIES[4]; // connectors
+  }
+
+  // [6] 관계사 & 명사절 (clauses_relatives)
+  if (
+    fullText.includes('관계대명사') || fullText.includes('관계부사') || fullText.includes('명사절') ||
+    fullText.includes('that vs what') || fullText.includes('which vs what') || fullText.includes('in which') ||
+    fullText.includes('to whom') || fullText.includes('whoever') || fullText.includes('whatever') ||
+    fullText.includes('whomever') || fullText.includes('선행사') || fullText.includes('복합관계') ||
+    fullText.includes('whose')
+  ) {
+    return PRACTICAL_GRAMMAR_CATEGORIES[3]; // clauses_relatives
+  }
+
+  // [7] 준동사 (to부정사 / 동명사 / 분사구문) (verbals)
+  if (
+    fullText.includes('to부정사') || fullText.includes('동명사') || fullText.includes('분사구문') ||
+    fullText.includes('준동사') || fullText.includes('participle') || fullText.includes('gerund') ||
+    fullText.includes('infinitive') || fullText.includes('having p.p') || fullText.includes('with +') ||
+    fullText.includes('독립분사') || fullText.includes('목적격 보어') || fullText.includes('사역동사') ||
+    fullText.includes('지각동사') || fullText.includes('look forward to -ing') || fullText.includes('devoted to -ing') ||
+    fullText.includes('감정 분사') || fullText.includes('confusing vs confused')
   ) {
     return PRACTICAL_GRAMMAR_CATEGORIES[2]; // verbals
   }
 
-  // 8. 주어-동사 수일치
+  // [8] 시제 & 능동/수동태 (tense_voice)
   if (
-    text.includes('수일치') || text.includes('agreement') ||
-    /\b(was|were)\b/.test(text) || /\b(is|are)\b/.test(text) || /\b(has|have)\b/.test(text) ||
-    text.includes('단수 주어') || text.includes('복수 주어') || text.includes('3인칭 단수') ||
-    text.includes('a number of') || text.includes('the number of') || text.includes('every') || text.includes('each')
-  ) {
-    return PRACTICAL_GRAMMAR_CATEGORIES[0]; // subject_verb_agreement
-  }
-
-  // 9. 시제 & 능/수동태
-  if (
-    text.includes('시제') || text.includes('수동태') || text.includes('tense') ||
-    text.includes('passive') || text.includes('현재완료') || text.includes('과거완료') ||
-    text.includes('by the time') || text.includes('be p.p') || text.includes('been')
+    fullText.includes('수동태') || fullText.includes('passive') || fullText.includes('시제') ||
+    fullText.includes('현재완료') || fullText.includes('과거완료') || fullText.includes('미래완료') ||
+    fullText.includes('by the time') || fullText.includes('be p.p') || fullText.includes('have been p.p') ||
+    fullText.includes('has been p.p') || fullText.includes('had been p.p') || fullText.includes('능동태 vs 수동태')
   ) {
     return PRACTICAL_GRAMMAR_CATEGORIES[1]; // tense_voice
   }
 
-  // 10. 품사 자리 & 혼동 파생어 (기본 fallback)
+  // [9] 주어-동사 수일치 (subject_verb_agreement)
   if (
-    text.includes('품사') || text.includes('명사') || text.includes('형용사') ||
-    text.includes('부사') || text.includes('자리') || text.includes('관사') ||
-    text.includes('sensible') || text.includes('sensitive') || text.includes('considerate') ||
-    text.includes('considerable') || text.includes('economic') || text.includes('economical')
+    fullText.includes('수일치') || fullText.includes('주어-동사') || fullText.includes('단수 주어') ||
+    fullText.includes('복수 주어') || fullText.includes('3인칭 단수') || fullText.includes('the number of') ||
+    fullText.includes('a number of') || fullText.includes('every + 단수') || fullText.includes('each + 단수')
+  ) {
+    return PRACTICAL_GRAMMAR_CATEGORIES[0]; // subject_verb_agreement
+  }
+
+  // [10] 품사 자리 & 혼동 파생어 (parts_of_speech)
+  if (
+    fullText.includes('품사') || fullText.includes('자리') || fullText.includes('파생어') ||
+    fullText.includes('형용사 자리') || fullText.includes('부사 자리') || fullText.includes('명사 자리') ||
+    fullText.includes('sensible') || fullText.includes('sensitive') || fullText.includes('considerate') ||
+    fullText.includes('considerable') || fullText.includes('economic') || fullText.includes('economical') ||
+    fullText.includes('respectable') || fullText.includes('respectful')
   ) {
     return PRACTICAL_GRAMMAR_CATEGORIES[5]; // parts_of_speech
   }
 
-  // 1~5형식 번호에 따른 보조 매핑
-  if (q.form === 2) return PRACTICAL_GRAMMAR_CATEGORIES[5]; // 2형식 보어 품사
-  if (q.form === 5) return PRACTICAL_GRAMMAR_CATEGORIES[2]; // 5형식 목적격 보어 준동사
-  if (q.form === 4) return PRACTICAL_GRAMMAR_CATEGORIES[5]; // 4형식 수여동사/목적어 자리
-
-  return PRACTICAL_GRAMMAR_CATEGORIES[0];
+  // 기본 반환
+  return DEFAULT_GRAMMAR_CATEGORY;
 }
