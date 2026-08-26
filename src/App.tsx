@@ -67,7 +67,8 @@ import {
   calculateTier,
   getQuestionFormStatsByLevel,
   getRankingQuestionPoints,
-  adminDeleteSingleQuestion
+  adminDeleteSingleQuestion,
+  getQuestionsByGrammarCategory
 } from './services/dbService';
 import { auth } from './config/firebase';
 import { STARTER_AVATAR_IDS } from './services/avatarService';
@@ -1098,6 +1099,30 @@ function AppContent() {
     }
   };
 
+  // 5-1. Start Grammar Theme Practice Quiz
+  const handleStartThemeQuiz = async (topicId: string) => {
+    const topicInfo = getGrammarTagInfo(topicId);
+    setIsLoading(true);
+    setLoadingText(`[${topicInfo.nameKo}] 테마 문제를 불러오는 중...`);
+    setSelectedDifficulty(`${topicInfo.nameKo} 집중 훈련`);
+    setQuizMode('normal');
+
+    const result = await getQuestionsByGrammarCategory(topicId, 10);
+    setIsLoading(false);
+
+    if (result.success && result.data && result.data.length > 0) {
+      setQuestionQueue(result.data.slice(1));
+      setCurrentQ(result.data[0]);
+      setQuestionCount(1);
+      setScore(0);
+      setCorrectCount(0);
+      setEarnedCoinsTotal(0);
+      setView('solve');
+    } else {
+      toast.error('문제 로딩 실패', result.error || '해당 테마의 문제를 불러오지 못했습니다.');
+    }
+  };
+
   // 6. 🔥 3사이클 랭킹전 시작 파이프라인
   const launchRankingQuizSession = async (cycle: CycleInfo) => {
     if (!user) return;
@@ -1886,12 +1911,13 @@ function AppContent() {
         />
       )}
 
-      {/* 10. Weakness Report */}
+      {/* 10. Weakness Report & Theme Practice */}
       {view === 'weakness_view' && (
         <WeaknessReportView
           weaknessData={weaknessData}
           onBack={() => setView('menu')}
           onGeneratePrescription={(level) => handlePromptGenerateBulk(level, true)}
+          onStartThemePractice={handleStartThemeQuiz}
           isLoading={isLoading}
         />
       )}

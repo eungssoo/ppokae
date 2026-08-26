@@ -262,16 +262,16 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
 
               if (index === 0) {
                 badge = <span className="text-2xl sm:text-3xl filter drop-shadow shrink-0">🥇</span>;
-                rowStyle = 'bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border-amber-400/50 shadow-[0_0_20px_rgba(245,158,11,0.15)] ring-1 ring-amber-400/30';
-                textStyle = 'text-amber-200';
+                rowStyle = 'bg-gradient-to-r from-amber-500/20 to-yellow-500/10 border-amber-400/50 shadow-md ring-1 ring-amber-400/30';
+                textStyle = 'text-amber-300 dark:text-amber-300 font-black';
               } else if (index === 1) {
                 badge = <span className="text-2xl sm:text-3xl filter drop-shadow shrink-0">🥈</span>;
                 rowStyle = 'bg-gradient-to-r from-slate-700/40 to-slate-800/40 border-slate-500/40';
-                textStyle = 'text-slate-100';
+                textStyle = 'text-slate-200 dark:text-slate-100 font-black';
               } else if (index === 2) {
                 badge = <span className="text-2xl sm:text-3xl filter drop-shadow shrink-0">🥉</span>;
                 rowStyle = 'bg-gradient-to-r from-orange-950/40 to-slate-800/40 border-orange-700/40';
-                textStyle = 'text-orange-200';
+                textStyle = 'text-orange-300 dark:text-orange-200 font-black';
               }
 
               return (
@@ -306,11 +306,11 @@ export const RankingBoardView: React.FC<RankingBoardViewProps> = ({
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                        <span className="text-slate-300 font-medium truncate max-w-[100px] sm:max-w-none">{rank.avatarName || (language === 'en' ? 'Avatar' : '아바타')}</span>
+                        <span className="text-slate-300 font-semibold truncate max-w-[100px] sm:max-w-none">{rank.avatarName || (language === 'en' ? 'Avatar' : '아바타')}</span>
                         <span>•</span>
                         <div className="flex items-center gap-1 shrink-0">
-                          <Clock className="w-3 h-3 text-slate-500" />
-                          <span>{rank.completedAtFormatted || '--:--:--'}</span>
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span className="text-slate-400 font-medium">{rank.completedAtFormatted || '--:--:--'}</span>
                         </div>
                       </div>
                     </div>

@@ -64,7 +64,7 @@ export const DifficultySelectView: React.FC<DifficultySelectViewProps> = ({
       default:
         return {
           title: language === 'en' ? 'Standard Grammar Quiz' : '일반 퀴즈 풀기',
-          subtitle: language === 'en' ? 'Solve 10 questions evenly distributed across Forms 1 to 5.' : '공용 DB에서 선택한 난이도의 10문제를 1~5형식 골고루 추출하여 풉니다.',
+          subtitle: language === 'en' ? 'Solve 10 questions balanced across key grammar points.' : '공용 DB에서 선택한 난이도의 실전 핵심 문법 10문제를 풉니다.',
           icon: <PenTool className="w-6 h-6 text-emerald-400" />,
           badge: language === 'en' ? 'Differential Coin Rewards (Up to +7)' : '난이도별 코인 차등 지급 (최대 +7 코인)',
         };

@@ -271,11 +271,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           </div>
 
-          {/* 1~5 Form Mastery Quick Bar */}
+          {/* Mastery Quick Bar */}
           {masteryStats?.formMasteries && masteryStats.formMasteries.length > 0 && (
             <div className="bg-slate-950/50 rounded-2xl p-3 border border-slate-800">
               <div className="text-[11px] font-bold text-slate-300 mb-2 flex items-center justify-between">
-                <span>{language === 'en' ? 'Forms 1–5 Mastery Progress' : '1~5형식 문형별 숙련도 현황'}</span>
+                <span>{language === 'en' ? 'Core Grammar Mastery Progress' : '실전 문법 문형별 숙련도 현황'}</span>
                 <span className="text-[10px] text-slate-500 font-normal">{language === 'en' ? 'S-Grade (90%+) A-Grade (75%+)' : 'S등급(90%+) A등급(75%+)'}</span>
               </div>
               <div className="grid grid-cols-5 gap-1.5">

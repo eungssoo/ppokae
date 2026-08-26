@@ -3850,3 +3850,57 @@ export async function adminDeleteSingleQuestion(questionId?: string, sentence?: 
     return false;
   }
 }
+
+// 🎯 15-14. 실전 문법 테마별 집중 문제 추출 (테마별 10문제)
+export async function getQuestionsByGrammarCategory(topicId: string, limitCount: number = 10): Promise<{ success: boolean; data?: Question[]; error?: string }> {
+  try {
+    const snap = await getDocs(collection(db, 'questions'));
+    const matched: Question[] = [];
+
+    snap.forEach(d => {
+      const qData = d.data();
+      const qObj: Question = {
+        id: d.id,
+        form: sanitizeForm(qData.form),
+        sentence: qData.sentence,
+        options: shuffleOptions(qData.options || []),
+        answer: qData.answer,
+        translation: qData.translation,
+        explanation: qData.explanation,
+        components: qData.components,
+        difficulty: qData.difficulty
+      };
+
+      const cat = inferGrammarCategory(qObj);
+      if (cat.id === topicId) {
+        matched.push(qObj);
+      }
+    });
+
+    // DB에 해당 테마 문제가 5개 미만인 경우 AI로 즉시 생성
+    if (matched.length < 5) {
+      const topicTag = inferGrammarCategory({ explanation: { chunk_pattern: topicId } } as any);
+      console.log(`[getQuestionsByGrammarCategory]: DB contains only ${matched.length} questions for [${topicId}]. Generating fresh questions...`);
+      try {
+        const aiRes = await generateBulkQuestions('Level 2 (수능 기본 & 토익 중급)', `실전 문법 [${topicId}] 100% 집중 출제`, 10);
+        if (aiRes.success && aiRes.questions && aiRes.questions.length > 0) {
+          saveQuestionsToFirestore(aiRes.questions, 'Level 2 (수능 기본 & 토익 중급)').catch(() => {});
+          return { success: true, data: aiRes.questions.slice(0, limitCount) };
+        }
+      } catch (e) {
+        console.warn("AI generation for topic failed:", e);
+      }
+    }
+
+    if (matched.length === 0) {
+      return { success: false, error: "해당 문법 테마의 문제를 불러오지 못했습니다." };
+    }
+
+    matched.sort(() => Math.random() - 0.5);
+    return { success: true, data: matched.slice(0, limitCount) };
+  } catch (e: any) {
+    console.error("getQuestionsByGrammarCategory error:", e);
+    return { success: false, error: e.message || "문제 조회 오류" };
+  }
+}
+
